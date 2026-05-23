@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ベーカリー売上管理システム</title>
+    <style>
+        /* 🎨 マスターの審美眼に捧げる、優しく美しいベーカリーカラー */
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #fcfaf7; /* ほんのり小麦色の優しい背景 */
+            color: #4a3c31; /* 焼き立てのパンのような深みのあるブラウン */
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 650px;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(139, 92, 26, 0.05); /* 柔らかな影 */
+            margin: 0 auto;
+            border: 1px solid #f1ebd9;
+        }
+        h1 {
+            font-size: 22px;
+            color: #8b5a1a;
+            border-bottom: 2px solid #f7eed6;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: #6e543c;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        select, input[type="text"], input[type="number"] {
+            padding: 12px;
+            border: 1px solid #dcd1be;
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #fff;
+            color: #4a3c31;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        select:focus, input:focus {
+            border-color: #c9a063;
+            box-shadow: 0 0 0 3px rgba(201, 160, 99, 0.15);
+        }
+        .select-group {
+            display: flex;
+            gap: 12px;
+        }
+        select {
+            cursor: pointer;
+            padding-right: 30px;
+        }
+        /* 🛒 メニュー入力行のスタイル */
+        .menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .menu-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .input-name { flex: 2; }
+        .input-price { flex: 1; }
+        
+        /* 🔘 ボタンたちのデザイン */
+        .btn {
+            padding: 11px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-add {
+            background-color: #f7eed6;
+            color: #8b5a1a;
+            margin-top: 12px;
+            border: 1px dashed #c9a063;
+        }
+        .btn-add:hover {
+            background-color: #ebdcb9;
+        }
+        .btn-del {
+            background-color: #fff0f0;
+            color: #c0392b;
+            padding: 11px 14px;
+        }
+        .btn-del:hover {
+            background-color: #ffdddd;
+        }
+        .btn-submit {
+            background-color: #c9a063;
+            color: white;
+            width: 100%;
+            font-size: 16px;
+            padding: 15px;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(201, 160, 99, 0.3);
+        }
+        .btn-submit:hover {
+            background-color: #b3884b;
+            transform: translateY(-1px);
+            box-shadow: 0 7px 20px rgba(201, 160, 99, 0.4);
+        }
+        .btn-submit:active {
+            transform: translateY(1px);
+        }
+        
+        /* ✨ フェードインアニメーション */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍞 ベーカリー売上シート自動生成システム</h1>
+    
+    <form method="POST">
+        <div class="section">
+            <div class="section-title">① 作成する年月を選択してください</div>
+            <div class="select-group">
+                <select name="year">
+                    <option value="2026" selected>2026年</option>
+                    <option value="2027">2027年</option>
+                </select>
+                <select name="month">
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8" selected>8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">② 今月のメニューと価格（初日単価）を設定</div>
+            <div class="menu-list" id="menu-container">
+                <div class="menu-row">
+                    <input type="text" name="prod_name" class="input-name" value="食パン" placeholder="商品名" required>
+                    <input type="number" name="prod_price" class="input-price" value="200" placeholder="単価" min="0" required>
+                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                </div>
+                <div class="menu-row">
+                    <input type="text" name="prod_name" class="input-name" value="メロンパン" placeholder="商品名" required>
+                    <input type="number" name="prod_price" class="input-price" value="140" placeholder="単価" min="0" required>
+                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                </div>
+                <div class="menu-row">
+                    <input type="text" name="prod_name" class="input-name" value="クロワッサン" placeholder="商品名" required>
+                    <input type="number" name="prod_price" class="input-price" value="120" placeholder="単価" min="0" required>
+                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                </div>
+                <div class="menu-row">
+                    <input type="text" name="prod_name" class="input-name" value="コロネ" placeholder="商品名" required>
+                    <input type="number" name="prod_price" class="input-price" value="150" placeholder="単価" min="0" required>
+                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                </div>
+                <div class="menu-row">
+                    <input type="text" name="prod_name" class="input-name" value="ホットドッグ" placeholder="商品名" required>
+                    <input type="number" name="prod_price" class="input-price" value="220" placeholder="単価" min="0" required>
+                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-add" onclick="addRow()">＋ 新メニューを追加する</button>
+        </div>
+
+        <button type="submit" class="btn btn-submit">🚀 この内容で売上入力シート（Excel）を生成する</button>
+    </form>
+</div>
+
+<script>
+    // 🌟 パパっと追加・消去するための軽快なJavaScript
+    function addRow() {
+        const container = document.getElementById('menu-container');
+        const div = document.createElement('div');
+        div.className = 'menu-row';
+        div.innerHTML = `
+            <input type="text" name="prod_name" class="input-name" placeholder="新商品名" required>
+            <input type="number" name="prod_price" class="input-price" placeholder="単価" min="0" required>
+            <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+        `;
+        container.appendChild(div);
+    }
+
+    function removeRow(button) {
+        const row = button.parentElement;
+        row.parentElement.removeChild(row);
+    }
+</script>
+</body>
+</html>
