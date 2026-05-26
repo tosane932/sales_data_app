@@ -1,4 +1,4 @@
-# Bakery Sales Management System
+# 🍞Bakery Sales Management System
 
 現場の「困った」を、Pythonで「最適解」へ。
 
