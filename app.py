@@ -2,11 +2,12 @@ import os
 import datetime
 import calendar
 from flask import Flask, render_template, request, send_file
+from flask import request
 import openpyxl
 from openpyxl.styles import Font, Side, Border, PatternFill, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.styles.protection import Protection
-
+from auto_aggregator import get_filtered_sales_data
 app = Flask(__name__)
 
 # 🌟 保存先フォルダを「my_sales_app/過去売上高」に完全適応！
@@ -206,10 +207,38 @@ def index():
                     "price": int(price) if price.isdigit() else 0
                 })
         
+        # 💾 ここでPCの「過去売上高」フォルダへExcelが安全保存されます（既存ロジックのまま）
         file_path, filename = generate_excel(year, month, products_data)
-        return send_file(file_path, as_attachment=True, download_name=filename)
+        
+        # 🌟【C案に換装！】スマホにファイルを渡さず、完了画面（HTML）をレンダリングして返す
+        return render_template("success.html", year=year, month=month)
         
     return render_template("index.html")
+#-------------------------------------------------------
+# 🔴 集計ダッシュボードのルーティング（一つに統合！）
+@app.route("/dashboard")
+def dashboard():
+    # 1. HTMLのプルダウンから値を取得 (なければNone)
+    year_param = request.args.get("year")
+    month_param = request.args.get("month")
+
+    # 2. 数値に変換（空文字ならNoneを維持）
+    target_year = int(year_param) if year_param else None
+    target_month = int(month_param) if month_param else None
+
+    # 3. フィルタ付き関数を呼び出し
+    # ※auto_aggregator.pyの関数名は get_filtered_sales_data に変えたものを使用
+    sales_data = get_filtered_sales_data(target_year, target_month)
+    
+    # 4. ランキング計算
+    ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
+    
+    return render_template("dashboard.html", 
+                           sales=sales_data, 
+                           ranked_sales=ranked_sales,
+                           year=target_year or "全期間",
+                           month=target_month or "全期間")
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
