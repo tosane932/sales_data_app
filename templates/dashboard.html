@@ -83,7 +83,7 @@
             font-size: 16px;
             margin-right: 20px;
         }
-        /* 上位3位までの特別色（ゴールド・シルバー・ブロンズのベーカリー調） */
+        /* 上位3位までの特別色 */
         .rank-1 { background: #ffd700; color: #5c4308; }
         .rank-2 { background: #c0c0c0; color: #444444; }
         .rank-3 { background: #e1a67a; color: #fff; }
@@ -127,13 +127,13 @@
     <h1>📊 お店の健康診断書（売上データ分析）</h1>
 
     <div class="filter-box">
-        <form action="/dashboard" method="GET" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <form id="filterForm" onsubmit="updateDashboard(event)" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <strong>表示期間：</strong>
-            <select name="year">
+            <select name="year" id="selectYear">
                 <option value="2026" {% if year == 2026 %}selected{% endif %}>2026年</option>
                 <option value="2025" {% if year == 2025 %}selected{% endif %}>2025年</option>
             </select>
-            <select name="month">
+            <select name="month" id="selectMonth">
                 <option value="">全期間（通算）</option>
                 {% for m in range(1, 13) %}
                 <option value="{{ m }}" {% if month == m %}selected{% endif %}>{{ m }}月</option>
@@ -143,9 +143,9 @@
         </form>
     </div>
 
-    <h2>🏆 売上数量ランキング（{% if month %}{{ month }}月度{% else %}全期間{% endif %}）</h2>
+    <h2>🏆 売上数量ランキング（<span id="periodTitle">{% if month %}{{ month }}月度{% else %}全期間{% endif %}</span>）</h2>
     
-    <div class="ranking-container">
+    <div class="ranking-container" id="rankingContainer">
         {% if ranked_sales %}
             {% for name, qty in ranked_sales %}
                 <div class="ranking-item">
@@ -164,8 +164,110 @@
         {% endif %}
     </div>
 
+    <h2>📊 商品別 売上数量グラフ</h2>
+    <div style="background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #f5edd6; margin-bottom: 30px;">
+        <canvas id="salesChart"></canvas>
+    </div>
+
+    <h2>🤖 ベーカリーAI経営アシスタント（AIアドバイス）</h2>
+    <div style="background: #fff9e6; padding: 25px; border-radius: 12px; border: 1px solid #f3d9b1; margin-bottom: 30px; line-height: 1.8; position: relative; overflow: hidden;">
+        <div style="position: absolute; right: 10px; bottom: -10px; font-size: 70px; opacity: 0.05; user-select: none;">🍞</div>
+        
+        <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px;">
+            {{ ai_advice | replace('\n', '<br>') | safe }}
+        </p>
+    </div>
+    
     <a href="/" class="btn-back">🍞 売上入力シート作成画面に戻る</a>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 📊 初回起動時のグラフ描画ロジック（ここはグローバル変数にして後から書き換え可能にする）
+    const initialLabels = {{ chart_labels | tojson if chart_labels else [] }};
+    const initialValues = {{ chart_values | tojson if chart_values else [] }};
+
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: initialLabels,
+            datasets: [{
+                label: '売上数量（個）',
+                data: initialValues,
+                backgroundColor: 'rgba(139, 92, 26, 0.6)',
+                borderColor: 'rgba(139, 92, 26, 1)',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 🧙‍♂️ 【新魔術】画面リロードを阻止し、裏でデータを吸い上げて書き換える呪文
+    function updateDashboard(event) {
+        event.preventDefault(); // 🌟 これが画面の「ガクッ（リロード）」を完全に封じる防壁じゃ！
+
+        const year = document.getElementById('selectYear').value;
+        const month = document.getElementById('selectMonth').value;
+        const aiText = document.getElementById('aiAdviceText');
+        const rankContainer = document.getElementById('rankingContainer');
+        const periodTitle = document.getElementById('periodTitle');
+
+        // 通信中の演出
+        aiText.innerHTML = "🌀 AIアシスタントが売上データを分析中...（15秒ほどかかる場合があります）";
+        
+        // PythonのAPI窓口にセキュアに突撃！
+        fetch(`/api/dashboard-data?year=${year}&month=${month}`)
+            .then(response => response.json()) // ここはちゃんと「//」でコメントするぞ！
+            .then(data => {
+                // 1. タイトルの期間を書き換え
+                periodTitle.innerText = data.period_text;
+
+                // 2. ランキングリストの動的生成
+                if (data.ranked_sales.length > 0) {
+                    let htmlContent = "";
+                    data.ranked_sales.forEach((item, index) => {
+                        const rank = index + 1;
+                        let badgeClass = "";
+                        if (rank <= 3) badgeClass = `rank-${rank}`;
+
+                        htmlContent += `
+                            <div class="ranking-item">
+                                <div class="rank-badge ${badgeClass}">${rank}</div>
+                                <div class="prod-name">${item[0]}</div>
+                                <div class="prod-qty">${item[1]}<span class="prod-unit">個</span></div>
+                            </div>
+                        `;
+                    });
+                    rankContainer.innerHTML = htmlContent;
+                } else {
+                    rankContainer.innerHTML = `
+                        <div class="empty-message">
+                            該当期間の売上データ（数量）が見つかりませんでした。<br>
+                            <small style="color: #bfaea0;">※Excelファイル内に数量が入力されているか確認してください。</small>
+                        </div>
+                    `;
+                }
+
+                // 3. 📊 Chart.js のデータを全入れ替えしてアニメーション再描画！
+                salesChart.data.labels = data.chart_labels;
+                salesChart.data.datasets[0].data = data.chart_values;
+                salesChart.update(); // これだけでグラフが「シュッ」と滑らかに変形するぞ！
+
+                // 4. AIアドバイスの書き換え
+                aiText.innerHTML = data.ai_advice.replace(/\n/g, '<br>');
+            })
+            .catch(error => {
+                console.error("エラー発生:", error);
+                aiText.innerHTML = "🚨 データの取得に失敗したぞ。バックエンドのログを確認してくれ。";
+            });
+    }
+</script>
 
 </body>
 </html>

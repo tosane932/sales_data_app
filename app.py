@@ -2,13 +2,19 @@ import os
 import datetime
 import calendar
 from flask import Flask, render_template, request, send_file
-from flask import request
+from flask import jsonify
 import openpyxl
 from openpyxl.styles import Font, Side, Border, PatternFill, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.styles.protection import Protection
 from auto_aggregator import get_filtered_sales_data
+
+# 🟢 旧世代（generativeai）を廃止し、最新の genai クライアントを導入！
+from google import genai
+from google.genai import types
+
 app = Flask(__name__)
+
 
 # 🌟 保存先フォルダを「my_sales_app/過去売上高」に完全適応！
 PAST_FOLDER = os.path.join(os.path.dirname(__file__), "過去売上高")
@@ -215,30 +221,133 @@ def index():
         
     return render_template("index.html")
 #-------------------------------------------------------
-# 🔴 集計ダッシュボードのルーティング（一つに統合！）
+# 🔴 集計ダッシュボードのルーティング
 @app.route("/dashboard")
 def dashboard():
-    # 1. HTMLのプルダウンから値を取得 (なければNone)
     year_param = request.args.get("year")
     month_param = request.args.get("month")
 
-    # 2. 数値に変換（空文字ならNoneを維持）
     target_year = int(year_param) if year_param else None
     target_month = int(month_param) if month_param else None
 
-    # 3. フィルタ付き関数を呼び出し
-    # ※auto_aggregator.pyの関数名は get_filtered_sales_data に変えたものを使用
     sales_data = get_filtered_sales_data(target_year, target_month)
     
-    # 4. ランキング計算
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
     
+    chart_labels = [name for name, qty in ranked_sales]
+    chart_values = [qty for name, qty in ranked_sales]
+    
+    # 🌟 🔵 最新の google.genai 術式に完全換装！
+    ai_advice = "売上データがまだないため、アドバイスを生成できません。"
+    if ranked_sales:
+        try:
+            # 環境変数からキーを取得（なければテスト用の文字列）
+            api_key = os.environ.get("GEMINI_API_KEY")
+            
+            if not api_key:
+                ai_advice = "🚨【設定未完了】Ubuntu環境に GEMINI_API_KEY が登録されていません。ターミナルで設定をしてください。"
+            else:
+                # 2026年最新のクライアント初期化
+                client = genai.Client(api_key=api_key)
+                
+                sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
+                
+                prompt = f"""
+                あなたは街の優しいベーカリーの優秀な経営コンサルタントです。
+                以下の売上データ（商品名と販売数量）を見て、店長さんが明日から元気にお店を経営できるような、
+                温かくて具体的なアドバイスを3文以内で親しみやすく教えてください。
+                
+                データ: {sales_summary}
+                """
+                
+                # 最新モデル「gemini-2.5-flash」を使用して高速生成
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                ai_advice = response.text
+                
+        except Exception as e:
+            ai_advice = f"AIアドバイスを生成中に一時的なエラーが発生しました。（デバッグ用: {e}）"
+
     return render_template("dashboard.html", 
                            sales=sales_data, 
                            ranked_sales=ranked_sales,
+                           chart_labels=chart_labels,
+                           chart_values=chart_values,
+                           ai_advice=ai_advice,
                            year=target_year or "全期間",
                            month=target_month or "全期間")
 
+@app.route("/js-test")
+def js_test():
+    return render_template("js_test.html")
+
+# 🌟 実験用：データを返すだけの裏窓口（API）
+@app.route("/api/get-secret-data")
+def get_secret_data():
+    # Pythonの辞書データを、JavaScriptが読める「JSON形式」に変換して送る
+    return jsonify({
+        "status": "success",
+        "message": "🍞 智慧之王からの伝言：明日はメロンパンが運気上昇の鍵じゃ！",
+        "timestamp": "2026-05-27 17:45"
+    })
+
+# 🌟 【クエストA・ステージ2】ダッシュボード用のデータだけを返す高速窓口（API）
+@app.route("/api/dashboard-data")
+def api_dashboard_data():
+    year_param = request.args.get("year")
+    month_param = request.args.get("month")
+
+    target_year = int(year_param) if year_param else None
+    target_month = int(month_param) if month_param else None
+
+    # データを集計
+    sales_data = get_filtered_sales_data(target_year, target_month)
+    ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
+    
+    chart_labels = [name for name, qty in ranked_sales]
+    chart_values = [qty for name, qty in ranked_sales]
+    
+    # AIアドバイスの生成
+    ai_advice = "売上データがまだないため、アドバイスを生成できません。"
+    if ranked_sales:
+        try:
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if not api_key:
+                ai_advice = "🚨【設定未完了】Ubuntu環境に GEMINI_API_KEY が登録されていません。"
+            else:
+                client = genai.Client(api_key=api_key)
+                sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
+                
+                prompt = f"""
+                あなたは街の優しいベーカリーの優秀な経営コンサルタントです。
+                以下の売上データ（商品名と販売数量）を見て、店長さんが明日から元気にお店を経営できるような、
+                温かくて具体的なアドバイスを3文以内で親しみやすく教えてください。
+                
+                データ: {sales_summary}
+                """
+                
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                ai_advice = response.text
+        except Exception as e:
+            # 🌟 エラー内容に「429」や「RESOURCE_EXHAUSTED」が含まれているか判定
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                ai_advice = "☕【AIが少し休憩中じゃ】\n短時間にたくさんデータを抽出したため、AIの速度制限がかかっております。お手数ですが、10秒〜20秒ほどあけて、もう一度「データを抽出」ボタンを押してみてください。"
+            else:
+                ai_advice = f"AIアドバイスを生成中に一時的なエラーが発生しました。（デバッグ用: {e}）"
+
+    # 🌟 JavaScriptが一番大好物な「JSON形式」にパッケージして一撃で送出！
+    return jsonify({
+        "ranked_sales": ranked_sales,
+        "chart_labels": chart_labels,
+        "chart_values": chart_values,
+        "ai_advice": ai_advice,
+        "period_text": f"{target_month}月度" if target_month else "全期間"
+    })
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
