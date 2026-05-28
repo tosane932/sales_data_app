@@ -6,3 +6,4 @@ __pycache__/
 # 現場の生データ（Excel）を絶対に流出させない
 過去売上高/
 *.xlsx
+sales_data_app_android_demo.mp4
