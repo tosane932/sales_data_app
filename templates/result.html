@@ -51,14 +51,23 @@
             margin-top: 30px;
         }
 
-        /* 🤖 AI分析結果の表示エリア（改行をそのまま反映） */
+        /* 🤖 AI分析結果の表示エリア */
         .analysis-box {
             background-color: #fafbfc;
             border: 1px solid #ebedf0;
             padding: 20px;
             border-radius: 8px;
-            white-space: pre-wrap; /* Pythonからの改行文字を有効にします */
             line-height: 1.6;
+        }
+
+        /* GeminiのMarkdown出力（リストや強調）が荒れずに表示されるよう最低限だけ整える */
+        .analysis-box ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .analysis-box li {
+            margin-bottom: 6px;
         }
 
         /* 📰 収集したニュースのリスト */
@@ -94,11 +103,12 @@
 
     <div class="container">
         <h1>Puoppo 世論・不満分析結果 🕊️</h1>
-        
+
         <div class="keyword-badge">検索ワード: {{ keyword }}</div>
 
         <h2>🤖 AI「Puoppo」による分析レポート</h2>
-        <div class="analysis-box">{{ result }}</div>
+        <!-- app.py側でMarkdown→HTMLに変換済みのため safe を付けてそのまま表示します -->
+        <div class="analysis-box">{{ result | safe }}</div>
 
         <h2>📰 分析の元になった最新ニュース</h2>
         <ul class="news-list">
