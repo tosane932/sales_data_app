@@ -18,3 +18,4 @@ SQLALCHEMY_DATABASE_URI = os.environ.get(
     f"sqlite:///{os.path.join(os.path.dirname(__file__), 'local.db')}"
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+

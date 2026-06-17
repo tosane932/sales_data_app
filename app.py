@@ -7,15 +7,7 @@ from openpyxl.styles import Font, Side, Border, PatternFill, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.styles.protection import Protection
 from auto_aggregator import get_filtered_sales_data
-
 from models import db
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
-db.init_app(app)
-
-with app.app_context():
-    db.create_all()
 
 # 最新の Google GenAI SDK クライアントモジュールを導入
 from google import genai
@@ -25,6 +17,13 @@ from google.genai import types
 import config
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
 
 # アプリ起動時に保存先フォルダが存在しない場合は自動生成する
 if not os.path.exists(config.PAST_FOLDER):
@@ -272,8 +271,8 @@ def index():
                     "price": int(price) if price.isdigit() else 0
                 })
 
-if not products_data:
-    return render_template("index.html", error="商品を1つ以上入力してください。")
+        if not products_data:
+            return render_template("index.html", error="商品を1つ以上入力してください。")
 
         # 指定の条件で保護されたExcelファイルを生成して保存
         generate_excel(year, month, products_data)
