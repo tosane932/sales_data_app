@@ -7,3 +7,10 @@ __pycache__/
 過去売上高/
 *.xlsx
 sales_data_app_android_demo.mp4
+
+# 過去売上高フォルダを誤ってプッシュする事故を防ぐ
+past_sales_data/
+*.db
+.env
+__pycache__/
+.venv/
