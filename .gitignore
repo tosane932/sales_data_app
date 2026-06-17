@@ -1,16 +1,13 @@
-# Pythonの仮想環境を世界から隠す
+# Python系
 .venv/
 __pycache__/
 *.pyc
 
-# 現場の生データ（Excel）を絶対に流出させない
+# 現場の生データ・機密ファイル
 過去売上高/
 *.xlsx
-sales_data_app_android_demo.mp4
-
-# 過去売上高フォルダを誤ってプッシュする事故を防ぐ
-past_sales_data/
 *.db
 .env
-__pycache__/
-.venv/
+
+# その他不要ファイル
+sales_data_app_android_demo.mp4
