@@ -8,6 +8,15 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.styles.protection import Protection
 from auto_aggregator import get_filtered_sales_data
 
+from models import db
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
 # 最新の Google GenAI SDK クライアントモジュールを導入
 from google import genai
 from google.genai import types
