@@ -263,6 +263,9 @@ def index():
                     "price": int(price) if price.isdigit() else 0
                 })
 
+if not products_data:
+    return render_template("index.html", error="商品を1つ以上入力してください。")
+
         # 指定の条件で保護されたExcelファイルを生成して保存
         generate_excel(year, month, products_data)
 
@@ -301,7 +304,7 @@ def dashboard():
                            chart_values=chart_values,
                            ai_advice=ai_advice,
                            year=target_year or "全期間",
-                           month=target_month or "全期間")
+                           month=target_month)
 
 
 @app.route("/api/dashboard-data")
