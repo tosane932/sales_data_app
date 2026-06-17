@@ -141,6 +141,11 @@
 
 <div class="container">
     <h1>🍞 ベーカリー売上シート自動生成システム</h1>
+    {% if error %}
+    <div style="background-color: #fff0f0; color: #c0392b; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+        ⚠️ {{ error }}
+    </div>
+    {% endif %}
     
     <form method="POST">
         <div class="section">
