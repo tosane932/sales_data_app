@@ -17,6 +17,25 @@ from google.genai import types
 import config
 
 app = Flask(__name__)
+def build_sales_prompt(sales_summary: str) -> str:
+    return f"""
+あなたは食品業界のトレンドと消費者行動に精通した、経営コンサルタントです。
+
+以下のベーカリーの販売数量データをもとに、現場で即実践できる具体的な提案を3点挙げてください。
+
+【販売データ】
+{sales_summary}
+
+【分析の観点】
+- 近年の食トレンドや競合業態の動向（例：ドーナツ専門店の減少など）
+- ターゲット層別のニーズ（若年層・子育て世代・年配層）
+- SNSでの訴求可能性（見た目・素材・ストーリー性）
+- 曜日・季節・祝日パターンから読み取れる潜在需要
+
+【出力形式】
+箇条書き3点、各1〜2文で簡潔に。
+"""
+
 app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
 db.init_app(app)
