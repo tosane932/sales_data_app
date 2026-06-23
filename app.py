@@ -251,13 +251,7 @@ def _generate_ai_advice(ranked_sales):
         client = genai.Client(api_key=api_key)
         sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
 
-        prompt = f"""
-        あなたは街の優しいベーカリーの優秀な経営コンサルタントです。
-        以下の売上データ（商品名と販売数量）を見て、店長さんが明日から元気にお店を経営できるような、
-        温かくて具体的なアドバイスを3文以内で親しみやすく教えてください。
-        
-        データ: {sales_summary}
-        """
+        prompt = build_sales_prompt(sales_summary)
 
         # configで一元管理しているモデル名を使用してアドバイスをリクエスト
         response = client.models.generate_content(
