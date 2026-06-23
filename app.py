@@ -17,6 +17,15 @@ from google.genai import types
 import config
 
 app = Flask(__name__)
+
+
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
 def build_sales_prompt(sales_summary: str) -> str:
     return f"""
 あなたは食品業界のトレンドと消費者行動に精通した、経営コンサルタントです。
@@ -35,14 +44,6 @@ def build_sales_prompt(sales_summary: str) -> str:
 【出力形式】
 箇条書き3点、各1〜2文で簡潔に。
 """
-
-app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
-db.init_app(app)
-
-with app.app_context():
-    db.create_all()
-
 
 # アプリ起動時に保存先フォルダが存在しない場合は自動生成する
 if not os.path.exists(config.PAST_FOLDER):
