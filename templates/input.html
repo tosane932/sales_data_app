@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日次売上入力</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #fcfaf7;
+            color: #4a3c31;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 500px;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(139, 92, 26, 0.05);
+            margin: 0 auto;
+            border: 1px solid #f1ebd9;
+        }
+        h1 {
+            font-size: 20px;
+            color: #8b5a1a;
+            border-bottom: 2px solid #f7eed6;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .date-display {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #8b5a1a;
+            background: #fdfbf7;
+            border: 1px solid #f1ebd9;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+        .ai-greeting {
+            background: #fff9e6;
+            border: 1px solid #f3d9b1;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            line-height: 1.7;
+            font-size: 14px;
+            color: #4a3c31;
+            min-height: 60px;
+        }
+        .ai-greeting-label {
+            font-size: 11px;
+            color: #b08850;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .ai-greeting-text {
+            font-weight: bold;
+        }
+        .ai-loading {
+            color: #c9a063;
+            font-style: italic;
+        }
+        .success-msg {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #6e543c;
+        }
+        .product-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .product-name {
+            flex: 1;
+            font-size: 15px;
+        }
+        .product-price {
+            font-size: 13px;
+            color: #8c7e72;
+            white-space: nowrap;
+        }
+        input[type="number"].qty-input {
+            width: 100px;
+            flex-shrink: 0;
+            padding: 10px;
+            border: 1px solid #dcd1be;
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            background: #fff;
+            color: #4a3c31;
+        }
+        .btn-submit {
+            background-color: #c9a063;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 14px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background-color: #b3884b;
+        }
+        .btn-back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #8b5a1a;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .empty-msg {
+            text-align: center;
+            color: #9c8e82;
+            padding: 30px;
+            background: #faf8f5;
+            border-radius: 12px;
+            border: 1px dashed #d3c4b4;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📝 日次売上入力</h1>
+
+    <div class="date-display">
+        📅 {{ today.month }}月{{ today.day }}日（{{ ['月','火','水','木','金','土','日'][today.weekday()] }}曜日）
+    </div>
+
+    <div class="ai-greeting">
+        <div class="ai-greeting-label">🤖 AIアシスタントより</div>
+        <div class="ai-greeting-text" id="greetingText">
+            <span class="ai-loading">🌀 一言考え中...</span>
+        </div>
+    </div>
+
+    {% if success %}
+    <div class="success-msg">✅ 保存しました！</div>
+    {% endif %}
+
+    {% if products %}
+    <form method="POST" onkeydown="return event.key !== 'Enter';">
+        <input type="hidden" name="date" value="{{ today.isoformat() }}">
+
+        <div class="form-group">
+            <label>各商品の販売数量</label>
+            {% for product in products %}
+            <div class="product-row">
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <span class="product-name">{{ product.name }}</span>
+                <span class="product-price">¥{{ product.price }}</span>
+                <input type="number" name="quantity" class="qty-input"
+                       min="0" placeholder="0">
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn-submit">💾 保存する</button>
+    </form>
+    {% else %}
+    <div class="empty-msg">
+        今月の商品がまだ登録されていません。<br>
+        <small>先にトップページから商品を登録してください。</small>
+    </div>
+    {% endif %}
+
+    <a href="/" class="btn-back">🍞 トップに戻る</a>
+</div>
+
+<script>
+    window.addEventListener('load', function() {
+        fetch('/api/greeting')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('greetingText').innerHTML = data.message.replace(/\n/g, '<br>');
+            })
+            .catch(() => {
+                document.getElementById('greetingText').innerHTML = '本日もお疲れ様です！';
+            });
+    });
+</script>
+</body>
+</html>
