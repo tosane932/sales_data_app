@@ -172,7 +172,16 @@ def input_sales():
         quantities = request.form.getlist("quantity")
 
         for product_id, quantity in zip(product_ids, quantities):
+            # 空文字はスキップ
             if quantity.strip() == "":
+                continue
+
+            # 数値以外の文字列・マイナス値を弾く
+            try:
+                qty_int = int(float(quantity))
+            except ValueError:
+                continue
+            if qty_int < 0:
                 continue
 
             # 同じ日付・商品の入力が既にある場合は上書きして二重登録を防ぐ
@@ -182,12 +191,12 @@ def input_sales():
             ).first()
 
             if existing:
-                existing.quantity = int(quantity)
+                existing.quantity = qty_int
             else:
                 sale = DailySales(
                     product_id=int(product_id),
                     date=sale_date,
-                    quantity=int(quantity)
+                    quantity=qty_int
                 )
                 db.session.add(sale)
 
