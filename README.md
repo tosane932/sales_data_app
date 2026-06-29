@@ -5,7 +5,7 @@
 ## 📺 デモ動画
 以下の画像をクリックすると、YouTubeで実際の動作デモがご覧いただけます。
 
-[![ベーカリー売上管理システム（デモ動画）](demo2thumbnail.png)](https://youtu.be/KcIgl94h3OY)
+[![ベーカリー売上管理システム（デモ動画）](demo2thumbnail.png)](https://youtu.be/iz4r3YP3JZk)
 
 ※デモ動画は初期バージョンのものです。現在のバージョンはPostgreSQL・Docker対応済みです。
 
