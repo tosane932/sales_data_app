@@ -28,7 +28,7 @@
 
 ## 🚀 セットアップ手順（Docker使用）
 
-\`\`\`bash
+```bash
 # 1. リポジトリのクローン
 git clone https://github.com/tosane932/sales_data_app.git
 cd sales_data_app
@@ -39,7 +39,7 @@ cp .env.example .env
 
 # 3. 起動（これだけで完了）
 docker compose up --build
-\`\`\`
+```
 
 ブラウザで http://127.0.0.1:5000 にアクセス。
 
