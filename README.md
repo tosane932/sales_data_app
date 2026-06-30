@@ -30,7 +30,7 @@ IT開発系の資格なし、プログラミング実務未経験の状態から
   検索 → 結果という流れを一直線に設計し、迷わず使えることを意識したインターフェースです。
 
 ### - **公式RSSフィードを使った安全なデータ取得**
-  大手ニュースサイトへの直接スクレイピングを20回近く試みましたが、ことごとくブロックされました。[詳細はQiita記事に。](9999)
+  大手ニュースサイトへの直接スクレイピングを20回近く試みましたが、ことごとくブロックされました。[詳細はQiita記事に。](空リンク)
 
 ブロックを"回避"するのではなく、そもそもブロックされる心配のない公式の入口からデータを取得する設計です。
   
@@ -46,15 +46,16 @@ PCのローカル環境に直接インストールして動かす方法と、環
 
 プロジェクトのルートディレクトリに `.env` ファイルを作成し、Gemini の API キーを設定します。
 
-#### APIキーは [Google AI Studio](https://aistudio.google.com/apps?source=user&tag=created-by-you) から取得できます。
-
-『Googleアカウントでログイン → 「Get API key」またはスマホの場合は左メニューからメールアドレス上にある🔑鍵マークを選択するだけで発行されます。』
-
 ```text
 GEMINI_API_KEY=あなたのAPIキー
 ```
 
-#### ※セキュリティ保持（機密情報の流出防止）のため、.env ファイルは絶対に GitHub 等のリモートリポジトリにプッシュしないでください。
+#### APIキーは [Google AI Studio](https://aistudio.google.com/apps?source=user&tag=created-by-you) から取得できます。
+
+『Googleアカウントでログイン → 「Get API key」またはスマホの場合は左メニューからメールアドレス上にある🔑鍵マークを選択するだけで発行されます。』
+
+
+#### ※⚠️セキュリティ保持（機密情報の流出防止）のため、.env ファイルは絶対に GitHub 等のリモートリポジトリにプッシュしないでください。⚠️
 
 ---
 
@@ -84,20 +85,20 @@ docker run -p 5000:5000 --env-file .env puoppo-app
 
 #### 1. 仮想環境の作成と有効化
 
-```python
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
 #### 2. 依存ライブラリのインストール
 
-```python
+```bash
 pip install -r requirements.txt
 ```
 
 #### 3. アプリケーションの起動
 
-```python
+```bash
 python app.py
 ```
 
