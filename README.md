@@ -69,20 +69,20 @@ docker run -p 5000:5000 --env-file .env puoppo-app
 ### 🐍 B. ローカル環境（Python）での起動方法
 仮想環境（.venv）を作成してローカル環境で直接実行する場合の手順です。
 
-# 1. 仮想環境の作成と有効化
+#### 1. 仮想環境の作成と有効化
 
 ```python
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-# 2. 依存ライブラリのインストール
+#### 2. 依存ライブラリのインストール
 
 ```python
 pip install -r requirements.txt
 ```
 
-# 3. アプリケーションの起動
+#### 3. アプリケーションの起動
 
 ```python
 python app.py
