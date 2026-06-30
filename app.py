@@ -20,7 +20,7 @@ app = Flask(__name__)
 DB_NAME = 'puoppo.db'
 RSS_BASE_URL = "https://news.google.com/rss/search"
 MAX_NEWS_ITEMS = 100
-HOST = '127.0.0.1'
+HOST = '0.0.0.0'
 PORT = 5000
 DEBUG = True
 
