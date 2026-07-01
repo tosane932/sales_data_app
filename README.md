@@ -52,7 +52,7 @@ GEMINI_API_KEY=あなたのAPIキーを貼り付け
 
 #### 2. APIキーは [Google AI Studio](https://aistudio.google.com/apikey) にアクセス。  
 Googleアカウントでログイン →  「Get API key」またはスマホの場合は左メニューからメールアドレス上にある🔑鍵マークを選択して、［APIキーを作成］をタッチすると発行されます。
-#### 3. 発行されたキーを `.env` の `GEMINI_API_KEY` に貼り付け
+#### 3. 発行されたキーを `.env` の `GEMINI_API_KEY` =の後に貼り付け
 
 ```text
 GEMINI_API_KEY=あなたのAPIキーを貼り付け
