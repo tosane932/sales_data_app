@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import sqlite3
 import urllib.request
@@ -12,7 +14,7 @@ from google import genai
 import markdown
 
 # 🔑 余計な固定を外し、自動で最適な接続先を選ばせます
-client = genai.Client()
+client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 app = Flask(__name__)
 
