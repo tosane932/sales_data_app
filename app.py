@@ -1,63 +1,70 @@
 import os
 import datetime
+import logging  # 💡 1. ログモジュールをインポート
 from flask import Flask, render_template, request, send_file, jsonify
 from models import db, Product, DailySales
-# 最新の Google GenAI SDK クライアントモジュールを導入
 from google import genai
 from google.genai import types
-
-# 一元管理された設定情報をインポート
 import config
-
 from prompts import build_sales_prompt
 
-app = Flask(__name__)
+# 💡 2. ログの初期設定（デジタコのセットアップ）
+# フォーマットに「日時 [レベル] メッセージ」を指定し、コンテナの標準出力に出すよう設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
+app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
 db.init_app(app)
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        logger.info("Database tables initialized successfully.")  # 💡 正常な運行記録
+    except Exception as e:
+        logger.error(f"Failed to initialize database tables: {e}")  # 💡 致命的なエラーの記録
 
-
-# アプリ起動時に保存先フォルダが存在しない場合は自動生成する
 if not os.path.exists(config.PAST_FOLDER):
     os.makedirs(config.PAST_FOLDER)
+    logger.info(f"Created past folder at: {config.PAST_FOLDER}")
 
 
 def _generate_ai_advice(ranked_sales):
-    """
-    売上データを解析し、Gemini APIを用いて経営アドバイスのテキストを生成する共通関数。
-    通常表示と非同期通信（API）の両方から呼び出され、エラーハンドリングを一元化している。
-    """
     if not ranked_sales:
+        logger.warning("AI advice requested but ranked_sales is empty.")  # 💡 注意喚起
         return "売上データがまだないため、アドバイスを生成できません。"
 
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
-        # デプロイ環境を考慮し、特定のOS名に依存しない汎用的なエラーメッセージに修正
         if not api_key:
+            logger.error("GEMINI_API_KEY is missing from environment variables.")  # 💡 設定エラーの記録
             return "🚨【設定未完了】環境変数に GEMINI_API_KEY が登録されていません。ダッシュボードの設定を確認してください。"
 
-        # GenAIクライアントの初期化およびコンサルタントとしてのプロンプト構築
         client = genai.Client(api_key=api_key)
         sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
-
         prompt = build_sales_prompt(sales_summary)
 
-        # configで一元管理しているモデル名を使用してアドバイスをリクエスト
+        logger.info(f"Requesting Gemini AI advice for products: {len(ranked_sales)} items.")
         response = client.models.generate_content(
             model=config.GEMINI_MODEL,
             contents=prompt,
         )
+        logger.info("Gemini AI advice generated successfully.")
         return response.text
 
     except Exception as e:
-        # 短時間での過剰なリクエストによりAPIの速度制限（429エラー）に到達した場合の処理
+        # 💡 例外オブジェクト(e)をそのまま logger.error に渡すことで、詳細なスタックトレース（エラーの発生場所）も自動記録できる
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            logger.warning(f"Gemini API rate limit hit (429): {e}")  # 💡 429は予測可能な範囲なのでWARNING
             return "☕【AIが少し休憩中です】\n短時間にたくさんデータを抽出したため、AIの速度制限がかかっております。お手数ですが、10秒〜20秒ほどあけて、もう一度「データを抽出」ボタンを押してみてください。"
+        
+        logger.error("Unexpected error during AI advice generation", exc_info=True)  # 💡 想定外のエラーは詳細ログを残す
         return f"AIアドバイスを生成中に一時的なエラーが発生しました。（デバッグ用: {e}）"
 
 
@@ -66,7 +73,6 @@ def index():
     if request.method == "POST":
         year = int(request.form.get("year"))
         month = int(request.form.get("month"))
-
         product_names = request.form.getlist("prod_name")
         product_prices = request.form.getlist("prod_price")
 
@@ -81,17 +87,18 @@ def index():
         if not products_data:
             return render_template("index.html", error="商品を1つ以上入力してください。")
 
-        # 同じ年月の商品が既に登録されている場合は上書きを防ぐため一度削除してから再登録
+        # 💡 データ上書き（削除＆再登録）の動きをログに残す
+        logger.info(f"Updating products for {year}-{month}. Clear existing data.")
         existing = Product.query.filter_by(year=year, month=month).all()
         for p in existing:
             db.session.delete(p)
         db.session.commit()
 
-        # フォームで受け取った商品情報をProductテーブルに登録
         for prod in products_data:
             product = Product(year=year, month=month, name=prod["name"], price=prod["price"])
             db.session.add(product)
         db.session.commit()
+        logger.info(f"Successfully registered {len(products_data)} products for {year}-{month}.")
 
         return render_template("success.html", year=year, month=month)
 
@@ -100,23 +107,18 @@ def index():
 
 @app.route("/dashboard")
 def dashboard():
-    """
-    通常の画面遷移でダッシュボードを表示する際のルーティング。
-    初期表示時、またはクエリパラメータによる期間絞り込み時に動作する。
-    """
     year_param = request.args.get("year")
     month_param = request.args.get("month")
-
     target_year = int(year_param) if year_param else None
     target_month = int(month_param) if month_param else None
 
-    # ExcelファイルではなくDBのDailySalesテーブルから売上を集計する
+    logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
+
     sales_data = _get_sales_from_db(target_year, target_month)
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
     chart_values = [qty for name, qty in ranked_sales]
-
     ai_advice = _generate_ai_advice(ranked_sales)
 
     return render_template("dashboard.html",
@@ -132,22 +134,18 @@ def dashboard():
 
 @app.route("/api/dashboard-data")
 def api_dashboard_data():
-    """
-    画面をリロードせずにデータを非同期（Ajax）で更新するためのエンドポイント。
-    """
     year_param = request.args.get("year")
     month_param = request.args.get("month")
-
     target_year = int(year_param) if year_param else None
     target_month = int(month_param) if month_param else None
 
-    # ExcelファイルではなくDBから集計して返す
+    logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
+
     sales_data = _get_sales_from_db(target_year, target_month)
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
     chart_values = [qty for name, qty in ranked_sales]
-
     ai_advice = _generate_ai_advice(ranked_sales)
 
     return jsonify({
@@ -161,30 +159,27 @@ def api_dashboard_data():
 
 @app.route("/input", methods=["GET", "POST"])
 def input_sales():
-    """
-    日次の売上数量をWebフォームで入力し、DailySalesテーブルに保存するルート。
-    """
     if request.method == "POST":
         date_str = request.form.get("date")
         sale_date = datetime.date.fromisoformat(date_str)
-
         product_ids = request.form.getlist("product_id")
         quantities = request.form.getlist("quantity")
 
+        logger.info(f"Sales data submission received for date: {sale_date}")
+
         for product_id, quantity in zip(product_ids, quantities):
-            # 空文字はスキップ
             if quantity.strip() == "":
                 continue
 
-            # 数値以外の文字列・マイナス値を弾く
             try:
                 qty_int = int(float(quantity))
             except ValueError:
+                logger.warning(f"Invalid quantity format skipped: product_id={product_id}, quantity={quantity}")
                 continue
             if qty_int < 0:
+                logger.warning(f"Negative quantity skipped: product_id={product_id}, quantity={qty_int}")
                 continue
 
-            # 同じ日付・商品の入力が既にある場合は上書きして二重登録を防ぐ
             existing = DailySales.query.filter_by(
                 product_id=int(product_id),
                 date=sale_date
@@ -201,6 +196,7 @@ def input_sales():
                 db.session.add(sale)
 
         db.session.commit()
+        logger.info(f"Sales data successfully committed for date: {sale_date}")
         return render_template("input.html", success=True, products=_get_current_products(), today=datetime.date.today())
 
     return render_template("input.html", products=_get_current_products(), today=datetime.date.today())
@@ -208,9 +204,6 @@ def input_sales():
 
 @app.route("/api/greeting")
 def api_greeting():
-    """
-    日次売上入力画面の上部に表示する、今日の日付に応じたAIの一言を生成するエンドポイント。
-    """
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -219,15 +212,16 @@ def api_greeting():
         client = genai.Client(api_key=api_key)
         today = datetime.date.today()
 
+        # 💡 どんなプロンプトでリクエストを投げようとしているかINFOで記録
+        logger.info("Generating AI daily greeting...")
+        
         prompt = f"""
             あなたはベーカリーのスタッフに話しかける、明るく親しみやすいアシスタントです。
             今日は{today.month}月{today.day}日（{['月','火','水','木','金','土','日'][today.weekday()]}曜日）です。
-
             以下のどれか1〜2個を自然に盛り込んで、スタッフへの一言挨拶を作ってください。
             - 今の季節感（食材・行事・気候など）
             - 今のSNSやトレンドで話題になっているパンや食品
             - 季節の新商品へのさりげない提案
-
             条件：
             - 全体で2〜3文
             - 親しみやすいが馴れ馴れしすぎない口調
@@ -238,44 +232,36 @@ def api_greeting():
             model=config.GEMINI_MODEL,
             contents=prompt,
         )
+        logger.info("AI daily greeting generated successfully.")
         return jsonify({"message": response.text})
 
     except Exception as e:
+        logger.error(f"Failed to generate AI greeting: {e}", exc_info=True)
         today = datetime.date.today()
         return jsonify({"message": f"本日は{today.month}月{today.day}日です。今日も一日お疲れ様でした！"})
 
 
 def _get_current_products():
-    """今月登録されている商品一覧をDBから取得する。"""
     today = datetime.date.today()
     return Product.query.filter_by(year=today.year, month=today.month).all()
 
 
 def _get_sales_from_db(target_year=None, target_month=None):
-    """
-    DailySalesテーブルとProductテーブルをJOINし、
-    指定期間の商品別売上数量を集計して辞書で返す。
-    """
     query = db.session.query(
         Product.name,
         db.func.sum(DailySales.quantity)
     ).join(DailySales, Product.id == DailySales.product_id)
 
-    # 年・月の絞り込み条件をクエリに動的に追加する
     if target_year:
-        query = query.filter(
-            db.extract("year", DailySales.date) == target_year
-        )
+        query = query.filter(db.extract("year", DailySales.date) == target_year)
     if target_month:
-        query = query.filter(
-            db.extract("month", DailySales.date) == target_month
-        )
+        query = query.filter(db.extract("month", DailySales.date) == target_month)
 
     results = query.group_by(Product.name).all()
     return {name: int(qty) for name, qty in results}
 
 
 if __name__ == "__main__":
-    # debug=Trueは環境変数で制御し、本番環境での意図しない有効化を防ぐ
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    logger.info(f"Starting Flask application with FLASK_DEBUG={debug_mode}")
     app.run(debug=debug_mode, host="0.0.0.0", port=5000)
