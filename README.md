@@ -45,6 +45,11 @@ PCのローカル環境に直接インストールして動かす方法と、環
 ### 事前準備
 
 #### 1. プロジェクトのルートディレクトリに `.env` ファイルを作成し、Gemini の API キーを設定します。
+
+```text
+GEMINI_API_KEY=あなたのAPIキーを貼り付け
+```
+
 #### 2. APIキーは [Google AI Studio](https://aistudio.google.com/apikey) にアクセス。  
 Googleアカウントでログイン →  「Get API key」またはスマホの場合は左メニューからメールアドレス上にある🔑鍵マークを選択して、［APIキーを作成］をタッチすると発行されます。
 #### 3. 発行されたキーを `.env` の `GEMINI_API_KEY` に貼り付け
