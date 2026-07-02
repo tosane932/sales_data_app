@@ -263,5 +263,8 @@ def _get_sales_from_db(target_year=None, target_month=None):
 
 if __name__ == "__main__":
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-    logger.info(f"Starting Flask application with FLASK_DEBUG={debug_mode}")
-    app.run(debug=debug_mode, host="0.0.0.0", port=5000)
+    # Renderが指定するポートを優先し、なければローカル用の5000を使う
+    port = int(os.environ.get("PORT", 5000))
+    
+    logger.info(f"Starting Flask application with FLASK_DEBUG={debug_mode} on port {port}")
+    app.run(debug=debug_mode, host="0.0.0.0", port=port)
