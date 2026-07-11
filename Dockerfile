@@ -1,20 +1,32 @@
-# 1. ベースとなる環境に Python 3.12 を指定（軽量な slim 版を採用してリソースを最適化）
-FROM python:3.12-slim
+# ステージ1: 荷造り場（builder）
+FROM python:3.12-slim AS builder
 
-# 2. コンテナ内の作業ディレクトリ（部屋）を決める
 WORKDIR /app
 
-# 3. 依存ライブラリのリストを先にコンテナ内にコピー
+# コンパイルに必要な道具だけ、このステージだけに入れる
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# 4. コンテナ内で pip インストールを実行（キャッシュを使わず軽量化）
-RUN pip install --no-cache-dir -r requirements.txt
+# ステージ2: 本番トラック
+FROM python:3.12-slim
 
-# 5. アプリの全ファイルをコンテナ内にコピー
+WORKDIR /app
+
+# psycopg2-binaryの実行に必要なランタイムライブラリだけ入れる（gccは不要）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# builderで作った"完成品"だけ積み替え
+COPY --from=builder /root/.local /root/.local
 COPY . .
 
-# 6. Flaskが外部からの接続を受け付けられるようにポート5000を開放
-EXPOSE 5000
+ENV PATH=/root/.local/bin:$PATH
 
-# 7. コンテナ起動時に Flask アプリを実行するコマンド
+EXPOSE 5000
 CMD ["python", "app.py"]
