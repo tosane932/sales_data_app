@@ -2,6 +2,7 @@ import os
 import datetime
 import logging  # 💡 1. ログモジュールをインポート
 from flask import Flask, render_template, request, send_file, jsonify
+from flask_migrate import Migrate
 from models import db, Product, DailySales
 from google import genai
 from google.genai import types
@@ -23,12 +24,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
 db.init_app(app)
 
-with app.app_context():
-    try:
-        db.create_all()
-        logger.info("Database tables initialized successfully.")  # 💡 正常な運行記録
-    except Exception as e:
-        logger.error(f"Failed to initialize database tables: {e}")  # 💡 致命的なエラーの記録
+migrate = Migrate(app, db)
+
 
 if not os.path.exists(config.PAST_FOLDER):
     os.makedirs(config.PAST_FOLDER)
