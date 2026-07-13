@@ -29,4 +29,4 @@ COPY . .
 ENV PATH=/root/.local/bin:$PATH
 
 EXPOSE 5000
-CMD ["python", "app.py"]
+CMD flask db upgrade && python app.py
