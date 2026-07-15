@@ -82,12 +82,13 @@ AIによる売上分析・経営アドバイスまで支援するWebアプリケ
 - ✅ 年・月別売上分析
 - ✅ Docker環境対応
 - ✅ AlembicによるDBマイグレーション
+- ✅ pytest 
 
 ## 🛠 技術スタック
 
 ### Backend
-- Python
-- Flask
+- Python 3.12
+- Flask 3.1
 - SQLAlchemy
 - Flask-Migrate
 
@@ -132,20 +133,35 @@ docker compose up --build
 
 ブラウザで http://127.0.0.1:5000 にアクセス。
 
+## 🔄開発・デプロイフロー
 
-## 🔄 開発・デプロイフロー
-[ローカル環境] (VS Code / Ubuntu)
+```mermaid
+flowchart TD
+    A[Local Development<br>VS Code / Docker]
+    --> B[GitHub]
 
-      │
-      ▼  (pytest / ローカルテスト)
+    B --> C[GitHub Actions<br>pytest]
 
-[GitHub] (Push)
+    C --> D[Render Deploy]
 
-      │
-      ▼  (GitHub Actionsで自動テスト/CI)
+    D --> E[(PostgreSQL)]
+```
 
-[Render] (自動デプロイ/CD) ───[PostgreSQL] (本番DB)
 
+## 🏗 システム構成
+
+Browser
+    │
+    ▼
+Flask
+    │
+    ├── PostgreSQL
+    └── Gemini API
+
+## ✅ テスト
+
+pytest
+3 passed
 
 ## 💡 開発思想
 
