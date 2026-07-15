@@ -112,25 +112,15 @@ docker compose up --build
 
 ## 🔄 開発・デプロイフロー
 ローカル開発 
-
 ↓
-
 pytest
-
 ↓
-
 GitHubへPush
-
 ↓
-
 GitHub Actions（CI）
-
 ↓
-
 Renderへ自動デプロイ（CD）
-
 ↓
-
 本番公開
 
 ## 💡 開発思想
