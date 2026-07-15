@@ -151,18 +151,20 @@ docker compose up --build
 
 ### 🍞 商品マスタ登録画面
 
-![商品マスタ](screen01.jpg)
+![<img src="https://github.com/tosane932/sales_data_app/blob/main/screen01.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen01.jpg)
 
 ---
 
 ### 📝 日次売上入力
 
-![日次入力](screen02.jpg)
+![<img src="https://github.com/tosane932/sales_data_app/blob/main/screen02.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen02.jpg)
 
 ---
 
 ### 📊 売上分析ダッシュボード
 
-![ダッシュボード](screen03.jpg)
-![ダッシュボード](screen04.jpg)
-![ダッシュボード](screen05.jpg)
+![<img src="https://github.com/tosane932/sales_data_app/blob/main/screen03.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen03.jpg)
+
+![<img src="https://github.com/tosane932/sales_data_app/blob/main/screen04.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen04.jpg)
+
+![<img src="https://github.com/tosane932/sales_data_app/blob/main/screen05.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen05.jpg)
