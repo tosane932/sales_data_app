@@ -150,6 +150,7 @@ flowchart TD
 
 ## 🏗 システム構成
 
+```mermaid
 Browser
     │
     ▼
@@ -157,6 +158,7 @@ Flask
     │
     ├── PostgreSQL
     └── Gemini API
+```
 
 ## ✅ テスト
 
