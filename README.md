@@ -9,7 +9,7 @@
 
 ※上記リンクがアクセスできない場合はこちらから👇
 
-https://tosane932.github.io/sales_data_app/
+### [Bakery Sales Management System](https://tosane932.github.io/sales_data_app/)
 
 ---
 
