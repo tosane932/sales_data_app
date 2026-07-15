@@ -151,20 +151,20 @@ docker compose up --build
 
 ### 🍞 商品マスタ登録画面
 
-[<img src="https://github.com/tosane932/sales_data_app/blob/main/screen01.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen01.jpg)
+[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)
 
 ---
 
 ### 📝 日次売上入力
 
-[<img src="https://github.com/tosane932/sales_data_app/blob/main/screen02.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen02.jpg)
+[![日次売上入力](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)
 
 ---
 
 ### 📊 売上分析ダッシュボード
 
-[<img src="https://github.com/tosane932/sales_data_app/blob/main/screen03.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen03.jpg)
+[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)
 
-[<img src="https://github.com/tosane932/sales_data_app/blob/main/screen04.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen04.jpg)
+[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)
 
-[<img src="https://github.com/tosane932/sales_data_app/blob/main/screen05.jpg">](https://github.com/tosane932/sales_data_app/blob/main/screen05.jpg)
+[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)
