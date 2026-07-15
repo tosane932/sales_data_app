@@ -7,6 +7,10 @@
 
 ### [【👉ベーカリー売上管理システム体験（Renderで稼働中）】](https://bakery-salesdata.onrender.com/)
 
+※上記リンクがアクセスできない場合はこちらから👇
+
+https://tosane932.github.io/sales_data_app/
+
 ---
 
 ## 📊 3ステップで体験する「現場の業務フロー」
