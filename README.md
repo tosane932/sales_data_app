@@ -1,5 +1,28 @@
 # 🍞Bakery Sales Management System
 
+## 📸 スクリーンショット
+
+### 🍞 商品マスタ登録画面
+
+[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)
+
+---
+
+### 📝 日次売上入力
+
+[![日次売上入力](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)
+
+---
+
+### 📊 売上分析ダッシュボード
+
+[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)
+
+[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)
+
+[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)
+
+
 ### 現場の「困った」を、Pythonで「最適解」へ。
 ベーカリーの売上管理をデータベースで一元管理し、
 AIによる売上分析・経営アドバイスまで支援するWebアプリケーションです。
@@ -147,24 +170,3 @@ docker compose up --build
 - 曜日・季節傾向分析
 - 商品別利益分析
 
-## 📸 スクリーンショット
-
-### 🍞 商品マスタ登録画面
-
-[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen01.jpg)
-
----
-
-### 📝 日次売上入力
-
-[![日次売上入力](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen02.jpg)
-
----
-
-### 📊 売上分析ダッシュボード
-
-[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen03.jpg)
-
-[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen04.jpg)
-
-[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)
