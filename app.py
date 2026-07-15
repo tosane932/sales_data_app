@@ -26,13 +26,7 @@ db.init_app(app)
 
 migrate = Migrate(app, db)
 
-# 💡 3. データベースの自動作成処理をアプリケーションコンテキスト内で実行
-with app.app_context():
-    try:
-        db.create_all()
-        logger.info("Database tables created successfully or already exist.")
-    except Exception as e:
-        logger.error(f"Failed to auto-create tables: {e}", exc_info=True)
+
 
 if not os.path.exists(config.PAST_FOLDER):
     os.makedirs(config.PAST_FOLDER)
