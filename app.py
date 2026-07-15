@@ -26,7 +26,15 @@ db.init_app(app)
 
 migrate = Migrate(app, db)
 
+# 💡 3. データベースのマイグレーションを自動で最新状態にする処理
+from flask_migrate import stamp as _stamp
 
+with app.app_context():
+    try:
+        _stamp()  # コードの中で「flask db stamp head」を動かす処理
+        logger.info("Alembic database stamped to head successfully!")
+    except Exception as e:
+        logger.warning(f"Database stamp skipped or failed: {e}")
 
 if not os.path.exists(config.PAST_FOLDER):
     os.makedirs(config.PAST_FOLDER)
