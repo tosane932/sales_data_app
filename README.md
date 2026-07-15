@@ -150,7 +150,7 @@ flowchart TD
 
 ## 🏗 システム構成
 
-```mermaid
+```text
 Browser
     │
     ▼
