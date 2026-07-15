@@ -112,11 +112,15 @@ docker compose up --build
 
 ## 🔄 開発・デプロイフロー
 [ローカル環境] (VS Code / Ubuntu)
+
       │
       ▼  (pytest / ローカルテスト)
+
 [GitHub] (Push)
+
       │
       ▼  (GitHub Actionsで自動テスト/CI)
+
 [Render] (自動デプロイ/CD) ───[PostgreSQL] (本番DB)
 
 
