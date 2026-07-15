@@ -151,16 +151,18 @@ docker compose up --build
 
 ### 🍞 商品マスタ登録画面
 
-![商品マスタ](top_page.png)
+![商品マスタ](screen01.jpg)
 
 ---
 
 ### 📝 日次売上入力
 
-![日次入力](input_page.png)
+![日次入力](screen02.jpg)
 
 ---
 
 ### 📊 売上分析ダッシュボード
 
-![ダッシュボード](dashboard.png)
+![ダッシュボード](screen03.jpg)
+![ダッシュボード](screen04.jpg)
+![ダッシュボード](screen05.jpg)
