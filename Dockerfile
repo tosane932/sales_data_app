@@ -29,4 +29,4 @@ COPY . .
 ENV PATH=/root/.local/bin:$PATH
 
 EXPOSE 5000
-CMD flask db upgrade && python app.py
+CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:${PORT:-5000} app:app"]
