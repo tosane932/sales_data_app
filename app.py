@@ -229,7 +229,11 @@ def dashboard():
 
     chart_labels = [name for name, qty in ranked_sales]
     chart_values = [qty for name, qty in ranked_sales]
-    ai_advice = _generate_ai_advice(ranked_sales)
+    ai_advice = (
+        "売上ランキングとグラフを確認できます。"
+        "さらに詳しい改善案を知りたい場合は、"
+        "「詳しいアドバイスを聞く」ボタンを押してください。"
+    )
 
     return render_template("dashboard.html",
                            sales=sales_data,
@@ -256,13 +260,16 @@ def api_dashboard_data():
 
     chart_labels = [name for name, qty in ranked_sales]
     chart_values = [qty for name, qty in ranked_sales]
-    ai_advice = _generate_ai_advice(ranked_sales)
 
     return jsonify({
         "ranked_sales": ranked_sales,
         "chart_labels": chart_labels,
         "chart_values": chart_values,
-        "ai_advice": ai_advice,
+        "ai_advice": (
+            "売上ランキングとグラフを更新しました。"
+            "詳しい改善案を確認する場合は、"
+            "「詳しいアドバイスを聞く」ボタンを押してください。"
+        ),
         "period_text": f"{target_month}月度" if target_month else "全期間"
     })
 
