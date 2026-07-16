@@ -155,7 +155,7 @@ def index():
             f"Successfully updated product master with "
             f"{len(products_data)} submitted products for {year}-{month}."
         )
-        
+
         return render_template("success.html", year=year, month=month)
 
 
@@ -176,10 +176,10 @@ def index():
     ).all()
 
     registered_months = (
-    db.session.query(Product.month)
-    .filter_by(year=year)
-    .distinct()
-    .all()
+        db.session.query(Product.month)
+        .filter_by(year=year)
+        .distinct()
+        .all()
     )
 
     registered_months = [m[0] for m in registered_months]

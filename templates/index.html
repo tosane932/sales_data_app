@@ -300,6 +300,9 @@ translateY(0); }
 
                 {% for p in products %}
                 <div class="menu-row">
+
+                    <input type="hidden" name="product_id" value="{{ p.id }}">
+
                     <input
                         type="text"
                         name="prod_name"
