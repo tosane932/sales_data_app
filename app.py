@@ -57,28 +57,43 @@ def _generate_ai_advice(ranked_sales):
         return response.text
 
     except Exception as e:
-        # 💡 例外オブジェクト(e)をそのまま logger.error に渡すことで、詳細なスタックトレース（エラーの発生場所）も自動記録できる
         error_text = str(e)
 
         if "GenerateRequestsPerDayPerProjectPerModel-FreeTier" in error_text:
-            logger.warning(f"Gemini API daily free-tier quota reached: {e}")
+            logger.warning(
+                f"Gemini API daily free-tier quota reached: {e}"
+            )
             return (
                 "☕【本日のAI分析回数が上限に達しました】\n"
                 "売上データの保存と集計は正常です。"
                 "時間を置いてから、あらためてAI分析をお試しください。"
             )
-        
+
         if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+            logger.warning(
+                f"Gemini API rate limit hit (429): {e}"
+            )
+            return (
+                "☕【AIが少し休憩中です】\n"
+                "短時間に多くの分析を行ったため、"
+                "AIの利用制限がかかりました。"
+                "少し時間を置いてから、もう一度お試しください。"
+            )
 
         if "503" in error_text or "UNAVAILABLE" in error_text:
-            logger.warning(f"Gemini API temporarily unavailable (503): {e}")
+            logger.warning(
+                f"Gemini API temporarily unavailable (503): {e}"
+            )
             return (
                 "🥐【AIアシスタントが混み合っています】\n"
                 "売上データは正常に保存・集計されています。"
-                "少し時間を置いてから、もう一度「データを抽出」を押してください。"
+                "少し時間を置いてから、もう一度お試しください。"
             )
 
-        logger.error("Unexpected error during AI advice generation", exc_info=True)
+        logger.error(
+            "Unexpected error during AI advice generation",
+            exc_info=True
+        )
         return (
             "🚨 AIアドバイスの生成中に一時的なエラーが発生しました。"
             "時間を置いてから、もう一度お試しください。"
