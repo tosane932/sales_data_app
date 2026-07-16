@@ -22,6 +22,23 @@
 
 [![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)
 
+📝 更新履歴
+
+v2.1.0
+・スマホ対応（レスポンシブデザイン）
+・UI改善
+
+v2.0.0
+・Docker対応
+・PostgreSQL対応
+・Renderデプロイ
+・GitHub Actions(CI)
+
+v1.5.0
+・Gemini API追加
+
+v1.0.0
+・初回リリース
 
 ### 現場の「困った」を、Pythonで「最適解」へ。
 ベーカリーの売上管理をデータベースで一元管理し、
