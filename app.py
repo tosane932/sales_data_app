@@ -95,15 +95,66 @@ def index():
 
         # 💡 データ上書き（削除＆再登録）の動きをログに残す
         logger.info(f"Updating products for {year}-{month}. Clear existing data.")
-        existing = Product.query.filter_by(year=year, month=month).all()
-        for p in existing:
-            db.session.delete(p)
-        db.session.commit()
+
+        existing_products = Product.query.filter_by(
+            year=year,
+            month=month
+        ).all()
+
+        existing_dict = {p.name: p for p in existing_products}
 
         for prod in products_data:
-            product = Product(year=year, month=month, name=prod["name"], price=prod["price"])
-            db.session.add(product)
+
+            if prod["name"] in existing_dict:
+
+                # 既存商品の価格更新
+                existing_dict[prod["name"]].price = prod["price"]
+
+            else:
+
+                # 新商品だけ追加
+                db.session.add(
+                    Product(
+                        year=year,
+                        month=month,
+                        name=prod["name"],
+                        price=prod["price"]
+                    )
+                )
+        
+        submitted_names = {prod["name"] for prod in products_data}
+
+        for product in existing_products:
+
+            if product.name not in submitted_names:
+
+                sale = DailySales.query.filter_by(
+                    product_id=product.id
+                ).first()
+
+                registered_months = (
+                    db.session.query(Product.month)
+                    .filter_by(year=year)
+                    .distinct()
+                    .all()
+                )
+
+                registered_months = [m[0] for m in registered_months]
+
+                if sale:
+                    return render_template(
+                        "index.html",
+                        error=f"『{product.name}』は売上履歴があるため削除できません。",
+                        products=existing_products,
+                        selected_year=year,
+                        selected_month=month
+                        registered_months=registered_months
+                    )
+
+                db.session.delete(product)
+
         db.session.commit()
+
         logger.info(f"Successfully registered {len(products_data)} products for {year}-{month}.")
 
         return render_template("success.html", year=year, month=month)
