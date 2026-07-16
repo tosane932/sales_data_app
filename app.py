@@ -133,18 +133,22 @@ def index():
             month=month
         ).all()
 
-        existing_dict = {p.name: p for p in existing_products}
+        existing_dict = {
+            product.id: product
+            for product in existing_products
+        }
 
         for prod in products_data:
+            product_id = prod["id"]
 
-            if prod["name"] in existing_dict:
-
-                # 既存商品の価格更新
-                existing_dict[prod["name"]].price = prod["price"]
+            if product_id is not None and product_id in existing_dict:
+                # 既存商品の商品名と価格を更新
+                existing_product = existing_dict[product_id]
+                existing_product.name = prod["name"]
+                existing_product.price = prod["price"]
 
             else:
-
-                # 新商品だけ追加
+                # IDがない商品は新規追加
                 db.session.add(
                     Product(
                         year=year,
@@ -153,7 +157,6 @@ def index():
                         price=prod["price"]
                     )
                 )
-        
 
         db.session.commit()
 
