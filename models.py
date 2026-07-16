@@ -12,7 +12,13 @@ class Product(db.Model):
     month = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Integer, nullable=False)
-
+    
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+        server_default=db.true()
+    )
     # 1つの商品は複数の日別実績(daily_sales)を持つ
     daily_sales = db.relationship("DailySales", backref="product", lazy=True)
 

@@ -146,6 +146,7 @@ def index():
                 existing_product = existing_dict[product_id]
                 existing_product.name = prod["name"]
                 existing_product.price = prod["price"]
+                existing_product.is_active = True
 
             else:
                 # IDがない商品は新規追加
@@ -157,6 +158,16 @@ def index():
                         price=prod["price"]
                     )
                 )
+
+        submitted_ids = {
+            prod["id"]
+            for prod in products_data
+            if prod["id"] is not None
+        }
+
+        for product in existing_products:
+            if product.id not in submitted_ids:
+                product.is_active = False
 
         db.session.commit()
 
@@ -181,7 +192,8 @@ def index():
 
     products = Product.query.filter_by(
         year=year,
-        month=month
+        month=month,
+        is_active=True
     ).all()
 
     registered_months = (
@@ -339,7 +351,12 @@ def api_greeting():
 
 def _get_current_products():
     today = datetime.date.today()
-    return Product.query.filter_by(year=today.year, month=today.month).all()
+
+    return Product.query.filter_by(
+        year=today.year,
+        month=today.month,
+        is_active=True
+    ).all()
 
 
 def _get_sales_from_db(target_year=None, target_month=None):
