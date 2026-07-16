@@ -26,15 +26,7 @@ db.init_app(app)
 
 migrate = Migrate(app, db)
 
-# 💡 3. データベースのマイグレーションを自動で最新状態にする処理
-from flask_migrate import stamp as _stamp
 
-with app.app_context():
-    try:
-        _stamp()  # コードの中で「flask db stamp head」を動かす処理
-        logger.info("Alembic database stamped to head successfully!")
-    except Exception as e:
-        logger.warning(f"Database stamp skipped or failed: {e}")
 
 if not os.path.exists(config.PAST_FOLDER):
     os.makedirs(config.PAST_FOLDER)
@@ -66,12 +58,29 @@ def _generate_ai_advice(ranked_sales):
 
     except Exception as e:
         # 💡 例外オブジェクト(e)をそのまま logger.error に渡すことで、詳細なスタックトレース（エラーの発生場所）も自動記録できる
-        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-            logger.warning(f"Gemini API rate limit hit (429): {e}")  # 💡 429は予測可能な範囲なのでWARNING
-            return "☕【AIが少し休憩中です】\n短時間にたくさんデータを抽出したため、AIの速度制限がかかっております。お手数ですが、10秒〜20秒ほどあけて、もう一度「データを抽出」ボタンを押してみてください。"
-        
-        logger.error("Unexpected error during AI advice generation", exc_info=True)  # 💡 想定外のエラーは詳細ログを残す
-        return f"AIアドバイスを生成中に一時的なエラーが発生しました。（デバッグ用: {e}）"
+        error_text = str(e)
+
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+            logger.warning(f"Gemini API rate limit hit (429): {e}")
+            return (
+                "☕【AIが少し休憩中です】\n"
+                "短時間に多くの分析を行ったため、AIの利用制限がかかりました。"
+                "10〜20秒ほど待ってから、もう一度お試しください。"
+            )
+
+        if "503" in error_text or "UNAVAILABLE" in error_text:
+            logger.warning(f"Gemini API temporarily unavailable (503): {e}")
+            return (
+                "🥐【AIアシスタントが混み合っています】\n"
+                "売上データは正常に保存・集計されています。"
+                "少し時間を置いてから、もう一度「データを抽出」を押してください。"
+            )
+
+        logger.error("Unexpected error during AI advice generation", exc_info=True)
+        return (
+            "🚨 AIアドバイスの生成中に一時的なエラーが発生しました。"
+            "時間を置いてから、もう一度お試しください。"
+        )
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -91,11 +100,28 @@ def index():
                 })
 
         if not products_data:
-            return render_template("index.html", error="商品を1つ以上入力してください。")
+            registered_months = [
+                row[0]
+                for row in (
+                    db.session.query(Product.month)
+                    .filter_by(year=year)
+                    .distinct()
+                    .all()
+                )
+            ]
+
+            return render_template(
+                "index.html",
+                error="商品を1つ以上入力してください。",
+                products=[],
+                selected_year=year,
+                selected_month=month,
+                registered_months=registered_months
+            )
 
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
-        
+
         existing_products = Product.query.filter_by(
             year=year,
             month=month
