@@ -90,11 +90,17 @@ def index():
         month = int(request.form.get("month"))
         product_names = request.form.getlist("prod_name")
         product_prices = request.form.getlist("prod_price")
-
+        product_ids = request.form.getlist("product_id")
         products_data = []
-        for name, price in zip(product_names, product_prices):
+
+        for product_id, name, price in zip(
+            product_ids,
+            product_names,
+            product_prices
+        ):
             if name.strip():
                 products_data.append({
+                    "id": int(product_id) if product_id.isdigit() else None,
                     "name": name.strip(),
                     "price": int(price) if price.isdigit() else 0
                 })

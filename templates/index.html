@@ -332,26 +332,31 @@ translateY(0); }
             {% else %}
 
                 <div class="menu-row">
+                    <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="食パン" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="200" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
+                    <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="メロンパン" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="140" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
+                    <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="クロワッサン" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="120" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
+                    <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="コロネ" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="150" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
+                    <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="ホットドッグ" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="220" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
@@ -388,6 +393,7 @@ translateY(0); }
         const div = document.createElement('div');
         div.className = 'menu-row';
         div.innerHTML = `
+            <input type="hidden" name="product_id" value="">
             <input type="text" name="prod_name" class="input-name" placeholder="新商品名" required>
             <input type="number" name="prod_price" class="input-price" placeholder="単価" min="0" required>
             <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
