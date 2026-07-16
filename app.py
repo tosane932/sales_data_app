@@ -108,7 +108,29 @@ def index():
 
         return render_template("success.html", year=year, month=month)
 
-    return render_template("index.html")
+
+    year = request.args.get("year", type=int)
+    month = request.args.get("month", type=int)
+
+    today = datetime.date.today()
+
+    if year is None:
+        year = today.year
+
+    if month is None:
+        month = today.month
+
+    products = Product.query.filter_by(
+        year=year,
+        month=month
+    ).all()
+
+    return render_template(
+        "index.html",
+        products=products,
+        selected_year=year,
+        selected_month=month
+    )
 
 
 @app.route("/dashboard")
