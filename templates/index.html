@@ -263,6 +263,39 @@ translateY(0); }
         <div class="section">
             <div class="section-title">② 今月のメニューと価格（初日単価）を設定</div>
             <div class="menu-list" id="menu-container">
+            
+            {% if products %}
+
+                {% for p in products %}
+                <div class="menu-row">
+                    <input
+                        type="text"
+                        name="prod_name"
+                        class="input-name"
+                        value="{{ p.name }}"
+                        placeholder="商品名"
+                        required>
+
+                    <input
+                        type="number"
+                        name="prod_price"
+                        class="input-price"
+                        value="{{ p.price }}"
+                        placeholder="単価"
+                        min="0"
+                        required>
+
+                    <button
+                        type="button"
+                        class="btn btn-del"
+                        onclick="removeRow(this)">
+                        ✖
+                    </button>
+                </div>
+                {% endfor %}
+
+            {% else %}
+
                 <div class="menu-row">
                     <input type="text" name="prod_name" class="input-name" value="食パン" placeholder="商品名" required>
                     <input type="number" name="prod_price" class="input-price" value="200" placeholder="単価" min="0" required>
@@ -288,6 +321,7 @@ translateY(0); }
                     <input type="number" name="prod_price" class="input-price" value="220" placeholder="単価" min="0" required>
                     <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
                 </div>
+            {% endif %}
             </div>
             <button type="button" class="btn btn-add" onclick="addRow()">＋ 新メニューを追加する</button>
         </div>
