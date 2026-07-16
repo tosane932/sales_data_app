@@ -95,6 +95,7 @@ def index():
 
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
+        
         existing_products = Product.query.filter_by(
             year=year,
             month=month
