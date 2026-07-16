@@ -151,8 +151,11 @@ def index():
 
         db.session.commit()
 
-        logger.info(f"Successfully registered {len(products_data)} products for {year}-{month}.")
-
+        logger.info(
+            f"Successfully updated product master with "
+            f"{len(products_data)} submitted products for {year}-{month}."
+        )
+        
         return render_template("success.html", year=year, month=month)
 
 
