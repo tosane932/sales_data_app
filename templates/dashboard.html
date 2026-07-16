@@ -128,6 +128,27 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             border: 1px solid #eee;
         }
+        .btn-ai-advice {
+            width: 100%;
+            margin-top: 18px;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background-color: #c9a063;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+.btn-ai-advice:hover {
+    background-color: #b3884b;
+}
+
+.btn-ai-advice:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
     </style>
 </head>
 <body>
@@ -187,6 +208,13 @@
         <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px;">
             {{ ai_advice | replace('\n', '<br>') | safe }}
         </p>
+        <button
+            type="button"
+            class="btn-ai-advice"
+            id="aiAdviceButton"
+            onclick="loadAiAdvice()">
+            🤖 詳しいアドバイスを聞く
+        </button>
     </div>
 
     <a href="/" class="btn-back">🍞 売上入力シート作成画面に戻る</a>
@@ -276,6 +304,42 @@
             .catch(error => {
                 console.error("データ取得エラー:", error);
                 aiText.innerHTML = "🚨 データの取得に失敗しました。お手数ですが時間を置いて再度お試しいただくか、システムの稼働状態を確認してください。";
+            });
+    }
+    function loadAiAdvice() {
+        const year = document.getElementById('selectYear').value;
+        const month = document.getElementById('selectMonth').value;
+        const aiText = document.getElementById('aiAdviceText');
+        const aiButton = document.getElementById('aiAdviceButton');
+
+        aiText.innerHTML =
+            '🌀 AIアシスタントが詳しい改善案を考えています...';
+
+        aiButton.disabled = true;
+        aiButton.textContent = '分析中...';
+
+        fetch(`/api/ai-advice?year=${year}&month=${month}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('AI advice API failed');
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                aiText.innerHTML =
+                    data.ai_advice.replace(/\n/g, '<br>');
+            })
+            .catch(error => {
+                console.error('AIアドバイス取得エラー:', error);
+
+                aiText.innerHTML =
+                    '🚨 AIアドバイスの取得に失敗しました。'
+                    + '時間を置いてから、もう一度お試しください。';
+            })
+            .finally(() => {
+                aiButton.disabled = false;
+                aiButton.textContent = '🤖 もう一度詳しいアドバイスを聞く';
             });
     }
 </script>
