@@ -60,13 +60,15 @@ def _generate_ai_advice(ranked_sales):
         # 💡 例外オブジェクト(e)をそのまま logger.error に渡すことで、詳細なスタックトレース（エラーの発生場所）も自動記録できる
         error_text = str(e)
 
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
-            logger.warning(f"Gemini API rate limit hit (429): {e}")
+        if "GenerateRequestsPerDayPerProjectPerModel-FreeTier" in error_text:
+            logger.warning(f"Gemini API daily free-tier quota reached: {e}")
             return (
-                "☕【AIが少し休憩中です】\n"
-                "短時間に多くの分析を行ったため、AIの利用制限がかかりました。"
-                "10〜20秒ほど待ってから、もう一度お試しください。"
+                "☕【本日のAI分析回数が上限に達しました】\n"
+                "売上データの保存と集計は正常です。"
+                "時間を置いてから、あらためてAI分析をお試しください。"
             )
+        
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
 
         if "503" in error_text or "UNAVAILABLE" in error_text:
             logger.warning(f"Gemini API temporarily unavailable (503): {e}")
