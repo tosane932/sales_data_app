@@ -239,23 +239,67 @@ translateY(0); }
         <div class="section">
             <div class="section-title">① 作成する年月を選択してください</div>
             <div class="select-group">
-                <select name="year">
-                    <option value="2026" selected>2026年</option>
-                    <option value="2027">2027年</option>
+                <select name="year" id="year-select">
+                    <option value="2026"
+                        {% if selected_year == 2026 %}selected{% endif %}>
+                        2026年
+                    </option>
+
+                    <option value="2027"
+                        {% if selected_year == 2027 %}selected{% endif %}>
+                        2027年
+                    </option>
+                    
                 </select>
-                <select name="month">
-                    <option value="1">1月</option>
-                    <option value="2">2月</option>
-                    <option value="3">3月</option>
-                    <option value="4">4月</option>
-                    <option value="5">5月</option>
-                    <option value="6">6月</option>
-                    <option value="7">7月</option>
-                    <option value="8" selected>8月</option>
-                    <option value="9">9月</option>
-                    <option value="10">10月</option>
-                    <option value="11">11月</option>
-                    <option value="12">12月</option>
+                <select name="month" id="month-select">
+                    <option value="1"
+                        {% if selected_month == 1 %}selected{% endif %}>
+                        1月
+                    </option>
+                    <option value="2"
+                        {% if selected_month == 2 %}selected{% endif %}>
+                        2月
+                    </option>
+                    <option value="3"
+                        {% if selected_month == 3 %}selected{% endif %}>
+                        3月
+                    </option>
+                    <option value="4"
+                        {% if selected_month == 4 %}selected{% endif %}>
+                        4月
+                    </option>
+                    <option value="5"
+                        {% if selected_month == 5 %}selected{% endif %}>
+                        5月
+                    </option>
+                    <option value="6"
+                        {% if selected_month == 6 %}selected{% endif %}>
+                        6月
+                    </option>
+                    <option value="7"
+                        {% if selected_month == 7 %}selected{% endif %}>
+                        7月
+                    </option>
+                    <option value="8"
+                        {% if selected_month == 8 %}selected{% endif %}>
+                        8月
+                    </option>
+                    <option value="9"
+                        {% if selected_month == 9 %}selected{% endif %}>
+                        9月
+                    </option>
+                    <option value="10"
+                        {% if selected_month == 10 %}selected{% endif %}>
+                        10月
+                    </option>
+                    <option value="11"
+                        {% if selected_month == 11 %}selected{% endif %}>
+                        11月
+                    </option>
+                    <option value="12"
+                        {% if selected_month == 12 %}selected{% endif %}>
+                        12月
+                    </option>
                 </select>
             </div>
         </div>
@@ -364,6 +408,21 @@ translateY(0); }
         const row = button.parentElement;
         row.parentElement.removeChild(row);
     }
+
+    const yearSelect = document.getElementById("year-select");
+    const monthSelect = document.getElementById("month-select");
+
+    function loadMaster() {
+
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+
+        window.location.href =
+            `/?year=${year}&month=${month}`;
+    }
+
+    yearSelect.addEventListener("change", loadMaster);
+    monthSelect.addEventListener("change", loadMaster);
 
 </script>
 </body>
