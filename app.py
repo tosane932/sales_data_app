@@ -125,13 +125,22 @@ def index():
         month=month
     ).all()
 
+    registered_months = (
+    db.session.query(Product.month)
+    .filter_by(year=year)
+    .distinct()
+    .all()
+    )
+
+    registered_months = [m[0] for m in registered_months]
+
     return render_template(
         "index.html",
         products=products,
         selected_year=year,
-        selected_month=month
+        selected_month=month,
+        registered_months=registered_months
     )
-
 
 @app.route("/dashboard")
 def dashboard():
