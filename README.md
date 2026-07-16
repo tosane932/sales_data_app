@@ -22,7 +22,7 @@
 
 [![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screen05.jpg)
 
-📝 更新履歴
+### 📝 更新履歴
 
 v2.1.0
 ・スマホ対応（レスポンシブデザイン）
