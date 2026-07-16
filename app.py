@@ -273,6 +273,35 @@ def api_dashboard_data():
         "period_text": f"{target_month}月度" if target_month else "全期間"
     })
 
+@app.route("/api/ai-advice")
+def api_ai_advice():
+    year_param = request.args.get("year")
+    month_param = request.args.get("month")
+
+    target_year = int(year_param) if year_param else None
+    target_month = int(month_param) if month_param else None
+
+    logger.info(
+        f"AI advice requested for period: "
+        f"year={target_year}, month={target_month}"
+    )
+
+    sales_data = _get_sales_from_db(
+        target_year,
+        target_month
+    )
+
+    ranked_sales = sorted(
+        sales_data.items(),
+        key=lambda item: item[1],
+        reverse=True
+    )
+
+    ai_advice = _generate_ai_advice(ranked_sales)
+
+    return jsonify({
+        "ai_advice": ai_advice
+    })
 
 @app.route("/input", methods=["GET", "POST"])
 def input_sales():

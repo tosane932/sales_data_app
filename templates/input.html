@@ -138,6 +138,27 @@
             border-radius: 12px;
             border: 1px dashed #d3c4b4;
         }
+        .btn-greeting {
+            width: 100%;
+            margin-top: 14px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #f7eed6;
+            color: #8b5a1a;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+.btn-greeting:hover {
+    background-color: #ebdcb9;
+}
+
+.btn-greeting:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
     </style>
 </head>
 <body>
@@ -150,9 +171,19 @@
 
     <div class="ai-greeting">
         <div class="ai-greeting-label">🤖 AIアシスタントより</div>
+
         <div class="ai-greeting-text" id="greetingText">
-            <span class="ai-loading">🌀 一言考え中...</span>
+            今日も売上入力お疲れさまです。
+            季節に合わせた一言を聞きたい場合は、下のボタンを押してください。
         </div>
+
+        <button
+            type="button"
+            class="btn-greeting"
+            id="greetingButton"
+            onclick="loadGreeting()">
+            💬 今日のひとことを聞く
+        </button>
     </div>
 
     {% if success %}
@@ -189,16 +220,36 @@
 </div>
 
 <script>
-    window.addEventListener('load', function() {
+    function loadGreeting() {
+        const greetingText = document.getElementById('greetingText');
+        const greetingButton = document.getElementById('greetingButton');
+
+        greetingText.innerHTML = '🌀 今日のひとことを考え中です...';
+        greetingButton.disabled = true;
+        greetingButton.textContent = '考え中...';
+
         fetch('/api/greeting')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('greetingText').innerHTML = data.message.replace(/\n/g, '<br>');
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('API response was not successful');
+                }
+
+                return response.json();
             })
-            .catch(() => {
-                document.getElementById('greetingText').innerHTML = '本日もお疲れ様です！';
+            .then(data => {
+                greetingText.innerHTML =
+                    data.message.replace(/\n/g, '<br>');
+            })
+            .catch(error => {
+                console.error('挨拶の取得エラー:', error);
+                greetingText.innerHTML =
+                    '今日はAIアシスタントが休憩中です。本日もお疲れさまです！';
+            })
+            .finally(() => {
+                greetingButton.disabled = false;
+                greetingButton.textContent = '💬 もう一度ひとことを聞く';
             });
-    });
+    }
 </script>
 </body>
 </html>
