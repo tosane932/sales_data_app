@@ -93,9 +93,8 @@ def index():
         if not products_data:
             return render_template("index.html", error="商品を1つ以上入力してください。")
 
-        # 💡 データ上書き（削除＆再登録）の動きをログに残す
-        logger.info(f"Updating products for {year}-{month}. Clear existing data.")
-
+        # 💡既存商品の価格更新と新商品の追加をログに残す
+        logger.info(f"Updating product master for {year}-{month}.")
         existing_products = Product.query.filter_by(
             year=year,
             month=month
@@ -122,36 +121,6 @@ def index():
                     )
                 )
         
-        submitted_names = {prod["name"] for prod in products_data}
-
-        for product in existing_products:
-
-            if product.name not in submitted_names:
-
-                sale = DailySales.query.filter_by(
-                    product_id=product.id
-                ).first()
-
-                registered_months = (
-                    db.session.query(Product.month)
-                    .filter_by(year=year)
-                    .distinct()
-                    .all()
-                )
-
-                registered_months = [m[0] for m in registered_months]
-
-                if sale:
-                    return render_template(
-                        "index.html",
-                        error=f"『{product.name}』は売上履歴があるため削除できません。",
-                        products=existing_products,
-                        selected_year=year,
-                        selected_month=month
-                        registered_months=registered_months
-                    )
-
-                db.session.delete(product)
 
         db.session.commit()
 
