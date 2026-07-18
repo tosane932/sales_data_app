@@ -320,13 +320,17 @@ def api_ai_advice():
 
 @app.route("/input", methods=["GET", "POST"])
 def input_sales():
+    today = datetime.date.today()
+
     if request.method == "POST":
         date_str = request.form.get("date")
         sale_date = datetime.date.fromisoformat(date_str)
         product_ids = request.form.getlist("product_id")
         quantities = request.form.getlist("quantity")
 
-        logger.info(f"Sales data submission received for date: {sale_date}")
+        logger.info(
+            f"Sales data submission received for date: {sale_date}"
+        )
 
         for product_id, quantity in zip(product_ids, quantities):
             if quantity.strip() == "":
@@ -335,10 +339,17 @@ def input_sales():
             try:
                 qty_int = int(float(quantity))
             except ValueError:
-                logger.warning(f"Invalid quantity format skipped: product_id={product_id}, quantity={quantity}")
+                logger.warning(
+                    "Invalid quantity format skipped: "
+                    f"product_id={product_id}, quantity={quantity}"
+                )
                 continue
+
             if qty_int < 0:
-                logger.warning(f"Negative quantity skipped: product_id={product_id}, quantity={qty_int}")
+                logger.warning(
+                    "Negative quantity skipped: "
+                    f"product_id={product_id}, quantity={qty_int}"
+                )
                 continue
 
             existing = DailySales.query.filter_by(
@@ -357,11 +368,25 @@ def input_sales():
                 db.session.add(sale)
 
         db.session.commit()
-        logger.info(f"Sales data successfully committed for date: {sale_date}")
-        return render_template("input.html", success=True, products=_get_current_products(), today=datetime.date.today())
 
-    return render_template("input.html", products=_get_current_products(), today=datetime.date.today())
+        logger.info(
+            f"Sales data successfully committed for date: {sale_date}"
+        )
 
+        return render_template(
+            "input.html",
+            success=True,
+            products=_get_current_products(),
+            today=today,
+            today_sales=_get_today_sales_map(today)
+        )
+
+    return render_template(
+        "input.html",
+        products=_get_current_products(),
+        today=today,
+        today_sales=_get_today_sales_map(today)
+    )
 
 @app.route("/api/greeting")
 def api_greeting():
@@ -411,6 +436,14 @@ def _get_current_products():
         is_active=True
     ).all()
 
+def _get_today_sales_map(target_date):
+    """指定日の商品別売上個数を辞書で返す。"""
+    sales = DailySales.query.filter_by(date=target_date).all()
+
+    return {
+        sale.product_id: sale.quantity
+        for sale in sales
+    }
 
 def _get_sales_from_db(target_year=None, target_month=None):
     query = db.session.query(

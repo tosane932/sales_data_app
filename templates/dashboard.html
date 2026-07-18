@@ -16,7 +16,7 @@
             <strong>表示期間：</strong>
             <select name="year" id="selectYear">
                 {% set current_year = now.year %}
-                {% for y in range(current_year + 1, current_year - 3, -1) %}
+                {% for y in range(current_year, current_year - 4, -1) %}
                 <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}年</option>
                 {% endfor %}
             </select>
@@ -72,7 +72,21 @@
         </button>
     </div>
 
-    <a href="/" class="btn-back">🍞 売上入力シート作成画面に戻る</a>
+    <div class="dashboard-actions">
+        <a
+            href="{{ url_for('input_sales') }}"
+            class="dashboard-action dashboard-input-link"
+        >
+            📝 日次売上を入力する
+        </a>
+
+        <a
+            href="{{ url_for('index') }}"
+            class="dashboard-action dashboard-home-link"
+        >
+            🍞 トップページに戻る
+        </a>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -37,11 +37,6 @@
                         {% if selected_year == 2026 %}selected{% endif %}>
                         2026年
                     </option>
-
-                    <option value="2027"
-                        {% if selected_year == 2027 %}selected{% endif %}>
-                        2027年
-                    </option>
                     
                 </select>
                 <select name="month" id="month-select">
@@ -159,24 +154,26 @@
             <button type="button" class="btn btn-add" onclick="addRow()">＋ 新メニューを追加する</button>
         </div>
 
-        <button type="submit" class="btn btn-submit">🚀 この内容で今月のメニューを登録する</button>
+        <button type="submit" class="btn btn-submit btn-menu-register">🚀 この内容で今月のメニューを登録する</button>
     </form>
 </div>
 
 <div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-    <a href="/input" class="menu-link" style="font-size: 1.5rem; color: #c9a063; font-weight: bold;">
+    <a
+        href="{{ url_for('input_sales') }}"
+        class="menu-link menu-link-input"
+    >
         📝 日次売上を入力する
     </a>
 </div>
 
 <div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-    <a href="/dashboard" class="menu-link" style="font-size: 1.5rem; color: #e74c3c; font-weight: bold;">
-        📊お店の健康診断書（売上分析・ランキング）を見る
+    <a
+    href="{{ url_for('dashboard') }}"
+    class="menu-link menu-link-dashboard"
+    >
+        📊 お店の健康診断書（売上分析・ランキング）を見る
     </a>
-    <p style="font-size:0.9rem; color:#777; text-align:center; margin-top:8px;">
-        🤖 AIが店舗の健康診断を作成します。
-        分析には5〜10秒ほどかかる場合があります。
-    </p>
 </div>
 
 <script>

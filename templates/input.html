@@ -26,42 +26,90 @@
             type="button"
             class="btn-greeting"
             id="greetingButton"
-            onclick="loadGreeting()">
+            onclick="loadGreeting()"
+        >
             💬 今日のひとことを聞く
         </button>
     </div>
 
     {% if success %}
-    <div class="success-msg">✅ 保存しました！</div>
+        <div class="success-msg">
+            ✅ 本日の売上個数を更新しました！
+        </div>
     {% endif %}
 
     {% if products %}
-    <form method="POST" onkeydown="return event.key !== 'Enter';">
-        <input type="hidden" name="date" value="{{ today.isoformat() }}">
+        <form method="POST" onkeydown="return event.key !== 'Enter';">
+            <input
+                type="hidden"
+                name="date"
+                value="{{ today.isoformat() }}"
+            >
 
-        <div class="form-group">
-            <label>各商品の販売数量</label>
-            {% for product in products %}
-            <div class="product-row">
-                <input type="hidden" name="product_id" value="{{ product.id }}">
-                <span class="product-name">{{ product.name }}</span>
-                <span class="product-price">¥{{ product.price }}</span>
-                <input type="number" name="quantity" class="qty-input"
-                       min="0" placeholder="0">
+            <div class="form-group">
+                <label>各商品の販売数量</label>
+
+                {% for product in products %}
+                    <div class="product-row">
+                        <input
+                            type="hidden"
+                            name="product_id"
+                            value="{{ product.id }}"
+                        >
+
+                        <div class="product-info">
+                            <span class="product-name">
+                                {{ product.name }}
+                            </span>
+
+                            <span class="registered-quantity">
+                                🟢 本日の登録済み：
+                                {{ today_sales.get(product.id, 0) }}個
+                            </span>
+                        </div>
+
+                        <span class="product-price">
+                            ¥{{ product.price }}
+                        </span>
+
+                        <input
+                            type="number"
+                            name="quantity"
+                            class="qty-input"
+                            min="0"
+                            value="{{ today_sales.get(product.id, 0) }}"
+                            required
+                        >
+                    </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
 
-        <button type="submit" class="btn-submit">💾 保存する</button>
-    </form>
+            <button type="submit" class="btn-submit">
+                💾 本日の売上個数を更新する
+            </button>
+
+            <a
+                href="{{ url_for('dashboard') }}"
+                class="btn-submit btn-dashboard-link"
+            >
+                📊 お店の健康診断書（売上分析・ランキング）を見る
+            </a>
+        </form>
     {% else %}
-    <div class="empty-msg">
-        今月の商品がまだ登録されていません。<br>
-        <small>先にトップページから商品を登録してください。</small>
-    </div>
+        <div class="empty-msg">
+            今月の商品がまだ登録されていません。<br>
+            <small>
+                先にトップページから商品を登録してください。
+            </small>
+        </div>
     {% endif %}
 
-    <a href="/" class="btn-back">🍞 トップに戻る</a>
+    <a
+        href="{{ url_for('index') }}"
+        class="input-home-link"
+    >
+        🍞 トップページに戻る
+    </a>
 </div>
 
 <script>

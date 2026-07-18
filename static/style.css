@@ -1,5 +1,5 @@
 /* ========================================
-   🎨 ページ全体 共通スタイル index.html
+   🎨 ページ全体 共通スタイル    index.html
 ======================================== */
 
 body {
@@ -19,7 +19,7 @@ body {
 
 
 /* ========================================
-   📦 メインコンテナ
+   📦 メインコンテナ    index.html
 ======================================== */
 
 .container {
@@ -36,7 +36,7 @@ body {
 
 
 /* ========================================
-   📝 見出し
+   📝 見出し    index.html
 ======================================== */
 
 h1 {
@@ -71,7 +71,7 @@ h1 {
 
 
 /* ========================================
-   ✏️ 入力欄・セレクト
+   ✏️ 入力欄・セレクト    index.html
 ======================================== */
 
 select,
@@ -110,7 +110,7 @@ select {
 
 
 /* ========================================
-   🛒 メニュー入力行
+   🛒 メニュー入力行    index.html
 ======================================== */
 
 .menu-list {
@@ -137,7 +137,7 @@ select {
 
 
 /* ========================================
-   🔘 共通ボタン
+   🔘 共通ボタン    index.html
 ======================================== */
 
 .btn {
@@ -160,7 +160,7 @@ select {
 
 
 /* ========================================
-   ➕ 追加ボタン
+   ➕ 追加ボタン    index.html
 ======================================== */
 
 .btn-add {
@@ -177,7 +177,7 @@ select {
 
 
 /* ========================================
-   🗑️ 削除ボタン
+   🗑️ 削除ボタン    index.html
 ======================================== */
 
 .btn-del {
@@ -193,7 +193,7 @@ select {
 
 
 /* ========================================
-   📤 送信ボタン
+   📤 共通の送信ボタン    index.html
 ======================================== */
 
 .btn-submit {
@@ -221,9 +221,21 @@ select {
     transform: translateY(1px);
 }
 
+/* ========================================
+   🥬 メニュー登録ボタン
+======================================== */
+
+.btn-menu-register {
+    background-color: #7fa45a;
+    color: #ffffff;
+}
+
+.btn-menu-register:hover {
+    background-color: #688c47;
+}
 
 /* ========================================
-   🔗 メニューリンク
+   🔗 メニューリンク    index.html
 ======================================== */
 
 .menu-link {
@@ -245,9 +257,30 @@ select {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+.menu-link-input {
+    background-color: #c9a063;
+    color: #ffffff;
+    border-color: #c9a063;
+}
+
+.menu-link-input:hover {
+    background-color: #b3884b;
+    color: #ffffff;
+}
+
+.menu-link-dashboard {
+    background-color: #e85d5d;
+    color: #ffffff;
+    border-color: #e85d5d;
+}
+
+.menu-link-dashboard:hover {
+    background-color: #cf4646;
+    color: #ffffff;
+}
 
 /* ========================================
-   ✨ フェードイン
+   ✨ フェードイン    index.html
 ======================================== */
 
 @keyframes fadeIn {
@@ -264,7 +297,7 @@ select {
 
 
 /* ========================================
-   📱 スマートフォン・タブレット対応
+   📱 スマートフォン・タブレット対応    index.html
 ======================================== */
 
 @media (max-width: 768px) {
@@ -331,7 +364,7 @@ select {
 
 
 /* ========================================
-   📊 ダッシュボード dashboard.html
+   📊 ダッシュボード    dashboard.html
 ======================================== */
 
 .dashboard-page .btn-submit {
@@ -339,12 +372,25 @@ select {
     margin-top: 0;
     padding: 10px 15px;
 
+    background-color: #8b5a1a;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+
     box-shadow: none;
+    cursor: pointer;
 }
 
 .dashboard-page .btn-submit:hover {
+    background-color: #6d4411;
     transform: none;
     box-shadow: none;
+}
+
+.dashboard-page .btn-submit:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 90, 26, 0.18);
 }
 
 .dashboard-page .filter-box {
@@ -358,7 +404,7 @@ select {
 
 
 /* ========================================
-   🏆 ランキング
+   🏆 ランキング    dashboard.html
 ======================================== */
 
 .dashboard-page .ranking-item {
@@ -431,7 +477,7 @@ select {
 
 
 /* ========================================
-   📭 データなし表示
+   📭 データなし表示    dashboard.html
 ======================================== */
 
 .dashboard-page .empty-message {
@@ -445,34 +491,60 @@ select {
     text-align: center;
 }
 
-
 /* ========================================
-   ↩️ 戻るボタン
+   🔗 ダッシュボード下部の操作ボタン
 ======================================== */
 
-.dashboard-page .btn-back {
-    display: block;
+.dashboard-page .dashboard-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    margin-top: 30px;
+}
+
+.dashboard-page .dashboard-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     width: 100%;
-    max-width: 650px;
-    margin: 16px auto;
-    padding: 18px;
+    padding: 15px 20px;
 
-    background: #ffffff;
-    color: #c9a063;
-    border: 1px solid #eeeeee;
-    border-radius: 14px;
-
+    border-radius: 10px;
     box-sizing: border-box;
 
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     text-align: center;
     text-decoration: none;
 
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition:
+        background-color 0.2s,
+        transform 0.2s;
 }
 
+.dashboard-page .dashboard-input-link {
+    background-color: #c9a063;
+    color: #ffffff;
+    border: 1px solid #c9a063;
+}
+
+.dashboard-page .dashboard-input-link:hover {
+    background-color: #b3884b;
+    transform: translateY(-1px);
+}
+
+.dashboard-page .dashboard-home-link {
+    background-color: #ffffff;
+    color: #8b5a1a;
+    border: 1px solid #eee2c9;
+}
+
+.dashboard-page .dashboard-home-link:hover {
+    background-color: #f7eed6;
+    transform: translateY(-1px);
+}
 
 /* ========================================
    🤖 AIアドバイスボタン
@@ -483,8 +555,8 @@ select {
     margin-top: 18px;
     padding: 15px;
 
-    background-color: #c9a063;
-    color: #ffffff;
+    background-color: #f7eed6;
+    color: #8b5a1a;
     border: none;
     border-radius: 10px;
 
@@ -498,7 +570,7 @@ select {
 }
 
 .dashboard-page .btn-ai-advice:hover {
-    background-color: #b3884b;
+    background-color: #ebdcb9;
 }
 
 .dashboard-page .btn-ai-advice:disabled {
@@ -508,7 +580,7 @@ select {
 
 
 /* ========================================
-   📱 ダッシュボードのスマホ対応
+   📱 ダッシュボードのスマホ対応    dashboard.html
 ======================================== */
 
 @media (max-width: 768px) {
@@ -545,8 +617,9 @@ select {
 
 
 
+
 /* ========================================
-   📝 売上入力ページ input.html
+   🥐 売上入力ページ     input.html 📝
 ======================================== */
 
 .input-page .container {
@@ -560,7 +633,7 @@ select {
 
 
 /* ========================================
-   📅 日付表示
+   📅 日付表示    input.html
 ======================================== */
 
 .input-page .date-display {
@@ -579,7 +652,7 @@ select {
 
 
 /* ========================================
-   🤖 AIあいさつ
+   🤖 AIあいさつ    input.html
 ======================================== */
 
 .input-page .ai-greeting {
@@ -615,7 +688,7 @@ select {
 
 
 /* ========================================
-   ✅ 登録成功メッセージ
+   ✅ 登録成功メッセージ    input.html
 ======================================== */
 
 .input-page .success-msg {
@@ -632,7 +705,7 @@ select {
 
 
 /* ========================================
-   📋 入力フォーム
+   📋 入力フォーム    input.html
 ======================================== */
 
 .input-page .form-group {
@@ -649,26 +722,45 @@ select {
 
 
 /* ========================================
-   🥐 商品入力行
+   🥐 商品入力行    input.html
 ======================================== */
 
 .input-page .product-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
 
-    margin-bottom: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+
+    border-bottom: 1px solid #f3ecde;
+}
+
+.input-page .product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .input-page .product-name {
-    flex: 1;
     font-size: 15px;
+    font-weight: bold;
+    line-height: 1.5;
+}
+
+.input-page .registered-quantity {
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1.4;
+    color: #4a3c31;
 }
 
 .input-page .product-price {
     color: #8c7e72;
     font-size: 13px;
     white-space: nowrap;
+    padding-top: 2px;
 }
 
 .input-page input[type="number"].qty-input {
@@ -685,9 +777,14 @@ select {
     box-sizing: border-box;
 }
 
+.input-page input[type="number"].qty-input:focus {
+    border-color: #c9a063;
+    box-shadow: 0 0 0 3px rgba(201, 160, 99, 0.15);
+}
+
 
 /* ========================================
-   📤 売上登録ボタン
+   📤 売上更新ボタン    input.html
 ======================================== */
 
 .input-page .btn-submit {
@@ -699,45 +796,96 @@ select {
     color: #ffffff;
     border: none;
     border-radius: 8px;
+    outline: none;
 
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
+
+    box-shadow: none;
+
+    transition:
+        background-color 0.2s,
+        box-shadow 0.2s,
+        transform 0.2s;
 }
 
 .input-page .btn-submit:hover {
     background-color: #b3884b;
+    transform: translateY(-1px);
+
+    box-shadow: 0 5px 15px rgba(201, 160, 99, 0.3);
+}
+
+.input-page .btn-submit:active {
+    transform: translateY(1px);
+}
+
+.input-page .btn-submit:focus {
+    box-shadow: 0 0 0 3px rgba(201, 160, 99, 0.2);
 }
 
 
 /* ========================================
-   ↩️ 戻るリンク
+   🍞 トップページへ戻るボタン
 ======================================== */
 
-.input-page .btn-back {
-    display: block;
+.input-page .input-home-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    width: auto;
-    max-width: none;
-    margin: 20px 0 0;
-    padding: 0;
+    width: 100%;
+    margin-top: 12px;
+    padding: 15px 20px;
 
-    background: transparent;
+    background-color: #ffffff;
     color: #8b5a1a;
-    border: none;
-    border-radius: 0;
+    border: 1px solid #eee2c9;
+    border-radius: 10px;
 
-    font-size: inherit;
+    box-sizing: border-box;
+
+    font-size: 16px;
     font-weight: bold;
     text-align: center;
     text-decoration: none;
 
-    box-shadow: none;
+    transition:
+        background-color 0.2s,
+        transform 0.2s;
 }
 
+.input-page .input-home-link:hover {
+    background-color: #f7eed6;
+    transform: translateY(-1px);
+}
 
 /* ========================================
-   📭 商品未登録表示
+   ダッシュボードへのリンク    input.html
+======================================== */
+
+.input-page .btn-dashboard-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-top: 12px;
+
+    background-color: #e85d5d;
+    color: #ffffff;
+
+    box-sizing: border-box;
+    text-align: center;
+    text-decoration: none;
+}
+
+.input-page .btn-dashboard-link:hover {
+    background-color: #cf4646;
+}
+
+/* ========================================
+   📭 商品未登録表示    input.html
 ======================================== */
 
 .input-page .empty-msg {
@@ -753,7 +901,7 @@ select {
 
 
 /* ========================================
-   💬 AIあいさつ生成ボタン
+   💬 AIあいさつ生成ボタン   input.html
 ======================================== */
 
 .input-page .btn-greeting {
@@ -786,7 +934,7 @@ select {
 
 
 /* ========================================
-   📱 売上入力ページのスマホ対応
+   📱 売上入力ページのスマホ対応   input.html
 ======================================== */
 
 @media (max-width: 768px) {
@@ -795,15 +943,16 @@ select {
         grid-template-columns: 1fr auto;
         gap: 8px 12px;
 
-        padding: 12px;
+        padding: 14px 12px;
+        margin-bottom: 12px;
 
         background: #fffdf8;
         border: 1px solid #eee2c9;
         border-radius: 10px;
     }
 
-    .input-page .product-name {
-        min-width: 0;
+    .input-page .product-info {
+        grid-column: 1;
     }
 
     .input-page .product-price {
@@ -812,12 +961,10 @@ select {
 
     .input-page input[type="number"].qty-input {
         grid-column: 2;
-        grid-row: 1 / 3;
-
+        grid-row: 1 / 4;
         width: 90px;
     }
 }
-
 
 
 
@@ -837,6 +984,7 @@ select {
 
 .success-page h1 {
     display: block;
+
     margin: 0 0 25px;
     padding-bottom: 0;
 
@@ -882,27 +1030,28 @@ select {
     box-sizing: border-box;
 
     font-size: 15px;
+    text-align: center;
     text-decoration: none;
 }
 
 
 /* ========================================
-   🏠 ホームへ戻るボタン
+   🏠 トップページへ戻るボタン
 ======================================== */
 
 .success-page .btn-home {
-    background-color: #f7eed6;
+    background-color: #ffffff;
     color: #8b5a1a;
-    border: 1px solid #ebdcb9;
+    border: 1px solid #eee2c9;
 }
 
 .success-page .btn-home:hover {
-    background-color: #ebdcb9;
+    background-color: #f7eed6;
 }
 
 
 /* ========================================
-   📝 続けて入力するボタン
+   📝 日次売上入力ボタン
 ======================================== */
 
 .success-page .btn-input {
@@ -918,18 +1067,18 @@ select {
 
 
 /* ========================================
-   📊 ダッシュボードへ移動するボタン
+   📊 売上分析・ランキングボタン
 ======================================== */
 
 .success-page .btn-dashboard {
-    background-color: #e74c3c;
+    background-color: #e85d5d;
     color: #ffffff;
-    border: 1px solid #e74c3c;
+    border: 1px solid #e85d5d;
 }
 
 .success-page .btn-dashboard:hover {
-    background-color: #c0392b;
-    border-color: #c0392b;
+    background-color: #cf4646;
+    border-color: #cf4646;
 }
 
 
