@@ -4,85 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>売上集計完了</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #fcfaf7;
-            color: #4a3c31;
-            margin: 0;
-            padding: 40px 20px;
-        }
-        .container {
-            max-width: 480px;
-            background: #ffffff;
-            padding: 35px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(139, 92, 26, 0.05);
-            margin: 0 auto;
-            border: 1px solid #f1ebd9;
-            text-align: center;
-        }
-        .icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        h1 {
-            font-size: 20px;
-            color: #8b5a1a;
-            margin: 0 0 25px;
-        }
-        .info-box {
-            background: #faf8f5;
-            border: 1px solid #f1ebd9;
-            color: #6e543c;
-            font-size: 14px;
-            line-height: 1.6;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-        .actions {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 13px 20px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 15px;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-        .btn-home {
-            background-color: #f7eed6;
-            color: #8b5a1a;
-            border: 1px solid #ebdcb9;
-        }
-        .btn-home:hover {
-            background-color: #ebdcb9;
-        }
-        .btn-input {
-            background-color: #c9a063;
-            color: #ffffff;
-        }
-        .btn-input:hover {
-            background-color: #b3884b;
-        }
-        .btn-dashboard {
-            background-color: #e74c3c;
-            color: #ffffff;
-        }
-        .btn-dashboard:hover {
-            background-color: #c0392b;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 </head>
-<body>
+<body class="success-page">
 
 <div class="container">
     <div class="icon">✅</div>
@@ -94,9 +19,17 @@
     </div>
 
     <div class="actions">
-        <a href="/" class="btn btn-home">🍞 売上シート作成画面に戻る</a>
-        <a href="/input" class="btn btn-input">📝 日次売上を入力する</a>
-        <a href="/dashboard" class="btn btn-dashboard">🔴 お店の健康診断書を見る</a>
+        <a href="{{ url_for('index') }}" class="btn btn-home">
+            🍞 売上シート作成画面に戻る
+        </a>
+
+        <a href="{{ url_for('input_sales') }}" class="btn btn-input">
+            📝 日次売上を入力する
+        </a>
+
+        <a href="{{ url_for('dashboard') }}" class="btn btn-dashboard">
+            🔴 お店の健康診断書を見る
+        </a>
     </div>
 </div>
 
