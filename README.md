@@ -51,7 +51,7 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 以下の画像をクリックすると、YouTubeで実際の動作を確認できます。
 
-[![ベーカリー売上管理システム（デモ動画）](demo/demo2thumbnail.png)](https://youtu.be/iz4r3YP3JZk?si=w9AENw1iifjlwZ7j)
+[![ベーカリー売上管理システム（デモ動画）](demo_thumbnail/demo2thumbnail.png)](https://youtu.be/iz4r3YP3JZk?si=w9AENw1iifjlwZ7j)
 
 > デモ動画は撮影時点の画面です。  
 > 最新版では、UI・文言・画面導線をさらに改善しています。
