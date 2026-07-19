@@ -1,6 +1,6 @@
 # 🍞 Bakery Sales Management System
 
-[![トップ画像](https://raw.githubusercontent.com/tosane932/sales_data_app/main/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)]
+![トップ画像](https://raw.githubusercontent.com/tosane932/sales_data_app/main/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)
 
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
