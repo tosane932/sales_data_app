@@ -1,5 +1,7 @@
 # 🍞 Bakery Sales Management System
 
+[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)]
+
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
 ベーカリーの商品登録・日次売上入力・売上分析を一元管理し、
