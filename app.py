@@ -1,11 +1,10 @@
 import os
 import datetime
 import logging  # 💡 1. ログモジュールをインポート
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_migrate import Migrate
 from models import db, Product, DailySales
 from google import genai
-from google.genai import types
 import config
 from prompts import build_sales_prompt
 
@@ -25,13 +24,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 db.init_app(app)
 
 migrate = Migrate(app, db)
-
-
-
-if not os.path.exists(config.PAST_FOLDER):
-    os.makedirs(config.PAST_FOLDER)
-    logger.info(f"Created past folder at: {config.PAST_FOLDER}")
-
 
 def _generate_ai_advice(ranked_sales):
     if not ranked_sales:

@@ -608,10 +608,6 @@ select {
         font-size: 18px;
     }
 
-    .dashboard-page .btn-back {
-        padding: 15px;
-        font-size: 17px;
-    }
 }
 
 
@@ -681,10 +677,6 @@ select {
     font-weight: bold;
 }
 
-.input-page .ai-loading {
-    color: #c9a063;
-    font-style: italic;
-}
 
 
 /* ========================================
