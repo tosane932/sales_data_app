@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # 現場の生データ・機密ファイル
 過去売上高/
@@ -10,6 +11,5 @@ __pycache__/
 .env
 
 # その他不要ファイル
-sales_data_app_android_demo.mp4
-
 *.bak
+sales_data_app_android_demo.mp4
