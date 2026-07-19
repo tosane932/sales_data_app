@@ -1,6 +1,6 @@
 # Puoppo 🕊
 
-![トップ画像](https://raw.githubusercontent.com/tosane932/puoppo_app/main/file_00000000e1dc820982ad82ea885d80c7)
+![トップ画像](https://raw.githubusercontent.com/tosane932/puoppo_app/main/file_00000000e1dc820982ad82ea885d80c7.png)
 
 ## 🚀 概要：なぜ「Puoppo」なのか
 
