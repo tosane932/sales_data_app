@@ -4,100 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Puoppo 🕊️ 世論分析アプリ</title>
-    <style>
-        /* 🌿 全体のデザイン設定（白背景と自然な緑・花の色調） */
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #fcfdfa; /* 優しい白 */
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        h1 {
-            color: #2c5e3b; /* 深い緑 */
-            margin-bottom: 5px;
-        }
-
-        .subtitle {
-            color: #88a070; /* 葉っぱの色 */
-            margin-bottom: 30px;
-        }
-
-        /* 🔍 検索フォームのスタイル */
-        .search-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 20px;
-            font-size: 16px;
-            border: 2px solid #c2d6b4;
-            border-radius: 25px;
-            outline: none;
-            box-sizing: border-box;
-        }
-
-        .search-button {
-            position: absolute;
-            right: 5px;
-            top: 5px;
-            padding: 7px 20px;
-            background-color: #e8a7b6; /* 桜色・お花の色 */
-            border: none;
-            border-radius: 20px;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* ⚠️ 注意事項の赤字表示 */
-        .warning-text {
-            color: #d9534f;
-            font-size: 13px;
-            margin-top: 5px;
-            text-align: center;
-        }
-
-        /* ⏳ ローディング画面の設定（初期状態は隠す） */
-        #loading-screen {
-            display: none;
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        /* 🕊️ 飛び立つ鳩のアニメーション設定 */
-        .dove {
-            font-size: 40px;
-            display: inline-block;
-            transition: all 1.5s ease-in-out;
-        }
-
-        /* ボタンが押されたときにJavaScriptで付与するクラス */
-        .dove.fly-away {
-            transform: translate(300px, -200px) scale(1.5) rotate(15deg);
-            opacity: 0;
-        }
-
-        /* 🔄 砂時計の回転アニメーション */
-        .hourglass {
-            font-size: 30px;
-            display: inline-block;
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -110,12 +18,44 @@
       ]
     }
     </script>
-
+    
 </head>
 <body>
 
     <h1>Puoppo 🕊️</h1>
     <div class="subtitle">AI世論・不満トレンド分析システム</div>
+
+    
+    {% if current_user.is_authenticated %}
+        <div class="user-panel">
+            <div class="user-info">
+                {% if current_user.profile_image %}
+                    <img
+                        src="{{ current_user.profile_image }}"
+                        alt="プロフィール画像"
+                        class="user-avatar"
+                    >
+                {% endif %}
+
+                <div class="user-text">
+                    <span class="login-label">ログイン中</span>
+                    <strong>{{ current_user.name }} さん</strong>
+                </div>
+            </div>
+
+            <a href="{{ url_for('logout') }}" class="logout-button">
+                ログアウト
+            </a>
+        </div>
+    {% else %}
+        <div class="user-panel guest-panel">
+            <a href="{{ url_for('login') }}" class="google-login-button">
+                <span class="google-icon">G</span>
+                <span>Googleでログイン</span>
+            </a>
+        </div>
+    {% endif %}
+
 
     <!-- 検索フォーム -->
     <div class="search-container">
@@ -143,7 +83,7 @@
     <script>
         // ボタンが押された時のアニメーション制御
         function startAnimation(event) {
-            // 💡 以下の行の先頭に「//」をつけて、画面遷移を止めないように修正します！
+            // 💡 以下の行の先頭に「//」をつけて、画面遷移を止めないように修正します
             //event.preventDefault(); // テスト用に通常の画面遷移を一時的に止めます
             
             const pigeon = document.getElementById('pigeon');

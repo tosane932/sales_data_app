@@ -1,3 +1,4 @@
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -8,6 +9,7 @@ import xml.etree.ElementTree as ET
 from contextlib import closing
 
 from flask import Flask, render_template, request, redirect, url_for
+from flask_login import LoginManager, UserMixin, login_user, logout_user
 
 # 🤖 新しい公式パッケージから Client を読み込みます
 from google import genai
@@ -17,6 +19,26 @@ import markdown
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+oauth = OAuth(app)
+
+google = oauth.register(
+    name="google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url=(
+        "https://accounts.google.com/"
+        ".well-known/openid-configuration"
+    ),
+    client_kwargs={
+        "scope": "openid email profile"
+    }
+)
 
 # ⚙️ コードのあちこちにあった固定値をここにまとめる（変更時はここだけ直せばOK）
 DB_NAME = 'puoppo.db'
@@ -45,11 +67,152 @@ def init_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                google_sub TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL,
+                name TEXT NOT NULL,
+                profile_image TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
 
 
 # アプリ起動時にデータベースを作成
 init_db()
+
+class User(UserMixin):
+    def __init__(self, user_id, google_sub, email, name, profile_image=None):
+        self.id = str(user_id)
+        self.google_sub = google_sub
+        self.email = email
+        self.name = name
+        self.profile_image = profile_image
+
+@login_manager.user_loader
+def load_user(user_id):
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT
+                id,
+                google_sub,
+                email,
+                name,
+                profile_image
+            FROM users
+            WHERE id = ?
+            ''',
+            (user_id,)
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return User(
+        user_id=row[0],
+        google_sub=row[1],
+        email=row[2],
+        name=row[3],
+        profile_image=row[4]
+    )
+
+
+@app.route("/login")
+def login():
+    redirect_uri = url_for(
+        "google_callback",
+        _external=True
+    )
+
+    return google.authorize_redirect(
+        redirect_uri
+    )
+
+
+@app.route("/login/google/callback")
+def google_callback():
+    token = google.authorize_access_token()
+    user_info = token.get("userinfo")
+
+    if not user_info:
+        return "Googleアカウント情報を取得できませんでした", 400
+
+    google_sub = user_info.get("sub")
+    email = user_info.get("email")
+    name = user_info.get("name")
+    profile_image = user_info.get("picture")
+
+    with closing(get_db_connection()) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT
+                id,
+                google_sub,
+                email,
+                name,
+                profile_image
+            FROM users
+            WHERE google_sub = ?
+            ''',
+            (google_sub,)
+        )
+        row = cursor.fetchone()
+
+        if row is None:
+            cursor.execute(
+                '''
+                INSERT INTO users (
+                    google_sub,
+                    email,
+                    name,
+                    profile_image
+                )
+                VALUES (?, ?, ?, ?)
+                ''',
+                (
+                    google_sub,
+                    email,
+                    name,
+                    profile_image
+                )
+            )
+            conn.commit()
+
+            user_id = cursor.lastrowid
+
+            user = User(
+                user_id=user_id,
+                google_sub=google_sub,
+                email=email,
+                name=name,
+                profile_image=profile_image
+            )
+        else:
+            user = User(
+                user_id=row[0],
+                google_sub=row[1],
+                email=row[2],
+                name=row[3],
+                profile_image=row[4]
+            )
+
+    login_user(user)
+
+    return redirect(url_for("index"))
+
+
+@app.route("/logout")
+def logout():
+    logout_user()
+    return redirect(url_for("index"))
 
 
 # 🏠 メイン画面（履歴の一覧表示）
