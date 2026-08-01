@@ -136,30 +136,66 @@
                 // 1. 表示期間タイトルの更新
                 periodTitle.innerText = data.period_text;
 
-                // 2. 売上ランキングリストの動的HTML生成と反映
+                // 2. 売上ランキングリストをDOM APIで安全に生成して反映
+                rankContainer.replaceChildren();
+
                 if (data.ranked_sales.length > 0) {
-                    let htmlContent = "";
+                    const fragment = document.createDocumentFragment();
+
                     data.ranked_sales.forEach((item, index) => {
                         const rank = index + 1;
-                        let badgeClass = "";
-                        if (rank <= 3) badgeClass = `rank-${rank}`;
 
-                        htmlContent += `
-                            <div class="ranking-item">
-                                <div class="rank-badge ${badgeClass}">${rank}</div>
-                                <div class="prod-name">${item[0]}</div>
-                                <div class="prod-qty">${item[1]}<span class="prod-unit">個</span></div>
-                            </div>
-                        `;
+                        const rankingItem = document.createElement('div');
+                        rankingItem.className = 'ranking-item';
+
+                        const rankBadge = document.createElement('div');
+                        rankBadge.className = 'rank-badge';
+                        if (rank <= 3) {
+                            rankBadge.classList.add(`rank-${rank}`);
+                        }
+                        rankBadge.textContent = String(rank);
+
+                        const productName = document.createElement('div');
+                        productName.className = 'prod-name';
+                        productName.textContent = item[0];
+
+                        const productQuantity = document.createElement('div');
+                        productQuantity.className = 'prod-qty';
+                        productQuantity.append(
+                            document.createTextNode(String(item[1]))
+                        );
+
+                        const productUnit = document.createElement('span');
+                        productUnit.className = 'prod-unit';
+                        productUnit.textContent = '個';
+
+                        productQuantity.append(productUnit);
+                        rankingItem.append(
+                            rankBadge,
+                            productName,
+                            productQuantity
+                        );
+                        fragment.append(rankingItem);
                     });
-                    rankContainer.innerHTML = htmlContent;
+
+                    rankContainer.append(fragment);
                 } else {
-                    rankContainer.innerHTML = `
-                        <div class="empty-message">
-                            該当期間の売上データ（数量）が見つかりませんでした。<br>
-                            <small style="color: #bfaea0;">※日次売上入力画面からデータを入力してください。</small>
-                        </div>
-                    `;
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'empty-message';
+                    emptyMessage.append(
+                        document.createTextNode(
+                            '該当期間の売上データ（数量）が見つかりませんでした。'
+                        ),
+                        document.createElement('br')
+                    );
+
+                    const note = document.createElement('small');
+                    note.style.color = '#bfaea0';
+                    note.textContent =
+                        '※日次売上入力画面からデータを入力してください。';
+
+                    emptyMessage.append(note);
+                    rankContainer.append(emptyMessage);
                 }
 
                 // 3. Chart.jsのデータ更新およびアニメーション再描画
