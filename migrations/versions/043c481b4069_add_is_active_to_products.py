@@ -1,7 +1,7 @@
 """add is_active to products
 
 Revision ID: 043c481b4069
-Revises: 
+Revises: b7e2c4a91f30
 Create Date: 2026-07-16 19:48:51.697185
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '043c481b4069'
-down_revision = None
+down_revision = 'b7e2c4a91f30'
 branch_labels = None
 depends_on = None
 
