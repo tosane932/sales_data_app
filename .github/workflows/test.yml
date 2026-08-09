@@ -25,4 +25,4 @@ jobs:
 
       - name: pytestを実行
         run: |
-          pytest test_prompts.py -v
+          pytest -v
