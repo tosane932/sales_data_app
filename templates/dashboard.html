@@ -60,9 +60,7 @@
     <div style="background: #fff9e6; padding: 25px; border-radius: 12px; border: 1px solid #f3d9b1; margin-bottom: 30px; line-height: 1.8; position: relative; overflow: hidden;">
         <div style="position: absolute; right: 10px; bottom: -10px; font-size: 70px; opacity: 0.05; user-select: none;">🍞</div>
 
-        <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px;">
-            {{ ai_advice | replace('\n', '<br>') | safe }}
-        </p>
+        <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px; white-space: pre-line;">{{ ai_advice }}</p>
         <button
             type="button"
             class="btn-ai-advice"
@@ -91,6 +89,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    function setTextWithLineBreaks(element, value) {
+        const fragment = document.createDocumentFragment();
+        const lines = String(value ?? '').split('\n');
+
+        lines.forEach((line, index) => {
+            if (index > 0) {
+                fragment.append(document.createElement('br'));
+            }
+
+            fragment.append(document.createTextNode(line));
+        });
+
+        element.replaceChildren(fragment);
+    }
+
     // 初回ページ読み込み時のグラフ描画処理
     const initialLabels = {{ chart_labels | tojson if chart_labels else [] }};
     const initialValues = {{ chart_values | tojson if chart_values else [] }};
@@ -127,7 +140,7 @@
         const periodTitle = document.getElementById('periodTitle');
 
         // 通信中の状態をユーザーに明示
-        aiText.innerHTML = "🌀 AIアシスタントが売上データを分析中...（15秒ほどかかる場合があります）";
+        aiText.textContent = "🌀 AIアシスタントが売上データを分析中...（15秒ほどかかる場合があります）";
 
         // バックエンドの非同期データ取得APIエンドポイントへリクエストを送信
         fetch(`/api/dashboard-data?year=${year}&month=${month}`)
@@ -204,11 +217,11 @@
                 salesChart.update();
 
                 // 4. AI経営アドバイスのテキストを改行を考慮して反映
-                aiText.innerHTML = data.ai_advice.replace(/\n/g, '<br>');
+                setTextWithLineBreaks(aiText, data.ai_advice);
             })
             .catch(error => {
                 console.error("データ取得エラー:", error);
-                aiText.innerHTML = "🚨 データの取得に失敗しました。お手数ですが時間を置いて再度お試しいただくか、システムの稼働状態を確認してください。";
+                aiText.textContent = "🚨 データの取得に失敗しました。お手数ですが時間を置いて再度お試しいただくか、システムの稼働状態を確認してください。";
             });
     }
     function loadAiAdvice() {
@@ -217,7 +230,7 @@
         const aiText = document.getElementById('aiAdviceText');
         const aiButton = document.getElementById('aiAdviceButton');
 
-        aiText.innerHTML =
+        aiText.textContent =
             '🌀 AIアシスタントが詳しい改善案を考えています...';
 
         aiButton.disabled = true;
@@ -232,13 +245,12 @@
                 return response.json();
             })
             .then(data => {
-                aiText.innerHTML =
-                    data.ai_advice.replace(/\n/g, '<br>');
+                setTextWithLineBreaks(aiText, data.ai_advice);
             })
             .catch(error => {
                 console.error('AIアドバイス取得エラー:', error);
 
-                aiText.innerHTML =
+                aiText.textContent =
                     '🚨 AIアドバイスの取得に失敗しました。'
                     + '時間を置いてから、もう一度お試しください。';
             })
