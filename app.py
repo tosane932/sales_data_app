@@ -344,13 +344,41 @@ def input_sales():
 
             validated_sales.append((product_id, int(quantity)))
 
+        validated_product_sales = []
+        for product_id, qty_int in validated_sales:
+            product = db.session.get(Product, int(product_id))
+
+            if product is None:
+                logger.warning(
+                    f"Unknown product rejected: product_id={product_id}"
+                )
+                return "指定された商品が存在しません。", 400
+
+            if (
+                product.year != sale_date.year
+                or product.month != sale_date.month
+            ):
+                logger.warning(
+                    "Product outside sales month rejected: "
+                    f"product_id={product_id}, date={sale_date}"
+                )
+                return "売上日と商品の対象年月が一致しません。", 400
+
+            if not product.is_active:
+                logger.warning(
+                    f"Inactive product rejected: product_id={product_id}"
+                )
+                return "販売終了商品には売上を登録できません。", 400
+
+            validated_product_sales.append((product, qty_int))
+
         logger.info(
             f"Sales data submission received for date: {sale_date}"
         )
 
-        for product_id, qty_int in validated_sales:
+        for product, qty_int in validated_product_sales:
             existing = DailySales.query.filter_by(
-                product_id=int(product_id),
+                product_id=product.id,
                 date=sale_date
             ).first()
 
@@ -358,7 +386,7 @@ def input_sales():
                 existing.quantity = qty_int
             else:
                 sale = DailySales(
-                    product_id=int(product_id),
+                    product_id=product.id,
                     date=sale_date,
                     quantity=qty_int
                 )

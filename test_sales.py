@@ -125,3 +125,86 @@ def test_invalid_sales_post_rejects_entire_request(
         product_id=sales_records.new_product_id,
         date=sales_records.date,
     ).first() is None
+
+
+@pytest.mark.parametrize(
+    "invalid_product_case",
+    [
+        "unknown_product",
+        "wrong_month_product",
+        "inactive_product",
+    ],
+)
+def test_sales_rejects_unknown_wrong_month_and_inactive_products(
+    client,
+    sales_records,
+    invalid_product_case,
+):
+    if invalid_product_case == "unknown_product":
+        invalid_product_id = 999999
+    elif invalid_product_case == "wrong_month_product":
+        if sales_records.date.month == 1:
+            product_year = sales_records.date.year - 1
+            product_month = 12
+        else:
+            product_year = sales_records.date.year
+            product_month = sales_records.date.month - 1
+
+        invalid_product = Product(
+            year=product_year,
+            month=product_month,
+            name="別月商品",
+            price=400,
+        )
+        db.session.add(invalid_product)
+        db.session.commit()
+        invalid_product_id = invalid_product.id
+    else:
+        invalid_product = Product(
+            year=sales_records.date.year,
+            month=sales_records.date.month,
+            name="販売終了商品",
+            price=500,
+            is_active=False,
+        )
+        db.session.add(invalid_product)
+        db.session.flush()
+        db.session.add(
+            DailySales(
+                product_id=invalid_product.id,
+                date=sales_records.date,
+                quantity=2,
+            )
+        )
+        db.session.commit()
+        invalid_product_id = invalid_product.id
+
+    sales_before = [
+        (sale.id, sale.product_id, sale.date, sale.quantity)
+        for sale in DailySales.query.order_by(DailySales.id).all()
+    ]
+
+    response = client.post(
+        "/input",
+        data={
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                str(invalid_product_id),
+            ],
+            "quantity": ["9", "4"],
+        },
+    )
+
+    sales_after = [
+        (sale.id, sale.product_id, sale.date, sale.quantity)
+        for sale in DailySales.query.order_by(DailySales.id).all()
+    ]
+
+    assert response.status_code == 400
+    assert len(sales_after) == len(sales_before)
+    assert sales_after == sales_before
+    assert DailySales.query.filter_by(
+        product_id=sales_records.existing_product_id,
+        date=sales_records.date,
+    ).one().quantity == 5
