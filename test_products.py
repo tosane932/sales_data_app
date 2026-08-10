@@ -147,6 +147,97 @@ def test_product_post_updates_existing_and_adds_new_products(
     assert _sales_snapshot() == sales_before
 
 
+def test_product_post_deactivates_missing_product_without_deleting_history(
+    client,
+    product_records,
+):
+    product_b_id = product_records.existing_product_id
+    sales_before = _sales_snapshot()
+    product_b_sale_before = DailySales.query.filter_by(
+        product_id=product_b_id,
+    ).one()
+    product_b_sale_snapshot = (
+        product_b_sale_before.id,
+        product_b_sale_before.product_id,
+        product_b_sale_before.date,
+        product_b_sale_before.quantity,
+    )
+
+    response = client.post(
+        "/",
+        data={
+            "year": "2026",
+            "month": "8",
+            "product_id": [str(product_records.other_product_id)],
+            "prod_name": ["同月商品"],
+            "prod_price": ["200"],
+        },
+    )
+
+    product_a = db.session.get(
+        Product,
+        product_records.other_product_id,
+    )
+    product_b = db.session.get(Product, product_b_id)
+    product_b_sale_after = DailySales.query.filter_by(
+        product_id=product_b_id,
+    ).one()
+
+    assert response.status_code == 200
+    assert product_a.is_active is True
+    assert product_b is not None
+    assert product_b.id == product_b_id
+    assert product_b.is_active is False
+    assert (
+        product_b_sale_after.id,
+        product_b_sale_after.product_id,
+        product_b_sale_after.date,
+        product_b_sale_after.quantity,
+    ) == product_b_sale_snapshot
+    assert _sales_snapshot() == sales_before
+
+
+def test_product_post_reactivates_same_product_without_losing_history(
+    client,
+    product_records,
+):
+    product_id = product_records.existing_product_id
+    product = db.session.get(Product, product_id)
+    product.is_active = False
+    db.session.commit()
+
+    product_count_before = Product.query.count()
+    sales_before = _sales_snapshot()
+
+    response = client.post(
+        "/",
+        data={
+            "year": "2026",
+            "month": "8",
+            "product_id": [
+                str(product_id),
+                str(product_records.other_product_id),
+            ],
+            "prod_name": ["再販売商品", "同月商品"],
+            "prod_price": ["150", "200"],
+        },
+    )
+
+    reactivated_product = db.session.get(Product, product_id)
+    product_sale = DailySales.query.filter_by(
+        product_id=product_id,
+    ).one()
+
+    assert response.status_code == 200
+    assert Product.query.count() == product_count_before
+    assert reactivated_product.id == product_id
+    assert reactivated_product.name == "再販売商品"
+    assert reactivated_product.price == 150
+    assert reactivated_product.is_active is True
+    assert _sales_snapshot() == sales_before
+    assert product_sale.product_id == product_id
+
+
 def test_product_post_rolls_back_all_changes_when_database_commit_fails(
     client,
     product_records,
