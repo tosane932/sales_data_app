@@ -1,0 +1,203 @@
+import datetime
+
+import pytest
+
+import app as app_module
+from models import DailySales, Product, db
+
+
+FIXED_AI_ADVICE = (
+    "売上ランキングとグラフを更新しました。"
+    "詳しい改善案を確認する場合は、"
+    "「詳しいアドバイスを聞く」ボタンを押してください。"
+)
+
+
+def _product_snapshot():
+    return [
+        (
+            product.id,
+            product.year,
+            product.month,
+            product.name,
+            product.price,
+            product.is_active,
+        )
+        for product in Product.query.order_by(Product.id).all()
+    ]
+
+
+def _sales_snapshot():
+    return [
+        (sale.id, sale.product_id, sale.date, sale.quantity)
+        for sale in DailySales.query.order_by(DailySales.id).all()
+    ]
+
+
+@pytest.fixture()
+def dashboard_records(flask_app, monkeypatch):
+    def reject_gemini_client(*args, **kwargs):
+        raise AssertionError("Gemini Client must not be used by dashboard API")
+
+    monkeypatch.setattr(app_module.genai, "Client", reject_gemini_client)
+
+    product_a = Product(
+        year=2026,
+        month=8,
+        name="商品A",
+        price=100,
+    )
+    product_b = Product(
+        year=2026,
+        month=8,
+        name="商品B",
+        price=200,
+    )
+    july_product = Product(
+        year=2026,
+        month=7,
+        name="7月商品",
+        price=300,
+    )
+    previous_year_product = Product(
+        year=2025,
+        month=8,
+        name="前年商品",
+        price=400,
+    )
+    db.session.add_all([
+        product_a,
+        product_b,
+        july_product,
+        previous_year_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=product_a.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=3,
+        ),
+        DailySales(
+            product_id=product_a.id,
+            date=datetime.date(2026, 8, 2),
+            quantity=7,
+        ),
+        DailySales(
+            product_id=product_b.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=5,
+        ),
+        DailySales(
+            product_id=july_product.id,
+            date=datetime.date(2026, 7, 1),
+            quantity=20,
+        ),
+        DailySales(
+            product_id=previous_year_product.id,
+            date=datetime.date(2025, 8, 1),
+            quantity=30,
+        ),
+    ])
+    db.session.commit()
+
+    return {
+        "product_a_id": product_a.id,
+        "product_b_id": product_b.id,
+    }
+
+
+def test_dashboard_api_returns_sales_aggregation_for_selected_period(
+    client,
+    dashboard_records,
+):
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+
+    response = client.get("/api/dashboard-data?year=2026&month=8")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert response.is_json
+    assert set(payload) == {
+        "ranked_sales",
+        "chart_labels",
+        "chart_values",
+        "ai_advice",
+        "period_text",
+    }
+    assert payload["ranked_sales"] == [
+        ["商品A", 10],
+        ["商品B", 5],
+    ]
+    assert payload["ai_advice"] == FIXED_AI_ADVICE
+    assert payload["period_text"] == "8月度"
+    assert _product_snapshot() == products_before
+    assert _sales_snapshot() == sales_before
+
+
+def test_dashboard_api_chart_matches_ranked_sales(
+    client,
+    dashboard_records,
+):
+    response = client.get("/api/dashboard-data?year=2026&month=8")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["ranked_sales"] == [
+        ["商品A", 10],
+        ["商品B", 5],
+    ]
+    assert payload["chart_labels"] == ["商品A", "商品B"]
+    assert payload["chart_values"] == [10, 5]
+    assert [item[0] for item in payload["ranked_sales"]] == payload[
+        "chart_labels"
+    ]
+    assert [item[1] for item in payload["ranked_sales"]] == payload[
+        "chart_values"
+    ]
+
+
+def test_dashboard_api_keeps_historical_sales_for_inactive_products(
+    client,
+    dashboard_records,
+):
+    product_b = db.session.get(Product, dashboard_records["product_b_id"])
+    product_b.is_active = False
+    db.session.commit()
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+
+    response = client.get("/api/dashboard-data?year=2026&month=8")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert ["商品B", 5] in payload["ranked_sales"]
+    assert db.session.get(Product, product_b.id).is_active is False
+    assert _product_snapshot() == products_before
+    assert _sales_snapshot() == sales_before
+
+
+def test_dashboard_api_returns_all_periods_without_filters(
+    client,
+    dashboard_records,
+):
+    response = client.get("/api/dashboard-data")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["ranked_sales"] == [
+        ["前年商品", 30],
+        ["7月商品", 20],
+        ["商品A", 10],
+        ["商品B", 5],
+    ]
+    assert payload["chart_labels"] == [
+        "前年商品",
+        "7月商品",
+        "商品A",
+        "商品B",
+    ]
+    assert payload["chart_values"] == [30, 20, 10, 5]
+    assert payload["period_text"] == "全期間"
