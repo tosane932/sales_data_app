@@ -325,6 +325,10 @@ def input_sales():
         product_ids = request.form.getlist("product_id")
         quantities = request.form.getlist("quantity")
 
+        if not product_ids or not quantities:
+            logger.warning("Empty sales submission rejected.")
+            return "商品と販売数量を入力してください。", 400
+
         if len(product_ids) != len(quantities):
             logger.warning(
                 "Mismatched sales input lengths rejected: "
@@ -334,7 +338,24 @@ def input_sales():
             return "商品と販売数量の件数が一致しません。", 400
 
         validated_sales = []
+        seen_product_ids = set()
         for product_id, quantity in zip(product_ids, quantities):
+            try:
+                product_id_int = int(product_id)
+            except (TypeError, ValueError):
+                logger.warning(
+                    f"Invalid product ID rejected: product_id={product_id}"
+                )
+                return "商品IDが正しくありません。", 400
+
+            if product_id_int in seen_product_ids:
+                logger.warning(
+                    f"Duplicate product ID rejected: product_id={product_id}"
+                )
+                return "同じ商品が複数回送信されています。", 400
+
+            seen_product_ids.add(product_id_int)
+
             if not quantity.isascii() or not quantity.isdigit():
                 logger.warning(
                     "Invalid quantity rejected: "
@@ -342,11 +363,11 @@ def input_sales():
                 )
                 return "販売数量は0以上の整数で入力してください。", 400
 
-            validated_sales.append((product_id, int(quantity)))
+            validated_sales.append((product_id_int, int(quantity)))
 
         validated_product_sales = []
         for product_id, qty_int in validated_sales:
-            product = db.session.get(Product, int(product_id))
+            product = db.session.get(Product, product_id)
 
             if product is None:
                 logger.warning(

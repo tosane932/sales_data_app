@@ -6,6 +6,13 @@ import pytest
 from models import DailySales, Product, db
 
 
+def _sales_snapshot():
+    return [
+        (sale.id, sale.product_id, sale.date, sale.quantity)
+        for sale in DailySales.query.order_by(DailySales.id).all()
+    ]
+
+
 @pytest.fixture()
 def sales_records(flask_app):
     sale_date = datetime.date.today()
@@ -125,6 +132,84 @@ def test_invalid_sales_post_rejects_entire_request(
         product_id=sales_records.new_product_id,
         date=sales_records.date,
     ).first() is None
+
+
+@pytest.mark.parametrize("invalid_product_id", ["", "abc"])
+def test_sales_rejects_invalid_product_ids_without_database_changes(
+    client,
+    sales_records,
+    invalid_product_id,
+):
+    sales_before = _sales_snapshot()
+
+    response = client.post(
+        "/input",
+        data={
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                invalid_product_id,
+            ],
+            "quantity": ["9", "4"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code == 400
+    assert len(sales_after) == len(sales_before)
+    assert sales_after == sales_before
+    assert DailySales.query.filter_by(
+        product_id=sales_records.existing_product_id,
+        date=sales_records.date,
+    ).one().quantity == 5
+
+
+def test_sales_rejects_duplicate_product_ids_without_database_changes(
+    client,
+    sales_records,
+):
+    sales_before = _sales_snapshot()
+
+    response = client.post(
+        "/input",
+        data={
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                str(sales_records.existing_product_id),
+            ],
+            "quantity": ["5", "9"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code == 400
+    assert len(sales_after) == len(sales_before)
+    assert sales_after == sales_before
+    assert DailySales.query.filter_by(
+        product_id=sales_records.existing_product_id,
+        date=sales_records.date,
+    ).one().quantity == 5
+
+
+def test_sales_rejects_empty_submission_without_database_changes(
+    client,
+    sales_records,
+):
+    sales_before = _sales_snapshot()
+
+    response = client.post(
+        "/input",
+        data={"date": sales_records.date.isoformat()},
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code == 400
+    assert len(sales_after) == len(sales_before)
+    assert sales_after == sales_before
 
 
 @pytest.mark.parametrize(
