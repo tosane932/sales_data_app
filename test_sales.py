@@ -1,8 +1,9 @@
 import datetime
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from models import DailySales, Product, db
 
@@ -73,6 +74,51 @@ def test_valid_sales_post_updates_existing_and_adds_new_sale(
         product_id=sales_records.new_product_id,
         date=sales_records.date,
     ).one().quantity == 0
+
+
+def test_sales_rolls_back_all_changes_when_database_commit_fails(
+    client,
+    sales_records,
+    monkeypatch,
+):
+    sales_before = _sales_snapshot()
+    rollback_spy = Mock(wraps=db.session.rollback)
+
+    monkeypatch.setattr(
+        db.session,
+        "commit",
+        Mock(side_effect=SQLAlchemyError("forced commit failure")),
+    )
+    monkeypatch.setattr(db.session, "rollback", rollback_spy)
+
+    response = client.post(
+        "/input",
+        data={
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                str(sales_records.new_product_id),
+            ],
+            "quantity": ["9", "7"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code == 500
+    rollback_spy.assert_called_once_with()
+    assert sales_after == sales_before
+    assert DailySales.query.filter_by(
+        product_id=sales_records.existing_product_id,
+        date=sales_records.date,
+    ).one().quantity == 5
+    assert DailySales.query.filter_by(
+        product_id=sales_records.new_product_id,
+        date=sales_records.date,
+    ).first() is None
+    assert "本日の売上個数を更新しました" not in response.get_data(
+        as_text=True
+    )
 
 
 def test_daily_sales_product_and_date_are_unique_at_database_level(

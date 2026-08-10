@@ -3,6 +3,7 @@ import datetime
 import logging  # 💡 1. ログモジュールをインポート
 from flask import Flask, render_template, request, jsonify
 from flask_migrate import Migrate
+from sqlalchemy.exc import SQLAlchemyError
 from models import db, Product, DailySales
 from google import genai
 import config
@@ -397,23 +398,28 @@ def input_sales():
             f"Sales data submission received for date: {sale_date}"
         )
 
-        for product, qty_int in validated_product_sales:
-            existing = DailySales.query.filter_by(
-                product_id=product.id,
-                date=sale_date
-            ).first()
-
-            if existing:
-                existing.quantity = qty_int
-            else:
-                sale = DailySales(
+        try:
+            for product, qty_int in validated_product_sales:
+                existing = DailySales.query.filter_by(
                     product_id=product.id,
-                    date=sale_date,
-                    quantity=qty_int
-                )
-                db.session.add(sale)
+                    date=sale_date
+                ).first()
 
-        db.session.commit()
+                if existing:
+                    existing.quantity = qty_int
+                else:
+                    sale = DailySales(
+                        product_id=product.id,
+                        date=sale_date,
+                        quantity=qty_int
+                    )
+                    db.session.add(sale)
+
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Failed to save sales data.")
+            return "売上データを保存できませんでした。", 500
 
         logger.info(
             f"Sales data successfully committed for date: {sale_date}"
