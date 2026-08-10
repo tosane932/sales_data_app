@@ -90,18 +90,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     function setTextWithLineBreaks(element, value) {
-        const fragment = document.createDocumentFragment();
-        const lines = String(value ?? '').split('\n');
-
-        lines.forEach((line, index) => {
-            if (index > 0) {
-                fragment.append(document.createElement('br'));
-            }
-
-            fragment.append(document.createTextNode(line));
-        });
-
-        element.replaceChildren(fragment);
+        element.innerText = String(value ?? '');
     }
 
     // 初回ページ読み込み時のグラフ描画処理

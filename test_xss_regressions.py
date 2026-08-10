@@ -23,6 +23,25 @@ def _source_between(source, start_marker, end_marker):
     return source.split(start_marker, 1)[1].split(end_marker, 1)[0]
 
 
+def _assert_safe_inner_text_helper(source, end_marker):
+    helper_source = _source_between(
+        source,
+        "function setTextWithLineBreaks(element, value)",
+        end_marker
+    )
+
+    assert re.search(
+        r"element\s*\.\s*innerText\s*=\s*"
+        r"String\(\s*value\s*\?\?\s*''\s*\)",
+        helper_source
+    )
+    assert not re.search(
+        r"element\s*\.\s*"
+        r"(?:innerHTML|outerHTML|insertAdjacentHTML)\b",
+        helper_source
+    )
+
+
 def test_dynamic_ranking_product_name_uses_text_dom_api():
     """商品名の動的表示がHTML sinkへ戻る事故を検知するsource guard。"""
     source = _read_template(DASHBOARD_TEMPLATE)
@@ -46,6 +65,7 @@ def test_dynamic_ranking_product_name_uses_text_dom_api():
 def test_dashboard_ai_responses_use_text_dom_api():
     """dashboardのAI返答がinnerHTMLへ戻る事故を検知するsource guard。"""
     source = _read_template(DASHBOARD_TEMPLATE)
+    _assert_safe_inner_text_helper(source, "// 初回ページ読み込み時")
     update_source = _source_between(
         source,
         "function updateDashboard(event)",
@@ -73,6 +93,7 @@ def test_dashboard_ai_responses_use_text_dom_api():
 def test_input_ai_response_uses_text_dom_api():
     """inputのAI返答がinnerHTMLへ戻る事故を検知するsource guard。"""
     source = _read_template(INPUT_TEMPLATE)
+    _assert_safe_inner_text_helper(source, "function loadGreeting()")
     greeting_source = source.split("function loadGreeting()", 1)[1]
 
     assert re.search(
