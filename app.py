@@ -316,34 +316,39 @@ def input_sales():
 
     if request.method == "POST":
         date_str = request.form.get("date")
-        sale_date = datetime.date.fromisoformat(date_str)
+        try:
+            sale_date = datetime.date.fromisoformat(date_str)
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid sales date rejected: {date_str}")
+            return "売上日の日付形式が正しくありません。", 400
+
         product_ids = request.form.getlist("product_id")
         quantities = request.form.getlist("quantity")
+
+        if len(product_ids) != len(quantities):
+            logger.warning(
+                "Mismatched sales input lengths rejected: "
+                f"product_ids={len(product_ids)}, "
+                f"quantities={len(quantities)}"
+            )
+            return "商品と販売数量の件数が一致しません。", 400
+
+        validated_sales = []
+        for product_id, quantity in zip(product_ids, quantities):
+            if not quantity.isascii() or not quantity.isdigit():
+                logger.warning(
+                    "Invalid quantity rejected: "
+                    f"product_id={product_id}, quantity={quantity}"
+                )
+                return "販売数量は0以上の整数で入力してください。", 400
+
+            validated_sales.append((product_id, int(quantity)))
 
         logger.info(
             f"Sales data submission received for date: {sale_date}"
         )
 
-        for product_id, quantity in zip(product_ids, quantities):
-            if quantity.strip() == "":
-                continue
-
-            try:
-                qty_int = int(float(quantity))
-            except ValueError:
-                logger.warning(
-                    "Invalid quantity format skipped: "
-                    f"product_id={product_id}, quantity={quantity}"
-                )
-                continue
-
-            if qty_int < 0:
-                logger.warning(
-                    "Negative quantity skipped: "
-                    f"product_id={product_id}, quantity={qty_int}"
-                )
-                continue
-
+        for product_id, qty_int in validated_sales:
             existing = DailySales.query.filter_by(
                 product_id=int(product_id),
                 date=sale_date
