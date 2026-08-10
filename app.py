@@ -96,23 +96,74 @@ def _generate_ai_advice(ranked_sales):
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        year = int(request.form.get("year"))
-        month = int(request.form.get("month"))
+        try:
+            year = int(request.form.get("year"))
+            month = int(request.form.get("month"))
+        except (TypeError, ValueError):
+            logger.warning("Rejected product update with invalid year or month.")
+            return "年月が正しくありません。", 400
+
+        if month < 1 or month > 12:
+            logger.warning("Rejected product update with out-of-range month.")
+            return "月は1から12で指定してください。", 400
+
         product_names = request.form.getlist("prod_name")
         product_prices = request.form.getlist("prod_price")
         product_ids = request.form.getlist("product_id")
+
+        if not (
+            len(product_ids) == len(product_names) == len(product_prices)
+        ):
+            logger.warning("Rejected product update with mismatched field lengths.")
+            return "商品データの件数が一致しません。", 400
+
         products_data = []
+        seen_product_ids = set()
 
         for product_id, name, price in zip(
             product_ids,
             product_names,
             product_prices
         ):
+            existing_product = None
+
+            if product_id:
+                try:
+                    parsed_product_id = int(product_id)
+                except ValueError:
+                    logger.warning("Rejected product update with invalid product ID.")
+                    return "商品IDが正しくありません。", 400
+
+                if parsed_product_id in seen_product_ids:
+                    logger.warning("Rejected product update with duplicate product ID.")
+                    return "同じ商品が複数回送信されています。", 400
+
+                existing_product = db.session.get(Product, parsed_product_id)
+                if existing_product is None:
+                    logger.warning("Rejected product update with unknown product ID.")
+                    return "指定された商品が見つかりません。", 400
+
+                if (
+                    existing_product.year != year
+                    or existing_product.month != month
+                ):
+                    logger.warning("Rejected product update for another year or month.")
+                    return "指定された商品は選択年月の商品ではありません。", 400
+
+                seen_product_ids.add(parsed_product_id)
+            else:
+                parsed_product_id = None
+
+            if not price.isascii() or not price.isdigit():
+                logger.warning("Rejected product update with invalid price.")
+                return "価格は0以上の整数で入力してください。", 400
+
             if name.strip():
                 products_data.append({
-                    "id": int(product_id) if product_id.isdigit() else None,
+                    "id": parsed_product_id,
+                    "product": existing_product,
                     "name": name.strip(),
-                    "price": int(price) if price.isdigit() else 0
+                    "price": int(price)
                 })
 
         if not products_data:
@@ -143,17 +194,18 @@ def index():
             month=month
         ).all()
 
-        existing_dict = {
-            product.id: product
-            for product in existing_products
+        submitted_ids = {
+            prod["id"]
+            for prod in products_data
+            if prod["id"] is not None
         }
 
         for prod in products_data:
             product_id = prod["id"]
 
-            if product_id is not None and product_id in existing_dict:
+            if product_id is not None:
                 # 既存商品の商品名と価格を更新
-                existing_product = existing_dict[product_id]
+                existing_product = prod["product"]
                 existing_product.name = prod["name"]
                 existing_product.price = prod["price"]
                 existing_product.is_active = True
@@ -168,12 +220,6 @@ def index():
                         price=prod["price"]
                     )
                 )
-
-        submitted_ids = {
-            prod["id"]
-            for prod in products_data
-            if prod["id"] is not None
-        }
 
         for product in existing_products:
             if product.id not in submitted_ids:
