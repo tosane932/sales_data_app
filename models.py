@@ -26,6 +26,13 @@ class Product(db.Model):
 class DailySales(db.Model):
     """商品ごとの日別の販売数量を記録するテーブル。"""
     __tablename__ = "daily_sales"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "product_id",
+            "date",
+            name="uq_daily_sales_product_date"
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)

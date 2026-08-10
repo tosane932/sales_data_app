@@ -2,6 +2,7 @@ import datetime
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from models import DailySales, Product, db
 
@@ -72,6 +73,48 @@ def test_valid_sales_post_updates_existing_and_adds_new_sale(
         product_id=sales_records.new_product_id,
         date=sales_records.date,
     ).one().quantity == 0
+
+
+def test_daily_sales_product_and_date_are_unique_at_database_level(
+    flask_app,
+):
+    sale_date = datetime.date.today()
+    product = Product(
+        year=sale_date.year,
+        month=sale_date.month,
+        name="一意制約テスト商品",
+        price=250,
+    )
+    db.session.add(product)
+    db.session.flush()
+    db.session.add(
+        DailySales(
+            product_id=product.id,
+            date=sale_date,
+            quantity=3,
+        )
+    )
+    db.session.commit()
+
+    db.session.add(
+        DailySales(
+            product_id=product.id,
+            date=sale_date,
+            quantity=7,
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+
+    db.session.rollback()
+
+    sales = DailySales.query.filter_by(
+        product_id=product.id,
+        date=sale_date,
+    ).all()
+    assert len(sales) == 1
+    assert sales[0].quantity == 3
 
 
 @pytest.mark.parametrize(
