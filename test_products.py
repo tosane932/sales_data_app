@@ -1,7 +1,9 @@
 import datetime
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from models import DailySales, Product, db
 
@@ -143,6 +145,68 @@ def test_product_post_updates_existing_and_adds_new_products(
         is_active=True,
     ).one()
     assert _sales_snapshot() == sales_before
+
+
+def test_product_post_rolls_back_all_changes_when_database_commit_fails(
+    client,
+    product_records,
+    monkeypatch,
+):
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+    rollback_spy = Mock(wraps=db.session.rollback)
+
+    monkeypatch.setattr(
+        db.session,
+        "commit",
+        Mock(
+            side_effect=SQLAlchemyError(
+                "forced product commit failure"
+            )
+        ),
+    )
+    monkeypatch.setattr(db.session, "rollback", rollback_spy)
+
+    response = client.post(
+        "/",
+        data={
+            "year": "2026",
+            "month": "8",
+            "product_id": [
+                str(product_records.existing_product_id),
+                "",
+            ],
+            "prod_name": ["更新商品A", "新規商品C"],
+            "prod_price": ["150", "300"],
+        },
+    )
+
+    products_after = _product_snapshot()
+    sales_after = _sales_snapshot()
+
+    assert response.status_code == 500
+    rollback_spy.assert_called_once_with()
+    assert products_after == products_before
+    assert sales_after == sales_before
+
+    product_a = db.session.get(
+        Product,
+        product_records.existing_product_id,
+    )
+    product_b = db.session.get(
+        Product,
+        product_records.other_product_id,
+    )
+    assert product_a.name == "既存商品"
+    assert product_a.price == 100
+    assert product_a.is_active is True
+    assert product_b.name == "同月商品"
+    assert product_b.price == 200
+    assert product_b.is_active is True
+    assert Product.query.filter_by(name="新規商品C").first() is None
+    assert "今月のメニュー登録が完了しました" not in response.get_data(
+        as_text=True
+    )
 
 
 @pytest.mark.parametrize(

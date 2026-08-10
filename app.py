@@ -200,32 +200,37 @@ def index():
             if prod["id"] is not None
         }
 
-        for prod in products_data:
-            product_id = prod["id"]
+        try:
+            for prod in products_data:
+                product_id = prod["id"]
 
-            if product_id is not None:
-                # 既存商品の商品名と価格を更新
-                existing_product = prod["product"]
-                existing_product.name = prod["name"]
-                existing_product.price = prod["price"]
-                existing_product.is_active = True
+                if product_id is not None:
+                    # 既存商品の商品名と価格を更新
+                    existing_product = prod["product"]
+                    existing_product.name = prod["name"]
+                    existing_product.price = prod["price"]
+                    existing_product.is_active = True
 
-            else:
-                # IDがない商品は新規追加
-                db.session.add(
-                    Product(
-                        year=year,
-                        month=month,
-                        name=prod["name"],
-                        price=prod["price"]
+                else:
+                    # IDがない商品は新規追加
+                    db.session.add(
+                        Product(
+                            year=year,
+                            month=month,
+                            name=prod["name"],
+                            price=prod["price"]
+                        )
                     )
-                )
 
-        for product in existing_products:
-            if product.id not in submitted_ids:
-                product.is_active = False
+            for product in existing_products:
+                if product.id not in submitted_ids:
+                    product.is_active = False
 
-        db.session.commit()
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Failed to save product master.")
+            return "商品マスタを保存できませんでした。", 500
 
         logger.info(
             f"Successfully updated product master with "
