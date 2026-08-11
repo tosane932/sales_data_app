@@ -100,7 +100,7 @@ def _assert_product_post_rejected_without_changes(
 
 
 def test_product_post_updates_existing_and_adds_new_products(
-    client,
+    authenticated_client,
     product_records,
 ):
     payload = _valid_product_payload(product_records)
@@ -119,7 +119,7 @@ def test_product_post_updates_existing_and_adds_new_products(
     payload["prod_price"] = ["150", "200", "0", "50"]
     sales_before = _sales_snapshot()
 
-    response = client.post("/", data=payload)
+    response = authenticated_client.post("/", data=payload)
 
     assert response.status_code == 200
     assert Product.query.count() == 5
@@ -148,7 +148,7 @@ def test_product_post_updates_existing_and_adds_new_products(
 
 
 def test_product_post_deactivates_missing_product_without_deleting_history(
-    client,
+    authenticated_client,
     product_records,
 ):
     product_b_id = product_records.existing_product_id
@@ -163,7 +163,7 @@ def test_product_post_deactivates_missing_product_without_deleting_history(
         product_b_sale_before.quantity,
     )
 
-    response = client.post(
+    response = authenticated_client.post(
         "/",
         data={
             "year": "2026",
@@ -198,7 +198,7 @@ def test_product_post_deactivates_missing_product_without_deleting_history(
 
 
 def test_product_post_reactivates_same_product_without_losing_history(
-    client,
+    authenticated_client,
     product_records,
 ):
     product_id = product_records.existing_product_id
@@ -209,7 +209,7 @@ def test_product_post_reactivates_same_product_without_losing_history(
     product_count_before = Product.query.count()
     sales_before = _sales_snapshot()
 
-    response = client.post(
+    response = authenticated_client.post(
         "/",
         data={
             "year": "2026",
@@ -239,7 +239,7 @@ def test_product_post_reactivates_same_product_without_losing_history(
 
 
 def test_product_post_rolls_back_all_changes_when_database_commit_fails(
-    client,
+    authenticated_client,
     product_records,
     monkeypatch,
 ):
@@ -258,7 +258,7 @@ def test_product_post_rolls_back_all_changes_when_database_commit_fails(
     )
     monkeypatch.setattr(db.session, "rollback", rollback_spy)
 
-    response = client.post(
+    response = authenticated_client.post(
         "/",
         data={
             "year": "2026",
@@ -305,7 +305,7 @@ def test_product_post_rolls_back_all_changes_when_database_commit_fails(
     ["product_id", "prod_name", "prod_price"],
 )
 def test_product_post_rejects_mismatched_field_lengths_without_changes(
-    client,
+    authenticated_client,
     product_records,
     short_field,
 ):
@@ -313,14 +313,14 @@ def test_product_post_rejects_mismatched_field_lengths_without_changes(
     payload[short_field].pop()
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
 
 
 def test_product_post_rejects_nonnumeric_product_id_without_changes(
-    client,
+    authenticated_client,
     product_records,
 ):
     payload = _valid_product_payload(product_records)
@@ -329,14 +329,14 @@ def test_product_post_rejects_nonnumeric_product_id_without_changes(
     payload["prod_price"].append("400")
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
 
 
 def test_product_post_rejects_unknown_product_id_without_changes(
-    client,
+    authenticated_client,
     product_records,
 ):
     payload = _valid_product_payload(product_records)
@@ -345,14 +345,14 @@ def test_product_post_rejects_unknown_product_id_without_changes(
     payload["prod_price"].append("400")
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
 
 
 def test_product_post_rejects_product_from_other_month_without_changes(
-    client,
+    authenticated_client,
     product_records,
 ):
     payload = _valid_product_payload(product_records)
@@ -363,14 +363,14 @@ def test_product_post_rejects_product_from_other_month_without_changes(
     payload["prod_price"].append("400")
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
 
 
 def test_product_post_rejects_duplicate_product_ids_without_changes(
-    client,
+    authenticated_client,
     product_records,
 ):
     payload = _valid_product_payload(product_records)
@@ -383,7 +383,7 @@ def test_product_post_rejects_duplicate_product_ids_without_changes(
     payload["prod_price"] = ["150", "175", "200"]
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
@@ -391,7 +391,7 @@ def test_product_post_rejects_duplicate_product_ids_without_changes(
 
 @pytest.mark.parametrize("invalid_price", ["", "abc", "-1", "1.5"])
 def test_product_post_rejects_invalid_price_without_changes(
-    client,
+    authenticated_client,
     product_records,
     invalid_price,
 ):
@@ -399,7 +399,7 @@ def test_product_post_rejects_invalid_price_without_changes(
     payload["prod_price"][0] = invalid_price
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )
@@ -417,7 +417,7 @@ def test_product_post_rejects_invalid_price_without_changes(
     ],
 )
 def test_product_post_rejects_invalid_year_or_month_without_changes(
-    client,
+    authenticated_client,
     product_records,
     year,
     month,
@@ -427,7 +427,7 @@ def test_product_post_rejects_invalid_year_or_month_without_changes(
     payload["month"] = month
 
     _assert_product_post_rejected_without_changes(
-        client,
+        authenticated_client,
         product_records,
         payload,
     )

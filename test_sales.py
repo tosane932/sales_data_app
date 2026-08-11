@@ -49,10 +49,10 @@ def sales_records(flask_app):
 
 
 def test_valid_sales_post_updates_existing_and_adds_new_sale(
-    client,
+    authenticated_client,
     sales_records,
 ):
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": sales_records.date.isoformat(),
@@ -77,7 +77,7 @@ def test_valid_sales_post_updates_existing_and_adds_new_sale(
 
 
 def test_sales_rolls_back_all_changes_when_database_commit_fails(
-    client,
+    authenticated_client,
     sales_records,
     monkeypatch,
 ):
@@ -91,7 +91,7 @@ def test_sales_rolls_back_all_changes_when_database_commit_fails(
     )
     monkeypatch.setattr(db.session, "rollback", rollback_spy)
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": sales_records.date.isoformat(),
@@ -176,7 +176,7 @@ def test_daily_sales_product_and_date_are_unique_at_database_level(
     ],
 )
 def test_invalid_sales_post_rejects_entire_request(
-    client,
+    authenticated_client,
     sales_records,
     invalid_case,
 ):
@@ -202,7 +202,7 @@ def test_invalid_sales_post_rejects_entire_request(
     elif invalid_case == "extra_quantity":
         quantities.append("7")
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": date_value,
@@ -225,13 +225,13 @@ def test_invalid_sales_post_rejects_entire_request(
 
 @pytest.mark.parametrize("invalid_product_id", ["", "abc"])
 def test_sales_rejects_invalid_product_ids_without_database_changes(
-    client,
+    authenticated_client,
     sales_records,
     invalid_product_id,
 ):
     sales_before = _sales_snapshot()
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": sales_records.date.isoformat(),
@@ -255,12 +255,12 @@ def test_sales_rejects_invalid_product_ids_without_database_changes(
 
 
 def test_sales_rejects_duplicate_product_ids_without_database_changes(
-    client,
+    authenticated_client,
     sales_records,
 ):
     sales_before = _sales_snapshot()
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": sales_records.date.isoformat(),
@@ -284,12 +284,12 @@ def test_sales_rejects_duplicate_product_ids_without_database_changes(
 
 
 def test_sales_rejects_empty_submission_without_database_changes(
-    client,
+    authenticated_client,
     sales_records,
 ):
     sales_before = _sales_snapshot()
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={"date": sales_records.date.isoformat()},
     )
@@ -310,7 +310,7 @@ def test_sales_rejects_empty_submission_without_database_changes(
     ],
 )
 def test_sales_rejects_unknown_wrong_month_and_inactive_products(
-    client,
+    authenticated_client,
     sales_records,
     invalid_product_case,
 ):
@@ -358,7 +358,7 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
         for sale in DailySales.query.order_by(DailySales.id).all()
     ]
 
-    response = client.post(
+    response = authenticated_client.post(
         "/input",
         data={
             "date": sales_records.date.isoformat(),
