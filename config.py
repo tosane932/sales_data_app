@@ -8,6 +8,13 @@ import os
 GEMINI_MODEL = "gemini-2.5-flash"
 
 # ==========================================
+# 単一管理者認証の設定
+# ==========================================
+SECRET_KEY = os.environ.get("SECRET_KEY")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
+
+# ==========================================
 # データベース接続設定
 # ==========================================
 # RenderのPostgreSQL自動生成URL（postgres://）をSQLAlchemy対応形式（postgresql://）に変換する対策

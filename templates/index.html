@@ -29,6 +29,8 @@
     {% endif %}
     
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         <div class="section">
             <div class="section-title">① 作成する年月を選択してください</div>
             <div class="select-group">

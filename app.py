@@ -1,9 +1,18 @@
 import os
 import datetime
 import logging  # 💡 1. ログモジュールをインポート
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+)
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.security import check_password_hash
 from models import db, Product, DailySales
 from google import genai
 import config
@@ -22,9 +31,35 @@ app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
+app.config["SECRET_KEY"] = config.SECRET_KEY
+app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
+app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+csrf = CSRFProtect(app)
 db.init_app(app)
 
 migrate = Migrate(app, db)
+
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
+
+
+class AdminUser(UserMixin):
+    id = "admin"
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id != AdminUser.id:
+        return None
+
+    if not (
+        app.config.get("ADMIN_USERNAME")
+        and app.config.get("ADMIN_PASSWORD_HASH")
+    ):
+        return None
+
+    return AdminUser()
+
 
 def _generate_ai_advice(ranked_sales):
     if not ranked_sales:
@@ -93,9 +128,48 @@ def _generate_ai_advice(ranked_sales):
         )
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        configured_username = app.config.get("ADMIN_USERNAME")
+        configured_password_hash = app.config.get("ADMIN_PASSWORD_HASH")
+
+        password_matches = False
+        if configured_password_hash:
+            try:
+                password_matches = check_password_hash(
+                    configured_password_hash,
+                    password,
+                )
+            except (TypeError, ValueError):
+                logger.exception("Invalid administrator password hash configuration.")
+
+        if (
+            configured_username
+            and username == configured_username
+            and password_matches
+        ):
+            login_user(AdminUser())
+            return redirect(url_for("index"))
+
+        logger.warning("Administrator login failed.")
+        return render_template(
+            "login.html",
+            error="ユーザー名またはパスワードが正しくありません。",
+        ), 401
+
+    return render_template("login.html")
+
+
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     if request.method == "POST":
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+
         try:
             year = int(request.form.get("year"))
             month = int(request.form.get("month"))
@@ -275,6 +349,7 @@ def index():
     )
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -306,6 +381,7 @@ def dashboard():
 
 
 @app.route("/api/dashboard-data")
+@login_required
 def api_dashboard_data():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -333,6 +409,7 @@ def api_dashboard_data():
     })
 
 @app.route("/api/ai-advice")
+@login_required
 def api_ai_advice():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -363,10 +440,14 @@ def api_ai_advice():
     })
 
 @app.route("/input", methods=["GET", "POST"])
+@login_required
 def input_sales():
     today = datetime.date.today()
 
     if request.method == "POST":
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+
         date_str = request.form.get("date")
         try:
             sale_date = datetime.date.fromisoformat(date_str)
@@ -492,6 +573,7 @@ def input_sales():
     )
 
 @app.route("/api/greeting")
+@login_required
 def api_greeting():
     try:
         api_key = os.environ.get("GEMINI_API_KEY")

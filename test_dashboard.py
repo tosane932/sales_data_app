@@ -109,13 +109,15 @@ def dashboard_records(flask_app, monkeypatch):
 
 
 def test_dashboard_api_returns_sales_aggregation_for_selected_period(
-    client,
+    authenticated_client,
     dashboard_records,
 ):
     products_before = _product_snapshot()
     sales_before = _sales_snapshot()
 
-    response = client.get("/api/dashboard-data?year=2026&month=8")
+    response = authenticated_client.get(
+        "/api/dashboard-data?year=2026&month=8"
+    )
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -138,10 +140,12 @@ def test_dashboard_api_returns_sales_aggregation_for_selected_period(
 
 
 def test_dashboard_api_chart_matches_ranked_sales(
-    client,
+    authenticated_client,
     dashboard_records,
 ):
-    response = client.get("/api/dashboard-data?year=2026&month=8")
+    response = authenticated_client.get(
+        "/api/dashboard-data?year=2026&month=8"
+    )
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -160,7 +164,7 @@ def test_dashboard_api_chart_matches_ranked_sales(
 
 
 def test_dashboard_api_keeps_historical_sales_for_inactive_products(
-    client,
+    authenticated_client,
     dashboard_records,
 ):
     product_b = db.session.get(Product, dashboard_records["product_b_id"])
@@ -169,7 +173,9 @@ def test_dashboard_api_keeps_historical_sales_for_inactive_products(
     products_before = _product_snapshot()
     sales_before = _sales_snapshot()
 
-    response = client.get("/api/dashboard-data?year=2026&month=8")
+    response = authenticated_client.get(
+        "/api/dashboard-data?year=2026&month=8"
+    )
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -180,10 +186,10 @@ def test_dashboard_api_keeps_historical_sales_for_inactive_products(
 
 
 def test_dashboard_api_returns_all_periods_without_filters(
-    client,
+    authenticated_client,
     dashboard_records,
 ):
-    response = client.get("/api/dashboard-data")
+    response = authenticated_client.get("/api/dashboard-data")
     payload = response.get_json()
 
     assert response.status_code == 200
