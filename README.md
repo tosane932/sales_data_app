@@ -8,28 +8,37 @@
 Gemini APIによる経営アドバイスまで支援するWebアプリケーションです。
 
 販売・飲食・物流の現場経験とWebデザインの知識をもとに、
-**老若男女が迷わず操作できる、現場目線の業務システム**を目指して開発しています。
+
+**老若男女が迷わず操作でき、ヒューマンエラーを仕組みで防ぐ、現場目線の業務システム**
+
+を目指して開発しています。
 
 ---
 
 ## 🚀 オンラインデモ
 
-### [👉 ベーカリー売上管理システムを体験する](https://bakery-salesdata.onrender.com/)
+### [👉 ベーカリー売上管理システムを開く](https://bakery-salesdata.onrender.com/)
 
-スマートフォン・PCのブラウザから利用できます。
+スマートフォン・PCのブラウザからアクセスできます。
 
 > [!NOTE]
 > Renderの無料インスタンスを使用しているため、しばらくアクセスがない場合はスリープ状態になります。  
 > 最初のアクセス時のみ、起動に時間がかかる場合があります。
 
+> [!IMPORTANT]
+> 最新版では、Flask-Loginによる**単一管理者認証**を導入しています。  
+> 認証情報はREADME上では公開していません。
+
 > [!WARNING]
-> 現在のデモ環境には、ユーザー認証および店舗ごとのデータ分離を実装していません。  
-> 入力されたデータは、同じ公開環境を利用するユーザー間で共有される可能性があります。  
-> 個人情報や実際の店舗データは入力しないでください。
+> 現在は単一管理者向けの構成で、ユーザー・店舗ごとのデータ分離は実装していません。  
+> 公開環境へ個人情報や実際の店舗データを入力しないでください。
 
 ---
 
 ## 📸 スクリーンショット
+
+> スクリーンショットは撮影時点の画面です。  
+> 現在の実装では、認証・CSRF保護・アクセス制御なども追加しています。
 
 ### 🍞 商品マスタ登録画面
 
@@ -37,7 +46,7 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 ### ✅ メニュー登録完了画面
 
-[![日次売上入力画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)
+[![メニュー登録完了画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)
 
 ### 📝 日次売上入力画面
 
@@ -60,7 +69,7 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 [![ベーカリー売上管理システム（デモ動画）](demo_thumbnail/thumbnail_postgreSQL.png)](https://youtu.be/iz4r3YP3JZk?si=w9AENw1iifjlwZ7j)
 
 > デモ動画は撮影時点の画面です。  
-> 最新版では、UI・文言・画面導線をさらに改善しています。
+> 最新版では、UI・文言・画面導線に加え、認証・CSRF・アクセス制御・回帰テストも強化しています。
 
 ---
 
@@ -68,14 +77,18 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 ベーカリー店舗の日々の商品管理・売上入力・分析を一元化するWebアプリケーションです。
 
+現在は単一管理者ログイン後、次の業務フローで利用します。
+
 ```text
+管理者ログイン
+      ↓
 商品メニューと価格を登録する
-              ↓
+      ↓
 本日の販売個数を入力・更新する
-              ↓
+      ↓
 売上ランキングとグラフを確認する
-              ↓
-Geminiから経営アドバイスを受ける
+      ↓
+必要なときだけGeminiへ経営アドバイスを依頼する
 ```
 
 単に機能を実装するだけではなく、次の点を重視しています。
@@ -84,7 +97,11 @@ Geminiから経営アドバイスを受ける
 - 操作結果を画面上の文言から理解できる
 - 次の業務画面へ迷わず移動できる
 - 過去の売上履歴を壊さず商品を管理できる
-- ヒューマンエラーを個人の注意力だけに頼らず防ぐ
+- 不正な入力をDB更新前に拒否する
+- DB更新に失敗した場合は変更をrollbackする
+- ヒューマンエラーを個人の注意力だけに頼らず仕組みで防ぐ
+- 未認証ユーザーを業務画面・APIへ到達させない
+- CSRF tokenなしの状態変更リクエストを拒否する
 - AIを必要なときだけ実行し、API利用回数を抑える
 
 ---
@@ -93,10 +110,21 @@ Geminiから経営アドバイスを受ける
 
 - PostgreSQL / SQLAlchemyによる売上データの永続化
 - `is_active`を用いた論理削除と過去売上履歴の保持
+- `(product_id, date)`のDB一意制約による重複防止
 - Flask-Migrate / Alembicによるデータベース変更管理
+- 空DB・既存DB複製環境の両方でマイグレーション経路を検証
 - Docker / Docker Composeによる再現可能な開発環境
 - Gunicorn / Renderによる本番公開
-- pytest / GitHub Actionsによる自動テストとCI
+- Flask-Loginによる単一管理者認証
+- Flask-WTF / CSRFProtectによるCSRF保護
+- `login_required`による業務画面・APIのアクセス制御
+- 匿名状態からのAI API実行防止
+- pytestを**3件 → 9件 → 51件 → 69件**へ段階的に拡充
+- GitHub Actionsによるpush / Pull Request時の全pytest自動実行
+- feature branch → Pull Request → CI → main Mergeの変更確認フロー
+- 売上・商品POSTの入力値をDB変更前に全件検証
+- DB commit失敗時のrollback
+- 保存型XSS・AI返答表示のXSS対策
 - Gemini APIの明示的な実行制御
 - Gemini APIの429・503エラーハンドリング
 - 現在値の表示や文言設計による誤操作防止
@@ -108,11 +136,24 @@ Geminiから経営アドバイスを受ける
 
 ### 1. 当月の商品メニューと価格を登録する
 
-トップページから、現在の営業月に販売する商品名と価格を登録します。
+管理者ログイン後、トップページから現在の営業月に販売する商品名と価格を登録します。
 
 登録済み商品については、商品IDを基準に名称・価格を更新できます。
 
 販売終了商品は物理削除せず、`is_active`を`False`へ変更します。
+
+商品POSTでは、保存前に次のような入力内容を検証します。
+
+```text
+配列長
+商品ID
+対象年月
+重複ID
+価格
+年月
+```
+
+不正なリクエストの場合はDBを変更せず、HTTP 400で拒否します。
 
 ### 2. 本日の販売個数を入力・更新する
 
@@ -136,6 +177,21 @@ Geminiから経営アドバイスを受ける
 
 入力欄にも登録済みの`14`が最初から表示されます。
 
+売上POSTでは、DB変更前に次の内容を検証します。
+
+```text
+日付
+数量
+配列長
+商品ID
+商品が存在するか
+売上日と商品の対象年月が一致するか
+販売終了商品ではないか
+重複した商品IDが含まれていないか
+```
+
+リクエストの一部だけを保存するのではなく、不正な値が含まれている場合はリクエスト全体を拒否します。
+
 ### 3. お店の健康診断書を見る
 
 売上分析ダッシュボードでは、次の内容を確認できます。
@@ -143,6 +199,7 @@ Geminiから経営アドバイスを受ける
 - 商品別売上ランキング
 - 売上数量グラフ
 - 年・月別集計
+- 販売終了商品の過去売上
 - Gemini APIによる経営改善提案
 
 分析対象年は、現在年から過去の年だけを表示します。
@@ -153,15 +210,21 @@ Geminiから経営アドバイスを受ける
 
 | 分類 | 機能 |
 |---|---|
+| 認証 | Flask-Loginによる単一管理者ログイン |
+| CSRF | Flask-WTFによる状態変更POSTのCSRF保護 |
+| アクセス制御 | 業務画面・APIを認証必須化 |
 | 商品管理 | 月別商品登録・名称と価格の更新・新商品追加 |
 | 販売終了 | `is_active`による論理削除・過去売上履歴の保持 |
 | 日次売上 | 商品別販売数入力・同日データの上書き更新 |
+| 入力検証 | 売上・商品POSTの事前validation |
+| DB整合性 | `(product_id, date)`一意制約・transaction rollback |
 | 状態表示 | 本日の登録済み個数・入力欄への現在値表示 |
 | 売上分析 | 年月別集計・商品別ランキング・グラフ表示 |
 | AI機能 | 日次支援メッセージ・経営アドバイス |
+| XSS対策 | DOM API / `textContent` / `innerText`による安全な文字列表示 |
 | UI | レスポンシブ対応・操作別配色・画面導線 |
 | 運用 | PostgreSQL・Docker・Render・Gunicorn |
-| 品質管理 | pytest・GitHub Actions・ログ・例外処理 |
+| 品質管理 | pytest 69件・GitHub Actions・Pull Request・ログ・例外処理 |
 
 ---
 
@@ -173,6 +236,9 @@ Geminiから経営アドバイスを受ける
 - Flask 3.1
 - SQLAlchemy
 - Flask-Migrate
+- Flask-Login
+- Flask-WTF
+- Werkzeug
 - Gunicorn
 
 ### Frontend
@@ -187,11 +253,21 @@ Geminiから経営アドバイスを受ける
 ### Database
 
 - PostgreSQL
-- SQLite（ローカル開発）
+- SQLite（ローカル開発・テスト）
+
+### Authentication / Security
+
+- Flask-Login
+- Flask-WTF / CSRFProtect
+- Werkzeug password hash
+- `login_required`
+- Jinja2 autoescape
+- DOM API / `textContent` / `innerText`
 
 ### AI
 
 - Google Gemini API
+- Google GenAI SDK
 - Prompt Engineering
 
 ### Infrastructure / Test
@@ -199,6 +275,8 @@ Geminiから経営アドバイスを受ける
 - Docker
 - Docker Compose
 - Render
+- Git / GitHub
+- GitHub Pull Request
 - GitHub Actions
 - pytest
 
@@ -207,6 +285,193 @@ Geminiから経営アドバイスを受ける
 ## 📚 詳細な設計・実装内容
 
 以下の項目は、見出しをクリックすると展開できます。
+
+---
+
+<details>
+<summary><strong>🔐 認証・CSRF・アクセス制御を見る</strong></summary>
+
+<br>
+
+### 単一管理者認証
+
+現在は複数ユーザー方式ではなく、単一管理者方式を採用しています。
+
+認証情報は次の環境変数から取得します。
+
+```text
+SECRET_KEY
+ADMIN_USERNAME
+ADMIN_PASSWORD_HASH
+```
+
+本番用の平文passwordをコード内へ固定せず、Werkzeugの`check_password_hash()`でpassword hashを検証します。
+
+```text
+GET /login
+    ↓
+username / passwordを入力
+    ↓
+password hashを照合
+    ↓
+成功
+    ↓
+認証Sessionを作成
+```
+
+現在はUser DBモデルやrole、tenant、店舗別権限は導入していません。
+
+```text
+認証済み利用者
+=
+単一管理者
+```
+
+という前提で運用しています。
+
+### CSRF保護
+
+Flask-WTFの`CSRFProtect`をアプリ全体へ適用しています。
+
+状態を変更するフォームにはCSRF tokenを含めます。
+
+```html
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+```
+
+現在の対象は次のPOSTフォームです。
+
+```text
+POST /login
+POST /
+POST /input
+```
+
+CSRF tokenがないリクエストはHTTP 400で拒否します。
+
+### 業務画面・APIのアクセス制御
+
+次のルートには`login_required`を設定しています。
+
+```text
+/
+/input
+/dashboard
+/api/dashboard-data
+/api/ai-advice
+/api/greeting
+```
+
+未認証状態では業務処理へ進まず、`/login`へredirectします。
+
+AI APIについても、匿名アクセス時にはGemini Clientへ到達しないことをpytestで確認しています。
+
+</details>
+
+---
+
+<details>
+<summary><strong>🧪 pytestを「事故防止台帳」として育てた記録を見る</strong></summary>
+
+<br>
+
+pytestは最初から69件あったわけではありません。
+
+```text
+第1段階
+3件 → 9件
+
+第2段階
+9件 → 51件
+
+第3段階
+51件 → 69件
+```
+
+問題を見つけたとき、
+
+```text
+ヒヤリハット発見
+      ↓
+原因確認
+      ↓
+REDテスト
+      ↓
+最小修正
+      ↓
+GREEN
+      ↓
+pytestへ再発防止ルールとして残す
+```
+
+という流れで回帰テストを増やしています。
+
+現在は主に次の領域を確認しています。
+
+```text
+プロンプト生成
+AI連携（モック）
+XSS回帰
+商品POST
+売上POST
+DB一意制約
+rollback
+論理削除・履歴保持
+dashboard API集計
+認証
+CSRF
+アクセス制御
+```
+
+第3段階終了時点では、
+
+```text
+69 passed
+```
+
+です。
+
+GitHub Actionsでも同じ`pytest -v`を実行します。
+
+</details>
+
+---
+
+<details>
+<summary><strong>🛡️ 保存型XSS対策を見る</strong></summary>
+
+<br>
+
+Codexによるリポジトリレビューで、動的ランキング表示やAI返答表示にHTMLとして解釈される可能性のある処理が残っていることを確認しました。
+
+### 動的ランキング
+
+文字列からHTMLを組み立てる方法を避け、
+
+- `document.createElement()`
+- `textContent`
+- `createTextNode()`
+- `replaceChildren()`
+
+などのDOM APIを利用しています。
+
+### AI返答
+
+AI返答表示では、`innerHTML`ではなく`innerText`を使用します。
+
+```javascript
+function setTextWithLineBreaks(element, value) {
+    element.innerText = String(value ?? '');
+}
+```
+
+HTML風の文字列が返ってきてもHTML要素として解釈されないことを、XSS回帰テストでも確認しています。
+
+</details>
 
 ---
 
@@ -246,26 +511,13 @@ sales_data_app/
 │   ├── index.html
 │   ├── input.html
 │   ├── dashboard.html
+│   ├── login.html
 │   └── success.html
 └── static/
     └── style.css
 ```
 
-ページごとに`body`クラスを設定しています。
-
-```html
-<body class="input-page">
-```
-
-```html
-<body class="dashboard-page">
-```
-
-```html
-<body class="success-page">
-```
-
-CSSではページクラスを先頭に付け、別画面への意図しない影響を抑えています。
+ページごとに`body`クラスを設定し、ページ専用CSSの影響範囲を制御しています。
 
 ```css
 .input-page .btn-submit {
@@ -279,9 +531,7 @@ CSSではページクラスを先頭に付け、別画面への意図しない�
 }
 ```
 
-CSS整理中には、共通クラスの影響でダッシュボードの抽出ボタンから角丸が消え、黒い枠が表示される問題も発生しました。
-
-共通スタイルとページ専用スタイルを分け、各画面を確認しながら修正しています。
+共通スタイルとページ専用スタイルを分け、別画面へ意図しないスタイル変更が波及しにくい構成を目指しています。
 
 </details>
 
@@ -294,59 +544,61 @@ CSS整理中には、共通クラスの影響でダッシュボードの抽出�
 
 バックエンドでは、同じ日付・同じ商品の売上がすでに存在する場合、入力値で上書きします。
 
-```python
-existing = DailySales.query.filter_by(
-    product_id=int(product_id),
-    date=sale_date
-).first()
+現在は、POSTされた商品を先に検証してからDB更新処理へ進みます。
 
-if existing:
-    existing.quantity = qty_int
-else:
-    sale = DailySales(
-        product_id=int(product_id),
-        date=sale_date,
-        quantity=qty_int
-    )
-    db.session.add(sale)
+```python
+for product, qty_int in validated_product_sales:
+    existing = DailySales.query.filter_by(
+        product_id=product.id,
+        date=sale_date
+    ).first()
+
+    if existing:
+        existing.quantity = qty_int
+    else:
+        sale = DailySales(
+            product_id=product.id,
+            date=sale_date,
+            quantity=qty_int
+        )
+        db.session.add(sale)
 ```
 
-たとえば、14個が登録されている商品へ17個を入力した場合、結果は次のようになります。
+たとえば、14個が登録されている商品へ17個を入力した場合、
 
 ```text
 14個 → 17個
 ```
 
-次のような加算方式ではありません。
+となります。
+
+次の加算方式ではありません。
 
 ```text
 14個 + 17個 = 31個
 ```
 
-しかし、以前のボタン文言は次のとおりでした。
+そこで画面上のボタンも、
 
 ```text
 💾 保存する
 ```
 
-「保存する」だけでは、利用者は次のどちらなのか判断できません。
-
-- 入力した個数を現在値へ追加する
-- 現在値を入力した個数へ置き換える
-
-そこで、バックエンドの処理と画面上の説明を一致させました。
+ではなく、
 
 ```text
 💾 本日の売上個数を更新する
 ```
 
-成功メッセージも変更しています。
+としています。
+
+成功メッセージも、
 
 ```text
 ✅ 本日の売上個数を更新しました！
 ```
 
-内部処理が正しくても、処理内容が画面から伝わらなければ、実際の業務では誤操作につながる可能性があります。
+とし、内部処理と利用者へ伝える文言を一致させています。
 
 </details>
 
@@ -357,15 +609,17 @@ else:
 
 <br>
 
-日次売上入力画面を再度開いたときに、利用者が次のように迷う可能性がありました。
+日次売上入力画面を再度開いたときに、
 
 ```text
 今日、この商品はもう入力しただろうか？
 現在何個で登録されているのだろうか？
-17個を入力すると、前の値へ追加されるのだろうか？
+入力した数字は追加されるのだろうか？
 ```
 
-そこで、指定日の商品別売上数を辞書へ変換する処理を追加しました。
+と迷わないよう、現在の登録状態を表示しています。
+
+指定日の商品別売上数を辞書へ変換します。
 
 ```python
 def _get_today_sales_map(target_date):
@@ -377,7 +631,7 @@ def _get_today_sales_map(target_date):
     }
 ```
 
-テンプレートでは、商品ごとに登録済み数を表示します。
+テンプレートでは商品ごとに登録済み数を表示します。
 
 ```html
 <span class="registered-quantity">
@@ -399,13 +653,7 @@ def _get_today_sales_map(target_date):
 >
 ```
 
-登録データがない場合は、`get()`の第2引数によって`0`を表示します。
-
-```jinja2
-{{ today_sales.get(product.id, 0) }}
-```
-
-これにより、利用者は画面を開いた時点で現在の登録状態を確認できます。
+登録データがない場合は`0`を表示します。
 
 </details>
 
@@ -426,48 +674,102 @@ is_active = True
 is_active = False
 ```
 
-販売終了商品は、通常の商品マスタ画面・日次売上入力画面から非表示になります。
+販売終了商品は通常の商品マスタ画面・日次売上入力画面から非表示になります。
 
-一方で、`DailySales.product_id`との関連は維持されるため、次のデータを保持できます。
+一方で`DailySales.product_id`との関連は維持されるため、
 
 - 過去の販売数量
 - 過去の商品別ランキング
 - 年・月別集計
 - 販売終了前の売上履歴
 
-商品情報を物理削除すると、関連する売上履歴や集計へ影響する可能性があります。
+を保持できます。
 
-そのため、商品をデータベースから消すのではなく、販売状態を変更する設計を採用しました。
+既存商品は商品名ではなく商品IDを基準に扱います。
 
-### 商品IDを基準に更新
+そのため商品名を変更した場合でも、同じProduct IDと過去のDailySalesとの関連を維持できます。
 
-既存商品は、商品名ではなく商品IDを基準に更新します。
+### DB側でも重複を防ぐ
 
-これにより、商品名を変更した場合でも同じ商品として扱い、過去データとの関連を維持できます。
-
-### データベース変更管理
-
-`products`テーブルへの`is_active`追加には、Flask-Migrate / Alembicを使用しています。
+`DailySales`では、
 
 ```text
-モデルを変更
-    ↓
-マイグレーションファイルを作成
-    ↓
-変更内容を確認
-    ↓
-データベースへ適用
+(product_id, date)
 ```
 
-Render起動時には、未適用のマイグレーションを反映してからアプリを起動します。
+の組み合わせへ一意制約を設定しています。
+
+アプリ側のチェックだけでなく、DB側でも同一商品・同一日の重複レコードを防ぎます。
+
+</details>
+
+---
+
+<details>
+<summary><strong>🗄 マイグレーションと空DB構築の検証を見る</strong></summary>
+
+<br>
+
+Flask-Migrate / Alembicを導入したあと、途中からマイグレーション履歴を作成した影響で、
 
 ```text
+空のDB
+↓
 flask db upgrade
-        ↓
-Gunicorn起動
-        ↓
-Flaskアプリ公開
+↓
+productsテーブルが存在しない
 ```
+
+という問題が見つかりました。
+
+そこで、
+
+```text
+products
+daily_sales
+```
+
+を作成する基礎revisionを追加し、既存revisionへ接続しました。
+
+検証では通常の開発DBを直接使わず、隔離したPostgreSQL環境を用意しています。
+
+```text
+空PostgreSQL
+↓
+flask db upgrade
+↓
+Gunicorn起動
+↓
+HTTP 200確認
+```
+
+さらに既存DBについては、
+
+```text
+既存DB
+↓
+読み取り専用でpg_dump
+↓
+隔離PostgreSQLへ復元
+↓
+upgrade
+↓
+schema / data確認
+```
+
+という経路でも確認しました。
+
+`(product_id, date)`一意制約追加時にも、
+
+```text
+upgrade
+↓
+downgrade
+↓
+再upgrade
+```
+
+を隔離環境で検証しています。
 
 </details>
 
@@ -488,13 +790,17 @@ Gemini APIは、ページを表示しただけでは自動実行しません。
 └── 「詳しいアドバイスを聞く」を押したとき
 ```
 
-利用者が必要としたときだけAPIを実行することで、次の効果を狙っています。
+利用者が必要としたときだけAPIを実行することで、
 
 - 無料枠の消費を抑える
 - 初期表示を高速化する
-- 意図しないAPI呼び出しを防ぐ
+- 意図しないAPI呼び出しを減らす
 - 実行タイミングを利用者へ明示する
 - エラーが発生した操作を把握しやすくする
+
+ことを狙っています。
+
+さらに現在はAI API自体も認証必須にしており、匿名ユーザーからGemini処理へ到達しないようにしています。
 
 ### エラーハンドリング
 
@@ -508,7 +814,7 @@ APIの利用上限・速度制限など
 API側の一時的な混雑・利用不能など
 ```
 
-利用者には、原因に応じたメッセージを表示します。
+利用者には原因に応じたメッセージを表示します。
 
 </details>
 
@@ -529,40 +835,13 @@ API側の一時的な混雑・利用不能など
 売上分析・ランキングを見る
 ```
 
-日次売上入力画面からは、売上分析ダッシュボードへ移動できます。
+日次売上入力画面から売上分析ダッシュボードへ移動でき、
 
-```html
-<a
-    href="{{ url_for('dashboard') }}"
-    class="btn-submit btn-dashboard-link"
->
-    📊 お店の健康診断書（売上分析・ランキング）を見る
-</a>
-```
-
-ダッシュボードからは、日次入力画面とトップページへ移動できます。
-
-```html
-<div class="dashboard-actions">
-    <a
-        href="{{ url_for('input_sales') }}"
-        class="dashboard-action dashboard-input-link"
-    >
-        📝 日次売上を入力する
-    </a>
-
-    <a
-        href="{{ url_for('index') }}"
-        class="dashboard-action dashboard-home-link"
-    >
-        🍞 トップページに戻る
-    </a>
-</div>
-```
+ダッシュボードから日次入力画面・トップページへ戻れる導線を用意しています。
 
 ### 未来年の選択肢を削除
 
-商品メニュー登録画面では、現在の営業年度だけを扱います。
+商品メニュー登録画面では、現在の営業年度を中心に扱います。
 
 売上分析画面では、現在年から過去の年だけを表示します。
 
@@ -570,7 +849,7 @@ API側の一時的な混雑・利用不能など
 {% for y in range(current_year, current_year - 4, -1) %}
 ```
 
-2026年の場合は次のように表示されます。
+2026年の場合、
 
 ```text
 2026年
@@ -579,18 +858,20 @@ API側の一時的な混雑・利用不能など
 2023年
 ```
 
-未来の売上結果は存在しないため、利用者が迷う可能性のある未来年を表示しない設計へ変更しました。
+となります。
+
+未来の売上結果は存在しないため、利用者が迷う可能性のある不要な選択肢を表示しない方針です。
 
 </details>
 
 ---
 
 <details>
-<summary><strong>🏗 システム構成とデプロイフローを見る</strong></summary>
+<summary><strong>🏗 システム構成と開発フローを見る</strong></summary>
 
 <br>
 
-## システム構成
+### システム構成
 
 ```text
 Browser
@@ -601,36 +882,57 @@ Gunicorn
     ▼
 Flask
     │
+    ├── Flask-Login
+    │
+    ├── CSRFProtect
+    │
+    │
     ├── PostgreSQL
     │
     └── Gemini API
 ```
 
-## 開発・デプロイフロー
+業務画面とAPIには認証チェックが入り、
+
+状態変更POSTにはCSRFチェックが入ります。
+
+### 開発・変更確認フロー
 
 ```mermaid
 flowchart TD
     A[Local Development<br>VS Code / Docker]
-    --> B[GitHub]
+    --> B[feature branch]
 
-    B --> C[GitHub Actions<br>pytest]
+    B --> C[Local pytest]
 
-    C --> D[Render Deploy]
+    C --> D[GitHub Pull Request]
 
-    D --> E[(PostgreSQL)]
+    D --> E[GitHub Actions<br>pytest -v]
+
+    E --> F[mainへMerge]
+
+    F --> G[Render]
 ```
 
-ローカル環境では、Docker ComposeによってFlaskとPostgreSQLを起動できます。
+第3段階では実際に、
 
 ```text
-Docker Compose
-├── Flaskコンテナ
-└── PostgreSQLコンテナ
+feature/auth-hardening
+↓
+ローカルpytest 69 passed
+↓
+GitHubへpush
+↓
+Pull Request
+↓
+GitHub Actions 69 passed
+↓
+mainへMerge
+↓
+Merge後mainでも69 passed
 ```
 
-GitHubへpushすると、GitHub Actionsでpytestを実行します。
-
-テスト通過後、Renderへ最新コードを反映します。
+まで確認しています。
 
 </details>
 
@@ -641,39 +943,90 @@ GitHubへpushすると、GitHub Actionsでpytestを実行します。
 
 <br>
 
-現在は`pytest`を使用し、プロンプト生成ロジックの単体テストを実装しています。
+現在はpytestを**69件**まで拡充しています。
 
-主な確認内容は次のとおりです。
-
-- 販売データがプロンプトへ正しく埋め込まれること
-- AIへの主要な指示内容が含まれること
-- 戻り値が文字列であること
-
-GitHubへpushすると、GitHub Actionsでテストを実行します。
+### 主なテスト対象
 
 ```text
-ローカルで修正
-      ↓
-GitHubへpush
-      ↓
-GitHub Actions
-      ↓
-pytest実行
-      ↓
-Renderへ反映
+test_prompts.py
+→ Geminiへ渡すプロンプトの契約
+
+test_ai_integration.py
+→ Gemini ClientをモックしたAI連携
+
+test_xss_regressions.py
+→ XSS対策の回帰防止
+
+test_products.py
+→ 商品登録・更新・validation・rollback・履歴保持
+
+test_sales.py
+→ 売上入力・validation・DB一意制約・rollback
+
+test_dashboard.py
+→ dashboard APIの集計
+
+test_auth.py
+→ ログイン・未認証POST拒否
+
+test_csrf.py
+→ CSRF token・tokenなしPOST拒否
+
+test_authorization.py
+→ 匿名ユーザーから業務画面・APIへのアクセス拒否
 ```
 
-開発中には、アプリ本体のファイルとテストファイルを取り違えても、一部のテストが通過してしまう問題も経験しました。
+現在の結果は、
 
-この経験から、テストが存在するだけでは十分ではなく、重要な処理を守れるテスト設計が必要だと学びました。
+```text
+69 passed
+```
 
-今後は次の処理をテスト対象へ追加する予定です。
+です。
 
-- 商品更新
-- 論理削除
-- 売上の上書き更新
-- APIエンドポイント
-- ユーザー・店舗ごとのデータ分離
+GitHub Actionsでは、
+
+```text
+push to main
+Pull Request to main
+```
+
+の両方で、
+
+```bash
+pytest -v
+```
+
+を実行します。
+
+### 第3段階で追加した18件
+
+```text
+認証
+5件
+
+CSRF
+6件
+
+アクセス制御
+7件
+```
+
+合計18件を追加し、
+
+```text
+51 passed
+↓
+69 passed
+```
+
+となりました。
+
+テスト数そのものではなく、
+
+**一度見つけた事故やヒヤリハットを、次から自動で止めること**
+
+を目的にしています。
 
 </details>
 
@@ -691,9 +1044,29 @@ Renderへ反映
         ↓
 本日の登録済み個数を表示する
 
-「17個を入力したら加算されると誤解するかもしれない」
+「入力値が加算されると誤解するかもしれない」
         ↓
 現在値を表示し、更新であることを明記する
+
+「不正な値が一部だけDBへ保存されるかもしれない」
+        ↓
+全件検証してからDB更新する
+
+「DB commitが途中で失敗するかもしれない」
+        ↓
+rollbackしてtransactionを戻す
+
+「同じ商品・同じ日のデータが重複するかもしれない」
+        ↓
+DBにも一意制約を設定する
+
+「未認証ユーザーがAPIへ直接アクセスするかもしれない」
+        ↓
+login_requiredで業務画面・APIを保護する
+
+「ログイン中に意図しないPOSTを送られるかもしれない」
+        ↓
+CSRFProtectで状態変更POSTを保護する
 
 「未来年を選んで迷うかもしれない」
         ↓
@@ -701,16 +1074,22 @@ Renderへ反映
 
 「次の画面への移動方法が分からないかもしれない」
         ↓
-各画面へ業務の流れに沿ったボタンを配置する
+業務の流れに沿ったボタンを配置する
 ```
 
 主に次の考え方を重視しています。
 
 - Fail Fast
 - 入力バリデーション
+- DB制約
+- transaction / rollback
 - ログ出力
 - 環境変数管理
 - 例外処理
+- 認証
+- CSRF保護
+- アクセス制御
+- XSS対策
 - 売上履歴を壊さない論理削除
 - API利用回数を抑える明示的な実行操作
 - 現在状態を利用者へ見せるUI
@@ -734,7 +1113,7 @@ Renderへ反映
 
 その経験から、システムでも次の点を重視しています。
 
-> 機能が存在するだけでなく、利用者がその意味を理解して使えること。
+> **機能が存在するだけでなく、利用者がその意味を理解して使えること。**
 
 Webデザインで学んだ視線誘導・配色・情報の優先順位と、販売現場で得た利用者視点を組み合わせ、老若男女が直感的に操作できる画面を目指しています。
 
@@ -747,14 +1126,14 @@ Webデザインで学んだ視線誘導・配色・情報の優先順位と、�
 
 <br>
 
-## 1. リポジトリをクローン
+### 1. リポジトリをクローン
 
 ```bash
 git clone https://github.com/tosane932/sales_data_app.git
 cd sales_data_app
 ```
 
-## 2. 環境変数を作成
+### 2. 環境変数を作成
 
 ```bash
 cp .env.example .env
@@ -764,22 +1143,55 @@ cp .env.example .env
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key
+SECRET_KEY=your_random_secret_key
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD_HASH=your_password_hash
 ```
 
+`ADMIN_PASSWORD_HASH`には平文passwordではなく、Werkzeug互換のhashを設定します。
+
+例として、ローカル環境で次のように生成できます。
+
+```bash
+python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your-password'))"
+```
+
+表示されたhashを`.env`の`ADMIN_PASSWORD_HASH`へ設定します。
+
 > [!WARNING]
-> `.env`にはAPIキーなどの機密情報が含まれます。  
+> `.env`にはAPIキー・SECRET_KEY・認証情報などの機密情報が含まれます。  
 > GitHubなどの公開リポジトリへpushしないでください。
 
-## 3. Docker Composeで起動
+### 3. Docker Composeで起動
 
 ```bash
 docker compose up --build
+```
+
+Docker Compose利用時は、FlaskとPostgreSQLをまとめて起動します。
+
+```text
+Docker Compose
+├── Flaskコンテナ
+└── PostgreSQLコンテナ
 ```
 
 ブラウザから次のURLへアクセスします。
 
 ```text
 http://127.0.0.1:5000
+```
+
+### Dockerを使わずローカル起動する場合
+
+`DATABASE_URL`が設定されていない場合、現在の設定ではローカルSQLiteを使用します。
+
+必要な依存関係をインストールしてからFlaskを起動します。
+
+```bash
+pip install -r requirements.txt
+flask db upgrade
+flask run
 ```
 
 ### Dockerを直接実行する場合
@@ -795,6 +1207,10 @@ docker run \
   sales-data-app
 ```
 
+> [!NOTE]
+> Docker Composeでは`DATABASE_URL`をPostgreSQLコンテナへ接続する値として設定しています。  
+> Dockerを単体で起動する場合は、利用するDB構成に合わせて`DATABASE_URL`を設定してください。
+
 </details>
 
 ---
@@ -804,7 +1220,41 @@ docker run \
 
 <br>
 
-## v2.4.1（2026-07-19）
+### 2026-08-11：pytest強化 第3段階
+
+- 🔐 Flask-Loginによる単一管理者ログインを追加
+- 🔑 `SECRET_KEY`・`ADMIN_USERNAME`・`ADMIN_PASSWORD_HASH`を環境変数化
+- 🛡 Flask-WTF / CSRFProtectによるCSRF保護を追加
+- 📝 `/login`・`/`・`/input`へCSRF tokenを追加
+- 🚧 `/`・`/input`・`/dashboard`・各業務APIを認証必須化
+- 🤖 匿名状態からAI APIへ到達できないことを回帰テスト化
+- 🧪 認証5件・CSRF6件・アクセス制御7件を追加
+- ✅ pytestを51件から69件へ拡充
+- 🌿 `feature/auth-hardening`で段階的に実装
+- 🔍 Pull Requestで差分・CI結果・conflictを確認
+- ✅ GitHub Actionsで69件成功後にmainへMerge
+- ✅ Merge後のmainでも69件成功を確認
+
+### 2026-08-10：pytest強化 第1・第2段階 / XSS対策
+
+- 🧪 pytestを3件 → 9件 → 51件へ拡充
+- ✅ 売上POSTのvalidationを強化
+- ✅ 商品POSTのvalidationを強化
+- 🗄 `(product_id, date)`へDB一意制約を追加
+- ↩️ 売上・商品POSTのcommit失敗時rollbackを回帰テスト化
+- 🧾 論理削除後の売上履歴保持を回帰テスト化
+- 📊 dashboard APIの集計を回帰テスト化
+- 🛡 動的ランキング表示の保存型XSS対策
+- 🤖 AI返答表示を`innerHTML`から`innerText`へ変更
+
+### 2026-08-06：マイグレーション修復
+
+- 🗄 空DBから初期構築できないマイグレーション履歴を修復
+- 🧱 `products`・`daily_sales`を作成する基礎revisionを追加
+- 🧪 空PostgreSQLからheadまでupgradeできることを検証
+- 📦 既存DB複製環境でもupgrade経路を確認
+
+### v2.4.1（2026-07-19）
 
 - 🗂 デモ動画・サムネイル・スクリーンショットを用途別フォルダへ整理
 - 🖼 最新画面へスクリーンショットを更新し、README内の画像パスを修正
@@ -812,9 +1262,9 @@ docker run \
 - 🐳 `.dockerignore`を整理し、開発資料・テスト・ローカルデータをDockerビルド対象から除外
 - 🧹 旧Excel処理の設定、未使用import、`openpyxl`依存関係を削除
 - 🎨 未使用CSSと古い画面タイトルを削除・修正
-- ✅ 旧仕様の残骸と競合記号を検索し、`pytest` 3件成功・Git作業ツリーcleanを確認
+- ✅ 旧仕様の残骸と競合記号を検索し、当時の`pytest` 3件成功・Git作業ツリーcleanを確認
 
-## v2.4.0（2026-07-19）
+### v2.4.0（2026-07-19）
 
 - 🎨 HTML内のCSSを`static/style.css`へ分離
 - 🧩 `input-page`・`dashboard-page`・`success-page`でページ別スタイルを整理
@@ -827,16 +1277,11 @@ docker run \
 - ↔️ 商品同士の余白と区切り線を追加
 - 🧭 トップ・日次入力・売上分析間の画面導線を改善
 - 🎨 ボタン色を操作の役割ごとに統一
-- 🍓 売上分析ボタンをいちご色へ変更
-- 🍯 日次売上入力ボタンをはちみつ色へ統一
-- 🥬 商品登録ボタンをピスタチオ色へ変更
-- 🤖 AI実行ボタンを淡いクリーム色へ統一
 - 📱 スマートフォン表示を再調整
-- 🛠 CSS共通化による抽出ボタンの表示崩れを修正
 
-## v2.3.0（2026-07-16）
+### v2.3.0（2026-07-16）
 
-- 🆔 商品IDを基準に、既存商品の名称・価格を安全に更新
+- 🆔 商品IDを基準に既存商品の名称・価格を更新
 - 🛑 `is_active`による販売終了機能を追加
 - 🧾 販売終了後も過去の売上履歴を保持
 - 🗄 Flask-Migrate / Alembicで`products.is_active`を追加
@@ -844,38 +1289,38 @@ docker run \
 - ☕ Gemini APIの429と503を分けて案内
 - 🚀 Flask開発サーバーからGunicornによる本番起動へ変更
 
-## v2.2.0（2026-07-16）
+### v2.2.0（2026-07-16）
 
 - ✨ 商品マスタ編集機能を追加
 - 年月切替時に対象月の商品マスタを自動読込
 - 既存商品の編集に対応
 - UIを実際の業務フローに合わせて改善
 
-## v2.1.0（2026-07-16）
+### v2.1.0（2026-07-16）
 
 - 📱 スマートフォン向けレスポンシブデザイン対応
 - 🎨 商品マスタ画面をカードUIへ改善
 - ✨ ボタンデザインを調整
 - 📖 READMEを大幅リニューアル
 
-## v2.0.0
+### v2.0.0
 
 - 🚀 Renderへ本番デプロイ
 - 🐳 Docker対応
 - 🗄 PostgreSQLへ移行
 - ⚙ GitHub ActionsによるCI構築
 
-## v1.5.0
+### v1.5.0
 
 - 🤖 Gemini APIによるAI経営アドバイス追加
 - 💬 AIスタッフアシスタント追加
 
-## v1.2.0
+### v1.2.0
 
 - 📊 Chart.jsによる売上グラフ追加
 - 🏆 売上ランキング機能追加
 
-## v1.0.0
+### v1.0.0
 
 - 🎉 初回リリース
 - 商品登録
@@ -886,12 +1331,24 @@ docker run \
 
 ---
 
-## 🚧 今後の実装予定
+## 🚧 今後の改善候補
+
+### 認証・セキュリティ
+
+- logout機能とSession終了テスト
+- 認証設定不足時のfail-closed専用テスト
+- 不正CSRF token専用テスト
+- Session Cookie設定の強化
+- ログイン試行へのrate limit
+- APIの認証切れ時に302ではなく401 JSONを返す設計の検討
 
 ### ユーザー・データ管理
 
-- ユーザー認証
-- ユーザーまたは店舗ごとのデータ分離
+- 複数ユーザー対応
+- Userモデル
+- role設計
+- ユーザー・店舗ごとのデータ分離
+- 所有者確認
 - 公開デモデータの初期化機能
 - 公開環境における削除操作の制限
 - 更新前後の売上履歴
@@ -910,8 +1367,11 @@ docker run \
 
 - JavaScriptの外部ファイル化
 - CSSのページ別ファイル分割
-- 商品更新・論理削除のテスト追加
-- DB処理・APIエンドポイントのテスト拡充
+- 認証済み状態でのAI API正常系テスト拡充
+- dashboardの不正な年月指定に対する仕様決定
+- 同数ランキング時の並び順仕様決定
+- 商品名最大長・年範囲など未確定仕様の整理
+- `login_required`と内部認証チェックの重複整理
 
 ---
 
@@ -921,3 +1381,7 @@ docker run \
 - [オンラインデモ](https://bakery-salesdata.onrender.com/)
 - [GitHubリポジトリ](https://github.com/tosane932/sales_data_app)
 - [商品を消しても売上履歴を壊さない論理削除の実装記録](https://qiita.com/tosane932/items/4825452f4bb73fd90ba8)
+- [Flask-Migrateの初期マイグレーション修復記録](https://qiita.com/tosane932/items/13c2ca0e17716594aa1e)
+- [pytestを「事故防止台帳」として育てる 第1段階](https://qiita.com/tosane932/items/f3de1e190873a90de39f)
+- [pytestを「事故防止台帳」として育てる 第2段階](https://qiita.com/tosane932/items/b91261e7103df5792f7d)
+- [pytestを「事故防止台帳」として育てる 第3段階](https://qiita.com/tosane932/items/6d1ca5490979c8cf9d62)
