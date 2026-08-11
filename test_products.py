@@ -88,11 +88,12 @@ def _assert_product_post_rejected_without_changes(
     client,
     product_records,
     payload,
+    csrf_post,
 ):
     products_before = _product_snapshot()
     sales_before = _sales_snapshot()
 
-    response = client.post("/", data=payload)
+    response = csrf_post(client, "/", payload)
 
     assert response.status_code == 400
     assert _product_snapshot() == products_before
@@ -102,6 +103,7 @@ def _assert_product_post_rejected_without_changes(
 def test_product_post_updates_existing_and_adds_new_products(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["product_id"] = [
@@ -119,7 +121,7 @@ def test_product_post_updates_existing_and_adds_new_products(
     payload["prod_price"] = ["150", "200", "0", "50"]
     sales_before = _sales_snapshot()
 
-    response = authenticated_client.post("/", data=payload)
+    response = csrf_post(authenticated_client, "/", payload)
 
     assert response.status_code == 200
     assert Product.query.count() == 5
@@ -150,6 +152,7 @@ def test_product_post_updates_existing_and_adds_new_products(
 def test_product_post_deactivates_missing_product_without_deleting_history(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     product_b_id = product_records.existing_product_id
     sales_before = _sales_snapshot()
@@ -163,9 +166,10 @@ def test_product_post_deactivates_missing_product_without_deleting_history(
         product_b_sale_before.quantity,
     )
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/",
-        data={
+        {
             "year": "2026",
             "month": "8",
             "product_id": [str(product_records.other_product_id)],
@@ -200,6 +204,7 @@ def test_product_post_deactivates_missing_product_without_deleting_history(
 def test_product_post_reactivates_same_product_without_losing_history(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     product_id = product_records.existing_product_id
     product = db.session.get(Product, product_id)
@@ -209,9 +214,10 @@ def test_product_post_reactivates_same_product_without_losing_history(
     product_count_before = Product.query.count()
     sales_before = _sales_snapshot()
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/",
-        data={
+        {
             "year": "2026",
             "month": "8",
             "product_id": [
@@ -242,6 +248,7 @@ def test_product_post_rolls_back_all_changes_when_database_commit_fails(
     authenticated_client,
     product_records,
     monkeypatch,
+    csrf_post,
 ):
     products_before = _product_snapshot()
     sales_before = _sales_snapshot()
@@ -258,9 +265,10 @@ def test_product_post_rolls_back_all_changes_when_database_commit_fails(
     )
     monkeypatch.setattr(db.session, "rollback", rollback_spy)
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/",
-        data={
+        {
             "year": "2026",
             "month": "8",
             "product_id": [
@@ -308,6 +316,7 @@ def test_product_post_rejects_mismatched_field_lengths_without_changes(
     authenticated_client,
     product_records,
     short_field,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload[short_field].pop()
@@ -316,12 +325,14 @@ def test_product_post_rejects_mismatched_field_lengths_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
 def test_product_post_rejects_nonnumeric_product_id_without_changes(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["product_id"].append("abc")
@@ -332,12 +343,14 @@ def test_product_post_rejects_nonnumeric_product_id_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
 def test_product_post_rejects_unknown_product_id_without_changes(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["product_id"].append("999999")
@@ -348,12 +361,14 @@ def test_product_post_rejects_unknown_product_id_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
 def test_product_post_rejects_product_from_other_month_without_changes(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["product_id"].append(
@@ -366,12 +381,14 @@ def test_product_post_rejects_product_from_other_month_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
 def test_product_post_rejects_duplicate_product_ids_without_changes(
     authenticated_client,
     product_records,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["product_id"] = [
@@ -386,6 +403,7 @@ def test_product_post_rejects_duplicate_product_ids_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
@@ -394,6 +412,7 @@ def test_product_post_rejects_invalid_price_without_changes(
     authenticated_client,
     product_records,
     invalid_price,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["prod_price"][0] = invalid_price
@@ -402,6 +421,7 @@ def test_product_post_rejects_invalid_price_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )
 
 
@@ -421,6 +441,7 @@ def test_product_post_rejects_invalid_year_or_month_without_changes(
     product_records,
     year,
     month,
+    csrf_post,
 ):
     payload = _valid_product_payload(product_records)
     payload["year"] = year
@@ -430,4 +451,5 @@ def test_product_post_rejects_invalid_year_or_month_without_changes(
         authenticated_client,
         product_records,
         payload,
+        csrf_post,
     )

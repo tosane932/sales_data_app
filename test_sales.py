@@ -51,10 +51,12 @@ def sales_records(flask_app):
 def test_valid_sales_post_updates_existing_and_adds_new_sale(
     authenticated_client,
     sales_records,
+    csrf_post,
 ):
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": sales_records.date.isoformat(),
             "product_id": [
                 str(sales_records.existing_product_id),
@@ -80,6 +82,7 @@ def test_sales_rolls_back_all_changes_when_database_commit_fails(
     authenticated_client,
     sales_records,
     monkeypatch,
+    csrf_post,
 ):
     sales_before = _sales_snapshot()
     rollback_spy = Mock(wraps=db.session.rollback)
@@ -91,9 +94,10 @@ def test_sales_rolls_back_all_changes_when_database_commit_fails(
     )
     monkeypatch.setattr(db.session, "rollback", rollback_spy)
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": sales_records.date.isoformat(),
             "product_id": [
                 str(sales_records.existing_product_id),
@@ -179,6 +183,7 @@ def test_invalid_sales_post_rejects_entire_request(
     authenticated_client,
     sales_records,
     invalid_case,
+    csrf_post,
 ):
     date_value = sales_records.date.isoformat()
     product_ids = [
@@ -202,9 +207,10 @@ def test_invalid_sales_post_rejects_entire_request(
     elif invalid_case == "extra_quantity":
         quantities.append("7")
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": date_value,
             "product_id": product_ids,
             "quantity": quantities,
@@ -228,12 +234,14 @@ def test_sales_rejects_invalid_product_ids_without_database_changes(
     authenticated_client,
     sales_records,
     invalid_product_id,
+    csrf_post,
 ):
     sales_before = _sales_snapshot()
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": sales_records.date.isoformat(),
             "product_id": [
                 str(sales_records.existing_product_id),
@@ -257,12 +265,14 @@ def test_sales_rejects_invalid_product_ids_without_database_changes(
 def test_sales_rejects_duplicate_product_ids_without_database_changes(
     authenticated_client,
     sales_records,
+    csrf_post,
 ):
     sales_before = _sales_snapshot()
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": sales_records.date.isoformat(),
             "product_id": [
                 str(sales_records.existing_product_id),
@@ -286,12 +296,14 @@ def test_sales_rejects_duplicate_product_ids_without_database_changes(
 def test_sales_rejects_empty_submission_without_database_changes(
     authenticated_client,
     sales_records,
+    csrf_post,
 ):
     sales_before = _sales_snapshot()
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={"date": sales_records.date.isoformat()},
+        {"date": sales_records.date.isoformat()},
     )
 
     sales_after = _sales_snapshot()
@@ -313,6 +325,7 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
     authenticated_client,
     sales_records,
     invalid_product_case,
+    csrf_post,
 ):
     if invalid_product_case == "unknown_product":
         invalid_product_id = 999999
@@ -358,9 +371,10 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
         for sale in DailySales.query.order_by(DailySales.id).all()
     ]
 
-    response = authenticated_client.post(
+    response = csrf_post(
+        authenticated_client,
         "/input",
-        data={
+        {
             "date": sales_records.date.isoformat(),
             "product_id": [
                 str(sales_records.existing_product_id),

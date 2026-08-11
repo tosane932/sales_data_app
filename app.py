@@ -4,6 +4,7 @@ import logging  # 💡 1. ログモジュールをインポート
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_login import LoginManager, UserMixin, current_user, login_user
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
 from models import db, Product, DailySales
@@ -27,6 +28,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
 app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+csrf = CSRFProtect(app)
 db.init_app(app)
 
 migrate = Migrate(app, db)

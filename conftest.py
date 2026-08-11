@@ -1,4 +1,5 @@
 import os
+from html.parser import HTMLParser
 from types import SimpleNamespace
 
 import pytest
@@ -14,6 +15,17 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URI
 
 import app as app_module
 from models import db
+
+
+class _CSRFTokenParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.token = None
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag == "input" and attributes.get("name") == "csrf_token":
+            self.token = attributes.get("value")
 
 
 @pytest.fixture()
@@ -51,13 +63,39 @@ def admin_auth_config(flask_app):
 
 
 @pytest.fixture()
-def authenticated_client(flask_app):
+def csrf_token():
+    def get_csrf_token(test_client, path):
+        response = test_client.get(path)
+        assert response.status_code == 200
+
+        parser = _CSRFTokenParser()
+        parser.feed(response.get_data(as_text=True))
+        assert parser.token
+        return parser.token
+
+    return get_csrf_token
+
+
+@pytest.fixture()
+def csrf_post(csrf_token):
+    def post(test_client, path, data, **kwargs):
+        payload = data.copy()
+        payload["csrf_token"] = csrf_token(test_client, path)
+        return test_client.post(path, data=payload, **kwargs)
+
+    return post
+
+
+@pytest.fixture()
+def authenticated_client(flask_app, csrf_token):
     test_client = flask_app.test_client()
+    login_csrf_token = csrf_token(test_client, "/login")
     response = test_client.post(
         "/login",
         data={
             "username": TEST_ADMIN_USERNAME,
             "password": TEST_ADMIN_PASSWORD,
+            "csrf_token": login_csrf_token,
         },
         follow_redirects=False,
     )

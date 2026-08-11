@@ -84,12 +84,14 @@ def test_valid_admin_login_establishes_authenticated_session(
     client,
     unauthenticated_write_records,
     admin_auth_config,
+    csrf_token,
 ):
     login_response = client.post(
         "/login",
         data={
             "username": admin_auth_config.username,
             "password": admin_auth_config.password,
+            "csrf_token": csrf_token(client, "/login"),
         },
         follow_redirects=False,
     )
@@ -104,6 +106,7 @@ def test_valid_admin_login_establishes_authenticated_session(
                 str(unauthenticated_write_records.product_a_id),
             ],
             "quantity": ["5"],
+            "csrf_token": csrf_token(client, "/input"),
         },
         follow_redirects=False,
     )
@@ -115,6 +118,7 @@ def test_invalid_admin_login_does_not_authenticate(
     client,
     unauthenticated_write_records,
     admin_auth_config,
+    csrf_token,
 ):
     sales_before = _sales_snapshot()
 
@@ -123,6 +127,7 @@ def test_invalid_admin_login_does_not_authenticate(
         data={
             "username": admin_auth_config.username,
             "password": "wrong-password",
+            "csrf_token": csrf_token(client, "/login"),
         },
         follow_redirects=False,
     )
@@ -137,6 +142,7 @@ def test_invalid_admin_login_does_not_authenticate(
                 str(unauthenticated_write_records.product_a_id),
             ],
             "quantity": ["9"],
+            "csrf_token": csrf_token(client, "/input"),
         },
         follow_redirects=False,
     )
@@ -148,6 +154,7 @@ def test_invalid_admin_login_does_not_authenticate(
 def test_unauthenticated_product_post_redirects_to_login_without_database_changes(
     client,
     unauthenticated_write_records,
+    csrf_token,
 ):
     products_before = _product_snapshot()
     sales_before = _sales_snapshot()
@@ -163,6 +170,7 @@ def test_unauthenticated_product_post_redirects_to_login_without_database_change
             ],
             "prod_name": ["更新商品A", "新規商品C"],
             "prod_price": ["150", "300"],
+            "csrf_token": csrf_token(client, "/"),
         },
         follow_redirects=False,
     )
@@ -175,6 +183,7 @@ def test_unauthenticated_product_post_redirects_to_login_without_database_change
 def test_unauthenticated_sales_post_redirects_to_login_without_database_changes(
     client,
     unauthenticated_write_records,
+    csrf_token,
 ):
     sales_before = _sales_snapshot()
 
@@ -187,6 +196,7 @@ def test_unauthenticated_sales_post_redirects_to_login_without_database_changes(
                 str(unauthenticated_write_records.product_b_id),
             ],
             "quantity": ["9", "7"],
+            "csrf_token": csrf_token(client, "/input"),
         },
         follow_redirects=False,
     )

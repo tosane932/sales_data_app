@@ -40,6 +40,8 @@
 
     {% if products %}
         <form method="POST" onkeydown="return event.key !== 'Enter';">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <input
                 type="hidden"
                 name="date"
