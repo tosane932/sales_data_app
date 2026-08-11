@@ -75,14 +75,17 @@ def test_login_form_contains_csrf_token(client):
     _assert_form_contains_csrf_token(response)
 
 
-def test_product_form_contains_csrf_token(client):
-    response = client.get("/")
+def test_product_form_contains_csrf_token(authenticated_client):
+    response = authenticated_client.get("/")
 
     _assert_form_contains_csrf_token(response)
 
 
-def test_sales_form_contains_csrf_token(client, csrf_write_records):
-    response = client.get("/input")
+def test_sales_form_contains_csrf_token(
+    authenticated_client,
+    csrf_write_records,
+):
+    response = authenticated_client.get("/input")
 
     _assert_form_contains_csrf_token(response)
 
@@ -108,7 +111,7 @@ def test_login_post_without_csrf_is_rejected_without_authentication(
         "date": csrf_write_records.sale_date.isoformat(),
         "product_id": [str(csrf_write_records.product_a_id)],
         "quantity": ["9"],
-        "csrf_token": csrf_token(client, "/input"),
+        "csrf_token": csrf_token(client, "/login"),
     }
 
     protected_response = client.post(

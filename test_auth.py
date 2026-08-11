@@ -142,7 +142,7 @@ def test_invalid_admin_login_does_not_authenticate(
                 str(unauthenticated_write_records.product_a_id),
             ],
             "quantity": ["9"],
-            "csrf_token": csrf_token(client, "/input"),
+            "csrf_token": csrf_token(client, "/login"),
         },
         follow_redirects=False,
     )
@@ -170,7 +170,7 @@ def test_unauthenticated_product_post_redirects_to_login_without_database_change
             ],
             "prod_name": ["更新商品A", "新規商品C"],
             "prod_price": ["150", "300"],
-            "csrf_token": csrf_token(client, "/"),
+            "csrf_token": csrf_token(client, "/login"),
         },
         follow_redirects=False,
     )
@@ -196,7 +196,7 @@ def test_unauthenticated_sales_post_redirects_to_login_without_database_changes(
                 str(unauthenticated_write_records.product_b_id),
             ],
             "quantity": ["9", "7"],
-            "csrf_token": csrf_token(client, "/input"),
+            "csrf_token": csrf_token(client, "/login"),
         },
         follow_redirects=False,
     )

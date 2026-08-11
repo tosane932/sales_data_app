@@ -2,7 +2,13 @@ import os
 import datetime
 import logging  # 💡 1. ログモジュールをインポート
 from flask import Flask, jsonify, redirect, render_template, request, url_for
-from flask_login import LoginManager, UserMixin, current_user, login_user
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+)
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
@@ -158,6 +164,7 @@ def login():
 
 
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     if request.method == "POST":
         if not current_user.is_authenticated:
@@ -342,6 +349,7 @@ def index():
     )
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -373,6 +381,7 @@ def dashboard():
 
 
 @app.route("/api/dashboard-data")
+@login_required
 def api_dashboard_data():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -400,6 +409,7 @@ def api_dashboard_data():
     })
 
 @app.route("/api/ai-advice")
+@login_required
 def api_ai_advice():
     year_param = request.args.get("year")
     month_param = request.args.get("month")
@@ -430,6 +440,7 @@ def api_ai_advice():
     })
 
 @app.route("/input", methods=["GET", "POST"])
+@login_required
 def input_sales():
     today = datetime.date.today()
 
@@ -562,6 +573,7 @@ def input_sales():
     )
 
 @app.route("/api/greeting")
+@login_required
 def api_greeting():
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
