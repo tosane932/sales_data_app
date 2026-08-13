@@ -1,10 +1,13 @@
 import datetime
 from types import SimpleNamespace
+from unittest.mock import Mock
 from urllib.parse import urlparse
 
 import pytest
 from bs4 import BeautifulSoup
+from flask import g
 
+import app as app_module
 from models import DailySales, Product, db
 
 
@@ -112,6 +115,54 @@ def test_valid_admin_login_establishes_authenticated_session(
     )
 
     assert protected_response.status_code == 200
+
+
+def test_existing_authenticated_session_is_rejected_when_admin_password_hash_is_invalid(
+    authenticated_client,
+    flask_app,
+    monkeypatch,
+):
+    monkeypatch.setitem(
+        flask_app.config,
+        "ADMIN_PASSWORD_HASH",
+        "invalid$test$hash",
+    )
+    user_loader = Mock(wraps=app_module.load_user)
+    monkeypatch.setattr(
+        app_module.login_manager,
+        "_user_callback",
+        user_loader,
+    )
+    g.pop("_login_user", None)
+
+    response = authenticated_client.get(
+        "/dashboard",
+        follow_redirects=False,
+    )
+
+    user_loader.assert_called_once_with(app_module.AdminUser.id)
+    _assert_redirects_to_login(response)
+
+
+def test_existing_authenticated_session_is_restored_when_admin_password_hash_is_unchanged(
+    authenticated_client,
+    monkeypatch,
+):
+    user_loader = Mock(wraps=app_module.load_user)
+    monkeypatch.setattr(
+        app_module.login_manager,
+        "_user_callback",
+        user_loader,
+    )
+    g.pop("_login_user", None)
+
+    response = authenticated_client.get(
+        "/dashboard",
+        follow_redirects=False,
+    )
+
+    user_loader.assert_called_once_with(app_module.AdminUser.id)
+    assert response.status_code == 200
 
 
 def test_invalid_admin_login_does_not_authenticate(

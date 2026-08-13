@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import Mock
 
 import pytest
 
@@ -207,3 +208,52 @@ def test_dashboard_api_returns_all_periods_without_filters(
     ]
     assert payload["chart_values"] == [30, 20, 10, 5]
     assert payload["period_text"] == "全期間"
+
+
+@pytest.mark.parametrize(
+    ("route", "invalid_query"),
+    [
+        pytest.param("/dashboard", "year=abc", id="dashboard-invalid-year"),
+        pytest.param("/dashboard", "month=abc", id="dashboard-invalid-month"),
+        pytest.param(
+            "/api/dashboard-data",
+            "year=abc",
+            id="dashboard-api-invalid-year",
+        ),
+        pytest.param(
+            "/api/dashboard-data",
+            "month=abc",
+            id="dashboard-api-invalid-month",
+        ),
+        pytest.param(
+            "/api/ai-advice",
+            "year=abc",
+            id="ai-advice-api-invalid-year",
+        ),
+        pytest.param(
+            "/api/ai-advice",
+            "month=abc",
+            id="ai-advice-api-invalid-month",
+        ),
+    ],
+)
+def test_dashboard_routes_reject_noninteger_query_with_bad_request(
+    authenticated_client,
+    flask_app,
+    monkeypatch,
+    route,
+    invalid_query,
+):
+    gemini_client = Mock()
+    monkeypatch.setattr(app_module.genai, "Client", gemini_client)
+    monkeypatch.setitem(flask_app.config, "PROPAGATE_EXCEPTIONS", False)
+
+    response = authenticated_client.get(f"{route}?{invalid_query}")
+
+    if route == "/api/ai-advice":
+        assert response.status_code == 400 and not gemini_client.called, (
+            f"status={response.status_code}, "
+            f"gemini_calls={gemini_client.call_count}"
+        )
+    else:
+        assert response.status_code == 400

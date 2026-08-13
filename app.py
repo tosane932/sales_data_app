@@ -1,7 +1,9 @@
 import os
 import datetime
+import hashlib
+import hmac
 import logging  # 💡 1. ログモジュールをインポート
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -47,15 +49,33 @@ class AdminUser(UserMixin):
     id = "admin"
 
 
+ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
+
+
+def _get_admin_auth_fingerprint(password_hash):
+    if not isinstance(password_hash, str) or not password_hash:
+        return None
+
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()
+
+
 @login_manager.user_loader
 def load_user(user_id):
     if user_id != AdminUser.id:
         return None
 
-    if not (
-        app.config.get("ADMIN_USERNAME")
-        and app.config.get("ADMIN_PASSWORD_HASH")
-    ):
+    if not app.config.get("ADMIN_USERNAME"):
+        return None
+
+    current_fingerprint = _get_admin_auth_fingerprint(
+        app.config.get("ADMIN_PASSWORD_HASH")
+    )
+    session_fingerprint = session.get(
+        ADMIN_AUTH_FINGERPRINT_SESSION_KEY
+    )
+    if not current_fingerprint or not isinstance(session_fingerprint, str):
+        return None
+    if not hmac.compare_digest(current_fingerprint, session_fingerprint):
         return None
 
     return AdminUser()
@@ -152,6 +172,9 @@ def login():
             and password_matches
         ):
             login_user(AdminUser())
+            session[ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = (
+                _get_admin_auth_fingerprint(configured_password_hash)
+            )
             return redirect(url_for("index"))
 
         logger.warning("Administrator login failed.")
@@ -348,13 +371,22 @@ def index():
         registered_months=registered_months
     )
 
+def _get_optional_integer_query_parameter(name):
+    value = request.args.get(name)
+    if not value:
+        return None
+
+    try:
+        return int(value)
+    except ValueError:
+        abort(400)
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
@@ -383,10 +415,8 @@ def dashboard():
 @app.route("/api/dashboard-data")
 @login_required
 def api_dashboard_data():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
 
@@ -411,11 +441,8 @@ def api_dashboard_data():
 @app.route("/api/ai-advice")
 @login_required
 def api_ai_advice():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(
         f"AI advice requested for period: "
