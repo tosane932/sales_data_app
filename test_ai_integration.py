@@ -1,3 +1,4 @@
+import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -6,6 +7,7 @@ from google.genai import errors
 
 import app as app_module
 import config
+from models import DailySales, Product, db
 from prompts import build_sales_prompt
 
 
@@ -38,6 +40,80 @@ def test_generate_ai_advice_sends_complete_sales_prompt(monkeypatch):
         contents=expected_prompt
     )
     assert result == "モックされたAIアドバイス"
+
+
+def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sales(
+    authenticated_client,
+    monkeypatch,
+):
+    august_product_a = Product(
+        year=2026,
+        month=8,
+        name="8月商品A",
+        price=100,
+    )
+    august_product_b = Product(
+        year=2026,
+        month=8,
+        name="8月商品B",
+        price=200,
+    )
+    july_product = Product(
+        year=2026,
+        month=7,
+        name="7月対象外商品",
+        price=300,
+    )
+    db.session.add_all([
+        august_product_a,
+        august_product_b,
+        july_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=august_product_a.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=august_product_b.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=5,
+        ),
+        DailySales(
+            product_id=july_product.id,
+            date=datetime.date(2026, 7, 1),
+            quantity=99,
+        ),
+    ])
+    db.session.commit()
+
+    generate_content = Mock(
+        return_value=SimpleNamespace(text="モックされたAIアドバイス")
+    )
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+    client_factory = Mock(return_value=fake_client)
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
+    monkeypatch.setattr(app_module.genai, "Client", client_factory)
+
+    response = authenticated_client.get(
+        "/api/ai-advice?year=2026&month=8"
+    )
+
+    assert response.status_code == 200
+    assert response.is_json
+    assert response.get_json() == {
+        "ai_advice": "モックされたAIアドバイス"
+    }
+    client_factory.assert_called_once_with(api_key="dummy-test-key")
+    generate_content.assert_called_once()
+    contents = generate_content.call_args.kwargs["contents"]
+    assert "8月商品A: 10個" in contents
+    assert "8月商品B: 5個" in contents
+    assert "7月対象外商品" not in contents
 
 
 @pytest.mark.parametrize(
