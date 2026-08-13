@@ -36,6 +36,11 @@ def _assert_form_contains_csrf_token(response):
     assert document.select_one('form input[name="csrf_token"]') is not None
 
 
+def _tamper_csrf_token(token):
+    replacement = "A" if token[0] != "A" else "B"
+    return replacement + token[1:]
+
+
 @pytest.fixture()
 def csrf_write_records(flask_app):
     sale_date = datetime.date.today()
@@ -196,3 +201,77 @@ def test_authenticated_sales_post_without_csrf_is_rejected_without_database_chan
         f"status={response.status_code}, "
         f"sales_unchanged={sales_after == sales_before}"
     )
+
+
+def test_login_post_with_invalid_csrf_is_rejected_without_authentication(
+    client,
+    admin_auth_config,
+    csrf_token,
+):
+    valid_token = csrf_token(client, "/login")
+
+    login_response = client.post(
+        "/login",
+        data={
+            "username": admin_auth_config.username,
+            "password": admin_auth_config.password,
+            "csrf_token": _tamper_csrf_token(valid_token),
+        },
+        follow_redirects=False,
+    )
+    protected_response = client.get("/dashboard", follow_redirects=False)
+
+    assert login_response.status_code == 400
+    assert protected_response.status_code == 302
+    assert urlparse(protected_response.headers["Location"]).path == "/login"
+
+
+def test_authenticated_product_post_with_invalid_csrf_is_rejected_without_database_changes(
+    authenticated_client,
+    csrf_write_records,
+    csrf_token,
+):
+    valid_token = csrf_token(authenticated_client, "/")
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+
+    response = authenticated_client.post(
+        "/",
+        data={
+            "year": str(csrf_write_records.sale_date.year),
+            "month": str(csrf_write_records.sale_date.month),
+            "product_id": [str(csrf_write_records.product_a_id), ""],
+            "prod_name": ["更新商品A", "新規商品C"],
+            "prod_price": ["150", "300"],
+            "csrf_token": _tamper_csrf_token(valid_token),
+        },
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+    assert _sales_snapshot() == sales_before
+
+
+def test_authenticated_sales_post_with_invalid_csrf_is_rejected_without_database_changes(
+    authenticated_client,
+    csrf_write_records,
+    csrf_token,
+):
+    valid_token = csrf_token(authenticated_client, "/input")
+    sales_before = _sales_snapshot()
+
+    response = authenticated_client.post(
+        "/input",
+        data={
+            "date": csrf_write_records.sale_date.isoformat(),
+            "product_id": [
+                str(csrf_write_records.product_a_id),
+                str(csrf_write_records.product_b_id),
+            ],
+            "quantity": ["9", "7"],
+            "csrf_token": _tamper_csrf_token(valid_token),
+        },
+    )
+
+    assert response.status_code == 400
+    assert _sales_snapshot() == sales_before
