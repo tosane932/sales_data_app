@@ -1,7 +1,7 @@
 import os
 import datetime
 import logging  # 💡 1. ログモジュールをインポート
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -348,13 +348,22 @@ def index():
         registered_months=registered_months
     )
 
+def _get_optional_integer_query_parameter(name):
+    value = request.args.get(name)
+    if not value:
+        return None
+
+    try:
+        return int(value)
+    except ValueError:
+        abort(400)
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
@@ -383,10 +392,8 @@ def dashboard():
 @app.route("/api/dashboard-data")
 @login_required
 def api_dashboard_data():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
 
@@ -411,11 +418,8 @@ def api_dashboard_data():
 @app.route("/api/ai-advice")
 @login_required
 def api_ai_advice():
-    year_param = request.args.get("year")
-    month_param = request.args.get("month")
-
-    target_year = int(year_param) if year_param else None
-    target_month = int(month_param) if month_param else None
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
 
     logger.info(
         f"AI advice requested for period: "
