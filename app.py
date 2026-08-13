@@ -1,7 +1,9 @@
 import os
 import datetime
+import hashlib
+import hmac
 import logging  # 💡 1. ログモジュールをインポート
-from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
     UserMixin,
@@ -47,15 +49,33 @@ class AdminUser(UserMixin):
     id = "admin"
 
 
+ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
+
+
+def _get_admin_auth_fingerprint(password_hash):
+    if not isinstance(password_hash, str) or not password_hash:
+        return None
+
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()
+
+
 @login_manager.user_loader
 def load_user(user_id):
     if user_id != AdminUser.id:
         return None
 
-    if not (
-        app.config.get("ADMIN_USERNAME")
-        and app.config.get("ADMIN_PASSWORD_HASH")
-    ):
+    if not app.config.get("ADMIN_USERNAME"):
+        return None
+
+    current_fingerprint = _get_admin_auth_fingerprint(
+        app.config.get("ADMIN_PASSWORD_HASH")
+    )
+    session_fingerprint = session.get(
+        ADMIN_AUTH_FINGERPRINT_SESSION_KEY
+    )
+    if not current_fingerprint or not isinstance(session_fingerprint, str):
+        return None
+    if not hmac.compare_digest(current_fingerprint, session_fingerprint):
         return None
 
     return AdminUser()
@@ -152,6 +172,9 @@ def login():
             and password_matches
         ):
             login_user(AdminUser())
+            session[ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = (
+                _get_admin_auth_fingerprint(configured_password_hash)
+            )
             return redirect(url_for("index"))
 
         logger.warning("Administrator login failed.")
