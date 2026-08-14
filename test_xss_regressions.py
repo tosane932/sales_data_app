@@ -62,6 +62,22 @@ def test_dynamic_ranking_product_name_uses_text_dom_api():
     )
 
 
+def test_dynamic_ranking_product_name_does_not_use_inner_html():
+    """安全な代入と併存する商品名のHTML sinkも検知するsource guard。"""
+    source = _read_template(DASHBOARD_TEMPLATE)
+    update_source = _source_between(
+        source,
+        "function updateDashboard(event)",
+        "function loadAiAdvice()"
+    )
+
+    assert not re.search(
+        r"productName\s*\.\s*"
+        r"(?:innerHTML|outerHTML|insertAdjacentHTML)\b",
+        update_source
+    )
+
+
 def test_dashboard_ai_responses_use_text_dom_api():
     """dashboardのAI返答がinnerHTMLへ戻る事故を検知するsource guard。"""
     source = _read_template(DASHBOARD_TEMPLATE)
