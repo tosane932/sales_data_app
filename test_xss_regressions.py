@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from flask import render_template
 
 from app import app as flask_app
+from models import DailySales, Product, db
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -122,6 +123,40 @@ def test_input_ai_response_uses_text_dom_api():
         r"(?:innerHTML|outerHTML|insertAdjacentHTML)\b",
         greeting_source
     )
+
+
+def test_dashboard_initial_ranking_product_name_autoescapes_html_like_text(
+    authenticated_client,
+):
+    """HTML風の商品名が初期ランキングで要素として解釈されないことを確認する。"""
+    product_name = "<em>HTML風商品名</em>"
+    product = Product(
+        year=2026,
+        month=8,
+        name=product_name,
+        price=100,
+    )
+    db.session.add(product)
+    db.session.flush()
+    db.session.add(
+        DailySales(
+            product_id=product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=5,
+        )
+    )
+    db.session.commit()
+
+    response = authenticated_client.get("/dashboard?year=2026&month=8")
+    html = response.get_data(as_text=True)
+    soup = BeautifulSoup(html, "html.parser")
+    product_element = soup.select_one(".prod-name")
+
+    assert response.status_code == 200
+    assert "&lt;em&gt;HTML風商品名&lt;/em&gt;" in html
+    assert product_element is not None
+    assert product_element.get_text() == product_name
+    assert product_element.select("em") == []
 
 
 def test_dashboard_initial_ai_binding_does_not_disable_autoescape():
