@@ -144,6 +144,33 @@ def test_existing_authenticated_session_is_rejected_when_admin_password_hash_is_
     _assert_redirects_to_login(response)
 
 
+def test_existing_authenticated_session_is_rejected_when_auth_fingerprint_is_missing(
+    authenticated_client,
+    monkeypatch,
+):
+    with authenticated_client.session_transaction() as session_data:
+        session_data.pop(
+            app_module.ADMIN_AUTH_FINGERPRINT_SESSION_KEY,
+            None,
+        )
+
+    user_loader = Mock(wraps=app_module.load_user)
+    monkeypatch.setattr(
+        app_module.login_manager,
+        "_user_callback",
+        user_loader,
+    )
+    g.pop("_login_user", None)
+
+    response = authenticated_client.get(
+        "/dashboard",
+        follow_redirects=False,
+    )
+
+    user_loader.assert_called_once_with(app_module.AdminUser.id)
+    _assert_redirects_to_login(response)
+
+
 def test_existing_authenticated_session_is_restored_when_admin_password_hash_is_unchanged(
     authenticated_client,
     monkeypatch,
