@@ -78,6 +78,54 @@ def test_valid_sales_post_updates_existing_and_adds_new_sale(
     ).one().quantity == 0
 
 
+def test_sales_post_does_not_update_same_product_sale_from_other_date(
+    authenticated_client,
+    csrf_post,
+):
+    previous_date = datetime.date(2026, 8, 1)
+    target_date = datetime.date(2026, 8, 2)
+    product = Product(
+        year=2026,
+        month=8,
+        name="別日売上テスト商品",
+        price=200,
+        is_active=True,
+    )
+    db.session.add(product)
+    db.session.flush()
+    db.session.add(
+        DailySales(
+            product_id=product.id,
+            date=previous_date,
+            quantity=5,
+        )
+    )
+    db.session.commit()
+
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": target_date.isoformat(),
+            "product_id": [str(product.id)],
+            "quantity": ["9"],
+        },
+    )
+
+    product_sales = DailySales.query.filter_by(
+        product_id=product.id,
+    ).order_by(DailySales.date).all()
+
+    assert response.status_code == 200
+    assert [
+        (sale.date, sale.quantity)
+        for sale in product_sales
+    ] == [
+        (previous_date, 5),
+        (target_date, 9),
+    ]
+
+
 def test_sales_rolls_back_all_changes_when_database_commit_fails(
     authenticated_client,
     sales_records,
