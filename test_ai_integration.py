@@ -64,10 +64,17 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
         name="7月対象外商品",
         price=300,
     )
+    previous_year_august_product = Product(
+        year=2025,
+        month=8,
+        name="前年8月対象外商品",
+        price=400,
+    )
     db.session.add_all([
         august_product_a,
         august_product_b,
         july_product,
+        previous_year_august_product,
     ])
     db.session.flush()
     db.session.add_all([
@@ -85,6 +92,11 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
             product_id=july_product.id,
             date=datetime.date(2026, 7, 1),
             quantity=99,
+        ),
+        DailySales(
+            product_id=previous_year_august_product.id,
+            date=datetime.date(2025, 8, 1),
+            quantity=77,
         ),
     ])
     db.session.commit()
@@ -114,6 +126,7 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
     assert "8月商品A: 10個" in contents
     assert "8月商品B: 5個" in contents
     assert "7月対象外商品" not in contents
+    assert "前年8月対象外商品" not in contents
 
 
 @pytest.mark.parametrize(
