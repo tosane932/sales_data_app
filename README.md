@@ -4,7 +4,7 @@
 
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
-ベーカリーの商品登録・日次売上入力・売上分析を一元管理し、
+ベーカリーの商品登録・日次売上入力・売上分析を一元管理し、  
 Gemini APIによる経営アドバイスまで支援するWebアプリケーションです。
 
 販売・飲食・物流の現場経験とWebデザインの知識をもとに、
@@ -38,7 +38,7 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 ## 📸 スクリーンショット
 
 > スクリーンショットは撮影時点の画面です。  
-> 現在の実装では、認証・CSRF保護・アクセス制御なども追加しています。
+> 現在の実装では、認証・CSRF保護・アクセス制御・回帰テストなども追加しています。
 
 ### 🍞 商品マスタ登録画面
 
@@ -101,8 +101,11 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 - DB更新に失敗した場合は変更をrollbackする
 - ヒューマンエラーを個人の注意力だけに頼らず仕組みで防ぐ
 - 未認証ユーザーを業務画面・APIへ到達させない
-- CSRF tokenなしの状態変更リクエストを拒否する
+- CSRF tokenなし・改ざん済みtokenによる状態変更リクエストを拒否する
+- 管理者認証情報が変更された場合、既存Sessionをそのまま信用しない
+- 不正な年月クエリを未処理の500エラーへ進ませない
 - AIを必要なときだけ実行し、API利用回数を抑える
+- pytestがGREENでも重要条件を見逃していないか、反証によって検証する
 
 ---
 
@@ -113,22 +116,33 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 - `(product_id, date)`のDB一意制約による重複防止
 - Flask-Migrate / Alembicによるデータベース変更管理
 - 空DB・既存DB複製環境の両方でマイグレーション経路を検証
+- 空DBからAlembic headまで構築できることをpytestで自動検証
 - Docker / Docker Composeによる再現可能な開発環境
 - Gunicorn / Renderによる本番公開
 - Flask-Loginによる単一管理者認証
 - Flask-WTF / CSRFProtectによるCSRF保護
 - `login_required`による業務画面・APIのアクセス制御
 - 匿名状態からのAI API実行防止
-- pytestを**3件 → 9件 → 51件 → 69件**へ段階的に拡充
+- 管理者password hashのfingerprintを用いた既存Sessionのfail-closed化
+- 非整数の`year`・`month`クエリをHTTP 400で拒否
+- pytestを**3件 → 9件 → 51件 → 69件 → 87件 → 91件**へ段階的に拡充
+- Falsification（反証）の観点から既存pytestの検出力を再検証
+- 代表的な11件の手動Mutation Testingを実施
+- 初回SURVIVEDした5 Mutationをpytest強化後に再検証し、選択した11件すべてをKILL可能な状態へ強化
 - GitHub Actionsによるpush / Pull Request時の全pytest自動実行
 - feature branch → Pull Request → CI → main Mergeの変更確認フロー
 - 売上・商品POSTの入力値をDB変更前に全件検証
 - DB commit失敗時のrollback
 - 保存型XSS・AI返答表示のXSS対策
+- HTML sinkの混入を検知するXSS回帰テスト
+- Jinja2 autoescapeによる初期表示経路のXSS回帰テスト
 - Gemini APIの明示的な実行制御
-- Gemini APIの429・503エラーハンドリング
+- Gemini APIの429・503・想定外例外のfallbackをモックで回帰テスト
+- 認証済みAI APIが対象年月の売上だけを利用することを検証
 - 現在値の表示や文言設計による誤操作防止
 - ページ別CSSスコープによるスタイルの影響範囲制御
+- Flask-SQLAlchemy 3.xで非推奨となった`db.get_engine()`を廃止し、`db.engine`へ統一
+- 現在のpytest結果：**91 passed, 0 warnings**
 
 ---
 
@@ -192,6 +206,8 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 リクエストの一部だけを保存するのではなく、不正な値が含まれている場合はリクエスト全体を拒否します。
 
+また、同じ商品に別日の売上が存在する場合でも、対象日以外のデータを誤って更新しないことを回帰テストで確認しています。
+
 ### 3. お店の健康診断書を見る
 
 売上分析ダッシュボードでは、次の内容を確認できます。
@@ -204,27 +220,29 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 分析対象年は、現在年から過去の年だけを表示します。
 
+また、`year`・`month`へ整数として解釈できない値が渡された場合は、未処理例外によるHTTP 500ではなくHTTP 400で拒否します。
+
 ---
 
 ## ⚙️ 主な機能
 
 | 分類 | 機能 |
 |---|---|
-| 認証 | Flask-Loginによる単一管理者ログイン |
-| CSRF | Flask-WTFによる状態変更POSTのCSRF保護 |
+| 認証 | Flask-Loginによる単一管理者ログイン・認証設定fingerprintによるSession検証 |
+| CSRF | Flask-WTFによる状態変更POSTのCSRF保護・改ざんtoken拒否 |
 | アクセス制御 | 業務画面・APIを認証必須化 |
 | 商品管理 | 月別商品登録・名称と価格の更新・新商品追加 |
 | 販売終了 | `is_active`による論理削除・過去売上履歴の保持 |
 | 日次売上 | 商品別販売数入力・同日データの上書き更新 |
-| 入力検証 | 売上・商品POSTの事前validation |
+| 入力検証 | 売上・商品POST・dashboard queryの事前validation |
 | DB整合性 | `(product_id, date)`一意制約・transaction rollback |
 | 状態表示 | 本日の登録済み個数・入力欄への現在値表示 |
 | 売上分析 | 年月別集計・商品別ランキング・グラフ表示 |
 | AI機能 | 日次支援メッセージ・経営アドバイス |
-| XSS対策 | DOM API / `textContent` / `innerText`による安全な文字列表示 |
+| XSS対策 | DOM API / `textContent` / `innerText` / Jinja2 autoescape |
 | UI | レスポンシブ対応・操作別配色・画面導線 |
 | 運用 | PostgreSQL・Docker・Render・Gunicorn |
-| 品質管理 | pytest 69件・GitHub Actions・Pull Request・ログ・例外処理 |
+| 品質管理 | pytest 91件・GitHub Actions・Pull Request・Falsification・手動Mutation Testing・ログ・例外処理 |
 
 ---
 
@@ -279,6 +297,8 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 - GitHub Pull Request
 - GitHub Actions
 - pytest
+- Falsification
+- Manual Mutation Testing
 
 ---
 
@@ -329,6 +349,33 @@ password hashを照合
 
 という前提で運用しています。
 
+### 認証設定変更時のSession検証
+
+ログイン時には、現在の`ADMIN_PASSWORD_HASH`からfingerprintを生成し、Sessionへ保存します。
+
+既存Sessionを復元するときは、
+
+```text
+現在のADMIN_PASSWORD_HASH
+        ↓
+fingerprint生成
+        ↓
+Session内のfingerprintと比較
+```
+
+を行います。
+
+次の状態では既存Sessionをそのまま認証済みとして扱いません。
+
+```text
+fingerprintが存在しない
+現在の認証設定と一致しない
+ADMIN_USERNAMEが設定されていない
+ADMIN_PASSWORD_HASHが有効ではない
+```
+
+そのため、管理者password hashを変更したあとも古いSessionがそのまま信用され続ける状態を防ぎます。
+
 ### CSRF保護
 
 Flask-WTFの`CSRFProtect`をアプリ全体へ適用しています。
@@ -351,7 +398,15 @@ POST /
 POST /input
 ```
 
-CSRF tokenがないリクエストはHTTP 400で拒否します。
+CSRF tokenがないリクエストだけでなく、改ざんされたtokenもHTTP 400で拒否します。
+
+また、拒否されたリクエストによって、
+
+- 認証Sessionが作成されないこと
+- 商品データが変更されないこと
+- 売上データが変更されないこと
+
+をpytestで確認しています。
 
 ### 業務画面・APIのアクセス制御
 
@@ -379,7 +434,7 @@ AI APIについても、匿名アクセス時にはGemini Clientへ到達しな�
 
 <br>
 
-pytestは最初から69件あったわけではありません。
+pytestは最初から91件あったわけではありません。
 
 ```text
 第1段階
@@ -390,9 +445,15 @@ pytestは最初から69件あったわけではありません。
 
 第3段階
 51件 → 69件
+
+第4段階
+69件 → 87件
+
+第5段階
+87件 → 91件
 ```
 
-問題を見つけたとき、
+第1〜第4段階では、見つかった問題や弱い保証を回帰テストとして残してきました。
 
 ```text
 ヒヤリハット発見
@@ -408,13 +469,120 @@ GREEN
 pytestへ再発防止ルールとして残す
 ```
 
-という流れで回帰テストを増やしています。
+第5段階では、考え方を一段進め、
 
-現在は主に次の領域を確認しています。
+```text
+GREENだから安全
+```
+
+ではなく、
+
+```text
+GREENでも重要条件を見逃しているかもしれない
+```
+
+というFalsification（反証）の視点から、既存pytestそのものの検出力を検証しました。
+
+### 第4段階：69件 → 87件
+
+主に次の領域を強化しました。
+
+```text
+空DBからAlembic headまでのマイグレーション
+dashboardの不正query
+Gemini 429 / 503 / 想定外例外
+認証済みAI API正常系
+認証設定変更後の既存Session
+改ざんCSRF token
+```
+
+空の一時SQLite DBへ、
+
+```text
+Alembic base
+      ↓
+upgrade
+      ↓
+head
+```
+
+を実行し、
+
+- 必要なテーブル
+- 必要なカラム
+- Alembic revision
+- `(product_id, date)`一意制約
+
+まで自動確認する回帰テストも追加しました。
+
+### 第5段階：87件 → 91件
+
+第5段階では、production codeを正式に変更する前提ではなく、あえて一時的に重要条件を壊し、
+
+```text
+重要条件をMutationする
+      ↓
+既存pytestを実行
+      ↓
+REDになるか？
+```
+
+を確認しました。
+
+代表的な11 Mutationを選択して検証した結果、
+
+```text
+初回KILLED
+6件
+
+初回SURVIVED
+5件
+```
+
+となりました。
+
+SURVIVEDした5件について原因を確認し、pytestを強化しました。
+
+主な強化内容は次のとおりです。
+
+```text
+AI年月フィルタ
+→ 前年同月データをfixtureへ追加
+
+認証Session
+→ fingerprint欠落状態を再現
+
+売上更新
+→ 同一商品の別日データをfixtureへ追加
+
+XSS
+→ 安全なDOM APIの存在だけでなくHTML sinkの混入を検知
+
+初期ランキング表示
+→ Jinja2 autoescapeが実際のHTML表示経路で有効か確認
+```
+
+その後、同じMutationを再適用してREDを確認し、
+
+```text
+選択した11 Mutation
+↓
+すべてKILLED可能
+```
+
+な状態へ強化しました。
+
+> [!NOTE]
+> これはアプリ全体へ自動Mutation Testingを実行し、Mutation Score 100%を達成したという意味ではありません。  
+> 第5段階では、重要な仕様を代表する11件を手動で選択して反証しています。
+
+### 現在の主なテスト領域
 
 ```text
 プロンプト生成
 AI連携（モック）
+AIエラーfallback
+AI年月フィルタ
 XSS回帰
 商品POST
 売上POST
@@ -422,15 +590,18 @@ DB一意制約
 rollback
 論理削除・履歴保持
 dashboard API集計
+dashboard query validation
 認証
+Session fingerprint
 CSRF
 アクセス制御
+Alembic migration
 ```
 
-第3段階終了時点では、
+現在の結果は、
 
 ```text
-69 passed
+91 passed, 0 warnings
 ```
 
 です。
@@ -458,6 +629,34 @@ Codexによるリポジトリレビューで、動的ランキング表示やAI�
 - `replaceChildren()`
 
 などのDOM APIを利用しています。
+
+第5段階では、
+
+```text
+textContentが存在する
+```
+
+ことだけではなく、
+
+```text
+innerHTML
+outerHTML
+insertAdjacentHTML
+```
+
+など、未信頼データをHTMLとして解釈し得る処理が商品名表示へ混入した場合に検知できるsource guardも追加しました。
+
+### 初期ランキング表示
+
+JavaScriptによる更新後の表示だけでなく、Jinja2による初期HTML表示についても確認しています。
+
+HTML風の商品名を実際にDBへ保存し、
+
+```text
+<em>HTML風商品名</em>
+```
+
+がHTML要素として解釈されず、文字列として表示されることをpytestで確認しています。
 
 ### AI返答
 
@@ -731,7 +930,9 @@ daily_sales
 
 を作成する基礎revisionを追加し、既存revisionへ接続しました。
 
-検証では通常の開発DBを直接使わず、隔離したPostgreSQL環境を用意しています。
+### PostgreSQLでの手動検証
+
+通常の開発DBを直接使わず、隔離したPostgreSQL環境を用意しています。
 
 ```text
 空PostgreSQL
@@ -771,6 +972,46 @@ downgrade
 
 を隔離環境で検証しています。
 
+### pytestによる自動回帰テスト
+
+第4段階では、マイグレーション履歴そのものが壊れていないことを継続的に確認するため、
+
+```text
+一時SQLite DB
+↓
+Alembic base
+↓
+upgrade
+↓
+head
+```
+
+という経路をpytestへ追加しました。
+
+最終状態で、
+
+- `products`
+- `daily_sales`
+- 必要なカラム
+- Alembic head
+- `daily_sales(product_id, date)`の複合一意制約
+
+が存在することを確認します。
+
+これにより、
+
+```text
+アプリが動く
+```
+
+だけではなく、
+
+```text
+新しい空DBをマイグレーション履歴だけから構築できる
+```
+
+ことも回帰テストとして残しています。
+
 </details>
 
 ---
@@ -802,6 +1043,36 @@ Gemini APIは、ページを表示しただけでは自動実行しません。
 
 さらに現在はAI API自体も認証必須にしており、匿名ユーザーからGemini処理へ到達しないようにしています。
 
+### 認証済みAI APIの回帰テスト
+
+Gemini Clientをモックし、
+
+```text
+認証済み利用者
+↓
+/api/ai-advice
+↓
+指定年月の売上を抽出
+↓
+promptへ渡す
+↓
+AI返答をJSONで返す
+```
+
+というルート単位の正常系も確認しています。
+
+第5段階では、同じ月でも前年の売上が混ざらないことを確認するため、前年同月データをfixtureへ追加しました。
+
+```text
+2026年8月
+→ 対象
+
+2025年8月
+→ 対象外
+```
+
+月だけではなく、年と月の両方で正しく絞り込まれていることを検証しています。
+
 ### エラーハンドリング
 
 Gemini APIのエラーを一律に扱わず、主に次の状態を分けて案内します。
@@ -812,9 +1083,12 @@ APIの利用上限・速度制限など
 
 503
 API側の一時的な混雑・利用不能など
+
+その他の想定外例外
+既定のfallbackメッセージ
 ```
 
-利用者には原因に応じたメッセージを表示します。
+429・503・想定外例外についてはGemini Clientをモックし、既定のfallback挙動が維持されていることをpytestで確認しています。
 
 </details>
 
@@ -862,6 +1136,30 @@ API側の一時的な混雑・利用不能など
 
 未来の売上結果は存在しないため、利用者が迷う可能性のある不要な選択肢を表示しない方針です。
 
+### 不正な年月query
+
+`dashboard`・`dashboard-data`・`ai-advice`では、`year`・`month`を共通処理で整数化します。
+
+整数として解釈できない場合は、
+
+```text
+未処理例外
+↓
+HTTP 500
+```
+
+へ進ませず、
+
+```text
+不正query
+↓
+HTTP 400
+```
+
+として拒否します。
+
+AI APIの場合、不正queryが渡された時点でGemini Clientへ到達しないことも確認しています。
+
 </details>
 
 ---
@@ -883,11 +1181,11 @@ Gunicorn
 Flask
     │
     ├── Flask-Login
-    │
     ├── CSRFProtect
-    │
-    │
-    ├── PostgreSQL
+    ├── SQLAlchemy
+    │      │
+    │      ▼
+    │   PostgreSQL
     │
     └── Gemini API
 ```
@@ -914,22 +1212,58 @@ flowchart TD
     F --> G[Render]
 ```
 
-第3段階では実際に、
+pytest強化では実際に、
 
 ```text
 feature/auth-hardening
 ↓
-ローカルpytest 69 passed
+pytest 69 passed
 ↓
-GitHubへpush
+Pull Request #1
 ↓
-Pull Request
-↓
-GitHub Actions 69 passed
+CI成功
 ↓
 mainへMerge
+```
+
+```text
+feature/pytest-stage4
 ↓
-Merge後mainでも69 passed
+pytest 87 passed, 2 warnings
+↓
+Pull Request #2
+↓
+CI成功
+↓
+mainへMerge
+```
+
+```text
+feature/pytest-stage5
+↓
+pytest 91 passed, 2 known warnings
+↓
+Pull Request #3
+↓
+CI成功
+↓
+mainへMerge
+```
+
+さらにStage 5で可視化された既知Warningについて、
+
+```text
+fix/flask-sqlalchemy-warning
+↓
+db.get_engine()を削除
+↓
+db.engineへ統一
+↓
+pytest 91 passed, 0 warnings
+↓
+Pull Request #4
+↓
+mainへMerge
 ```
 
 まで確認しています。
@@ -943,7 +1277,7 @@ Merge後mainでも69 passed
 
 <br>
 
-現在はpytestを**69件**まで拡充しています。
+現在はpytestを**91件**まで拡充しています。
 
 ### 主なテスト対象
 
@@ -953,33 +1287,49 @@ test_prompts.py
 
 test_ai_integration.py
 → Gemini ClientをモックしたAI連携
+→ 429 / 503 / 想定外例外
+→ 認証済みAI API
+→ 年月フィルタ
 
 test_xss_regressions.py
 → XSS対策の回帰防止
+→ HTML sinkの混入検知
+→ Jinja2 autoescapeの初期表示検証
 
 test_products.py
 → 商品登録・更新・validation・rollback・履歴保持
 
 test_sales.py
 → 売上入力・validation・DB一意制約・rollback
+→ 同一商品の別日売上を誤更新しないこと
 
 test_dashboard.py
 → dashboard APIの集計
+→ 不正year / month queryのHTTP 400
 
 test_auth.py
-→ ログイン・未認証POST拒否
+→ ログイン・認証Session
+→ 認証設定変更時のSession無効化
+→ fingerprint欠落時のfail-closed
 
 test_csrf.py
-→ CSRF token・tokenなしPOST拒否
+→ CSRF token
+→ tokenなしPOST拒否
+→ 改ざんtoken拒否
+→ 拒否時に副作用がないこと
 
 test_authorization.py
 → 匿名ユーザーから業務画面・APIへのアクセス拒否
+
+test_migrations.py
+→ 空DBからAlembic headまでのmigration
+→ 必要schema・一意制約の検証
 ```
 
 現在の結果は、
 
 ```text
-69 passed
+91 passed, 0 warnings
 ```
 
 です。
@@ -998,6 +1348,31 @@ pytest -v
 ```
 
 を実行します。
+
+### pytest強化の推移
+
+```text
+開始時
+3 passed
+
+第1段階
+9 passed
+
+第2段階
+51 passed
+
+第3段階
+69 passed
+
+第4段階
+87 passed
+
+第5段階
+91 passed
+
+Warning修正後
+91 passed, 0 warnings
+```
 
 ### 第3段階で追加した18件
 
@@ -1022,9 +1397,81 @@ CSRF
 
 となりました。
 
+### 第4段階
+
+第4段階では、
+
+```text
+69 passed
+↓
+87 passed
+```
+
+へ拡充しました。
+
+主な対象は、
+
+- 空DB migration
+- 不正dashboard query
+- Gemini error fallback
+- 認証済みAI API
+- 認証設定変更後のSession
+- 改ざんCSRF token
+
+です。
+
+### 第5段階
+
+第5段階では、単にテスト件数を増やすのではなく、
+
+**現在のGREENが重要な仕様違反を本当に検出できるのか**
+
+を確認しました。
+
+代表的な11 Mutationの結果は、
+
+```text
+初回KILLED
+6
+
+初回SURVIVED
+5
+```
+
+でした。
+
+SURVIVEDした5件を分析し、既存pytestのfixture・assertion・異常状態の再現方法を強化しました。
+
+その後、同一Mutationを再適用し、
+
+```text
+選択した11 Mutation
+↓
+すべてREDを確認
+```
+
+しています。
+
+第5段階の正式差分はテストコードのみで、
+
+```text
+test_ai_integration.py
+test_auth.py
+test_sales.py
+test_xss_regressions.py
+```
+
+を強化しました。
+
+production code・template・model・migrationには正式変更を加えていません。
+
 テスト数そのものではなく、
 
-**一度見つけた事故やヒヤリハットを、次から自動で止めること**
+**一度見つけた事故やヒヤリハットを次から自動で止めること**
+
+そして、
+
+**その安全装置が本当に故障を検知できるか確かめること**
 
 を目的にしています。
 
@@ -1068,6 +1515,30 @@ login_requiredで業務画面・APIを保護する
         ↓
 CSRFProtectで状態変更POSTを保護する
 
+「CSRF tokenそのものが改ざんされるかもしれない」
+        ↓
+改ざんtokenを拒否し、副作用がないことをpytestで確認する
+
+「管理者passwordを変更しても古いSessionが残るかもしれない」
+        ↓
+認証設定fingerprintで既存Sessionを再検証する
+
+「同じ月でも前年の売上がAI分析へ混ざるかもしれない」
+        ↓
+前年同月fixtureを置いてyear条件を検証する
+
+「同じ商品の別日の売上を誤って更新するかもしれない」
+        ↓
+別日データを置いてdate条件を検証する
+
+「安全なDOM APIがあっても危険なHTML処理が混入するかもしれない」
+        ↓
+HTML sinkの混入をsource guardで検知する
+
+「pytestがGREENでも重要条件を見逃しているかもしれない」
+        ↓
+Falsificationと手動Mutation Testingで検出力を確認する
+
 「未来年を選んで迷うかもしれない」
         ↓
 不要な選択肢を表示しない
@@ -1087,6 +1558,7 @@ CSRFProtectで状態変更POSTを保護する
 - 環境変数管理
 - 例外処理
 - 認証
+- fail-closed
 - CSRF保護
 - アクセス制御
 - XSS対策
@@ -1095,6 +1567,9 @@ CSRFProtectで状態変更POSTを保護する
 - 現在状態を利用者へ見せるUI
 - 内部処理と画面上の文言を一致させる
 - 色だけに依存しない操作案内
+- 回帰テスト
+- Falsification
+- Mutation Testing
 - ヒューマンエラーを仕組みで防ぐ
 
 ### 現場経験を生かした設計
@@ -1116,6 +1591,23 @@ CSRFProtectで状態変更POSTを保護する
 > **機能が存在するだけでなく、利用者がその意味を理解して使えること。**
 
 Webデザインで学んだ視線誘導・配色・情報の優先順位と、販売現場で得た利用者視点を組み合わせ、老若男女が直感的に操作できる画面を目指しています。
+
+また物流現場では、安全装置が存在するだけで事故がなくなるわけではありません。
+
+ソフトウェアでも同様に、
+
+```text
+認証がある
+CSRF対策がある
+pytestがGREEN
+CIが成功
+```
+
+という事実だけで思考を止めず、
+
+**「その安全装置は、壊れたとき本当に異常を検知できるのか」**
+
+まで確認することを重視しています。
 
 </details>
 
@@ -1220,6 +1712,54 @@ docker run \
 
 <br>
 
+### 2026-08-15：Flask-SQLAlchemy Warning解消
+
+- 🧹 `migrations/env.py`の互換処理を整理
+- ⚠️ Flask-SQLAlchemy 3.xで非推奨の`db.get_engine()`を削除
+- ✅ 現行APIの`db.engine`へ統一
+- 🧪 テスト件数や本体機能を変更せずWarningを解消
+- ✅ pytest **91 passed, 0 warnings**
+- 🌿 `fix/flask-sqlalchemy-warning`で修正
+- 🔍 Pull Request #4を経由してmainへMerge
+
+### 2026-08-15：pytest強化 第5段階 / Falsification・手動Mutation Testing
+
+- 🧪 pytestを87件から91件へ拡充
+- 🔍 Falsification（反証）の観点から既存pytestの検出力を検証
+- 🧬 代表的な11 Mutationを手動で適用
+- ✅ 初回KILLED 6件
+- ⚠️ 初回SURVIVED 5件
+- 🛠 SURVIVEDした5件についてfixture・assertion・異常状態の再現方法を強化
+- 🔁 同一Mutationを再適用しREDを確認
+- ✅ 選択した11 MutationすべてをKILL可能な状態へ強化
+- 📅 AI年月filterへ前年同月データを追加
+- 🔐 fingerprint欠落Sessionのfail-closedテストを追加
+- 🧾 同一商品の別日売上を誤更新しないテストを追加
+- 🛡 XSS source guardと初期表示autoescapeテストを強化
+- 🧪 正式変更は`test_ai_integration.py`・`test_auth.py`・`test_sales.py`・`test_xss_regressions.py`
+- ✅ production code・template・model・migrationには正式変更なし
+- 🌿 `feature/pytest-stage5`で実施
+- 🔍 Pull Request #3を経由してmainへMerge
+- ✅ Stage 5時点：pytest **91 passed, 2 known warnings**
+
+### 2026-08-13：pytest強化 第4段階
+
+- 🧪 pytestを69件から87件へ拡充
+- 🗄 空DBからAlembic headまでupgradeするmigration回帰テストを追加
+- 🧱 必要table・column・revision・複合一意制約を自動確認
+- 🚫 `dashboard`・`dashboard-data`・`ai-advice`の非整数`year`・`month`をHTTP 400で拒否
+- 🤖 不正query時にGemini Clientへ到達しないことを確認
+- ☕ Gemini 429・503・想定外例外のfallbackをモックで回帰テスト
+- 🤖 認証済み`/api/ai-advice`正常系をroute単位で検証
+- 🔐 管理者認証設定fingerprintをSessionへ保存
+- 🚧 管理者password hash変更後の既存Sessionをfail-closed化
+- ✅ 認証設定が変わっていないSessionは正常復元
+- 🛡 login・商品・売上POSTへ改ざんCSRF tokenテストを追加
+- ↩️ CSRF拒否時に認証・DB変更の副作用がないことを確認
+- 🌿 `feature/pytest-stage4`で実施
+- 🔍 Pull Request #2を経由してmainへMerge
+- ✅ pytest **87 passed, 2 warnings**
+
 ### 2026-08-11：pytest強化 第3段階
 
 - 🔐 Flask-Loginによる単一管理者ログインを追加
@@ -1231,7 +1771,7 @@ docker run \
 - 🧪 認証5件・CSRF6件・アクセス制御7件を追加
 - ✅ pytestを51件から69件へ拡充
 - 🌿 `feature/auth-hardening`で段階的に実装
-- 🔍 Pull Requestで差分・CI結果・conflictを確認
+- 🔍 Pull Request #1で差分・CI結果・conflictを確認
 - ✅ GitHub Actionsで69件成功後にmainへMerge
 - ✅ Merge後のmainでも69件成功を確認
 
@@ -1336,8 +1876,7 @@ docker run \
 ### 認証・セキュリティ
 
 - logout機能とSession終了テスト
-- 認証設定不足時のfail-closed専用テスト
-- 不正CSRF token専用テスト
+- 認証設定不足時のfail-closed専用テスト拡充
 - Session Cookie設定の強化
 - ログイン試行へのrate limit
 - APIの認証切れ時に302ではなく401 JSONを返す設計の検討
@@ -1361,17 +1900,21 @@ docker run \
 - AIによる欠品予測
 - 曜日・季節傾向分析
 - 商品別利益分析
+- 原価・材料コスト管理
 - 商品の販売再開機能
 
 ### コード・品質改善
 
 - JavaScriptの外部ファイル化
 - CSSのページ別ファイル分割
-- 認証済み状態でのAI API正常系テスト拡充
-- dashboardの不正な年月指定に対する仕様決定
+- `month=13`など整数ではあるが範囲外の年月に対する仕様整理
 - 同数ランキング時の並び順仕様決定
 - 商品名最大長・年範囲など未確定仕様の整理
 - `login_required`と内部認証チェックの重複整理
+- PostgreSQL固有挙動を対象とした自動テスト拡充
+- 同時POST・concurrency時の整合性検証
+- 実ブラウザを用いたE2Eテストの検討
+- 自動Mutation Testingツール導入とMutation Score計測の検討
 
 ---
 
@@ -1382,6 +1925,11 @@ docker run \
 - [GitHubリポジトリ](https://github.com/tosane932/sales_data_app)
 - [商品を消しても売上履歴を壊さない論理削除の実装記録](https://qiita.com/tosane932/items/4825452f4bb73fd90ba8)
 - [Flask-Migrateの初期マイグレーション修復記録](https://qiita.com/tosane932/items/13c2ca0e17716594aa1e)
+
+### pytest強化シリーズ
+
 - [pytestを「事故防止台帳」として育てる 第1段階](https://qiita.com/tosane932/items/f3de1e190873a90de39f)
 - [pytestを「事故防止台帳」として育てる 第2段階](https://qiita.com/tosane932/items/b91261e7103df5792f7d)
 - [pytestを「事故防止台帳」として育てる 第3段階](https://qiita.com/tosane932/items/6d1ca5490979c8cf9d62)
+- [pytestを「事故防止台帳」として育てる 第4段階](https://qiita.com/tosane932/items/372270330e73583a227f)
+- [pytestを「事故防止台帳」として育てる 第5段階](https://qiita.com/tosane932/items/85fd24c7baa6fe7c76a7)
