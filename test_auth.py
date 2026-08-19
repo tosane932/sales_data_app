@@ -40,15 +40,17 @@ def _assert_redirects_to_login(response):
 
 
 @pytest.fixture()
-def unauthenticated_write_records(flask_app):
+def unauthenticated_write_records(flask_app, admin_dataset):
     sale_date = datetime.date(2026, 8, 10)
     product_a = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="商品A",
         price=100,
     )
     product_b = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="商品B",

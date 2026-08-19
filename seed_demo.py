@@ -2,7 +2,7 @@ import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import app
+from app import app, get_admin_dataset
 from models import db, Product, DailySales
 
 
@@ -32,6 +32,10 @@ def seed_demo_data(reference_date=None):
     reference_date = reference_date or datetime.date.today()
 
     with app.app_context():
+        admin_dataset = get_admin_dataset()
+        if admin_dataset is None:
+            raise RuntimeError("Admin Dataset is missing.")
+
         # 既存データがあるDBには触らない
         if Product.query.first() is not None or DailySales.query.first() is not None:
             print("Demo seed skipped: database already contains data.")
@@ -42,6 +46,7 @@ def seed_demo_data(reference_date=None):
 
         products = [
             Product(
+                dataset=admin_dataset,
                 year=year,
                 month=month,
                 name=name,

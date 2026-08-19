@@ -14,7 +14,7 @@ TEST_ADMIN_PASSWORD_HASH = generate_password_hash(TEST_ADMIN_PASSWORD)
 os.environ["DATABASE_URL"] = TEST_DATABASE_URI
 
 import app as app_module
-from models import db
+from models import Dataset, db
 
 
 class _CSRFTokenParser(HTMLParser):
@@ -52,6 +52,18 @@ def flask_app():
 @pytest.fixture()
 def client(flask_app):
     return flask_app.test_client()
+
+
+@pytest.fixture()
+def admin_dataset(flask_app):
+    dataset = Dataset(
+        kind="admin",
+        system_key="admin",
+        absolute_expires_at=None,
+    )
+    db.session.add(dataset)
+    db.session.commit()
+    return dataset
 
 
 @pytest.fixture()

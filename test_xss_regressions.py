@@ -127,10 +127,12 @@ def test_input_ai_response_uses_text_dom_api():
 
 def test_dashboard_initial_ranking_product_name_autoescapes_html_like_text(
     authenticated_client,
+    admin_dataset,
 ):
     """HTML風の商品名が初期ランキングで要素として解釈されないことを確認する。"""
     product_name = "<em>HTML風商品名</em>"
     product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name=product_name,

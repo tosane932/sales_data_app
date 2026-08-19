@@ -30,20 +30,23 @@ def _sales_snapshot():
 
 
 @pytest.fixture()
-def product_records(flask_app):
+def product_records(flask_app, admin_dataset):
     existing_product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="既存商品",
         price=100,
     )
     other_product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="同月商品",
         price=200,
     )
     other_month_product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=7,
         name="別月商品",
@@ -100,8 +103,85 @@ def _assert_product_post_rejected_without_changes(
     assert _sales_snapshot() == sales_before
 
 
+def test_new_product_is_assigned_to_admin_dataset(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [""],
+            "prod_name": ["新規商品"],
+            "prod_price": ["250"],
+        },
+    )
+
+    product = Product.query.filter_by(name="新規商品").one()
+
+    assert response.status_code == 200
+    assert product.dataset_id == admin_dataset.id
+
+
+def test_multiple_new_products_are_assigned_to_admin_dataset(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": ["", ""],
+            "prod_name": ["新規商品A", "新規商品B"],
+            "prod_price": ["250", "300"],
+        },
+    )
+
+    products = Product.query.order_by(Product.name).all()
+
+    assert response.status_code == 200
+    assert [product.name for product in products] == [
+        "新規商品A",
+        "新規商品B",
+    ]
+    assert all(
+        product.dataset_id == admin_dataset.id
+        for product in products
+    )
+
+
+def test_product_post_fails_safely_when_admin_dataset_is_missing(
+    authenticated_client,
+    csrf_post,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [""],
+            "prod_name": ["保存されない商品"],
+            "prod_price": ["250"],
+        },
+    )
+
+    assert response.status_code == 500
+    assert response.get_data(as_text=True) == (
+        "管理者データ領域が見つかりません。"
+    )
+    assert Product.query.count() == 0
+
+
 def test_product_post_updates_existing_and_adds_new_products(
     authenticated_client,
+    admin_dataset,
     product_records,
     csrf_post,
 ):
@@ -137,6 +217,7 @@ def test_product_post_updates_existing_and_adds_new_products(
         month=8,
         name="新規商品A",
         price=0,
+        dataset_id=admin_dataset.id,
         is_active=True,
     ).one()
     assert Product.query.filter_by(
@@ -144,6 +225,7 @@ def test_product_post_updates_existing_and_adds_new_products(
         month=8,
         name="新規商品B",
         price=50,
+        dataset_id=admin_dataset.id,
         is_active=True,
     ).one()
     assert _sales_snapshot() == sales_before
