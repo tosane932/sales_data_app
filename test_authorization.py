@@ -26,9 +26,10 @@ def _assert_redirects_to_login(response):
 
 
 @pytest.fixture()
-def authorization_sales_record(flask_app):
+def authorization_sales_record(flask_app, admin_dataset):
     sale_date = datetime.date.today()
     product = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="認可テスト商品",

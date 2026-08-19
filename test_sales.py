@@ -16,15 +16,17 @@ def _sales_snapshot():
 
 
 @pytest.fixture()
-def sales_records(flask_app):
+def sales_records(flask_app, admin_dataset):
     sale_date = datetime.date.today()
     existing_product = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="既存商品",
         price=200,
     )
     new_product = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="新規売上商品",
@@ -80,11 +82,13 @@ def test_valid_sales_post_updates_existing_and_adds_new_sale(
 
 def test_sales_post_does_not_update_same_product_sale_from_other_date(
     authenticated_client,
+    admin_dataset,
     csrf_post,
 ):
     previous_date = datetime.date(2026, 8, 1)
     target_date = datetime.date(2026, 8, 2)
     product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="別日売上テスト商品",
@@ -175,9 +179,11 @@ def test_sales_rolls_back_all_changes_when_database_commit_fails(
 
 def test_daily_sales_product_and_date_are_unique_at_database_level(
     flask_app,
+    admin_dataset,
 ):
     sale_date = datetime.date.today()
     product = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="一意制約テスト商品",
@@ -371,6 +377,7 @@ def test_sales_rejects_empty_submission_without_database_changes(
 )
 def test_sales_rejects_unknown_wrong_month_and_inactive_products(
     authenticated_client,
+    admin_dataset,
     sales_records,
     invalid_product_case,
     csrf_post,
@@ -386,6 +393,7 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
             product_month = sales_records.date.month - 1
 
         invalid_product = Product(
+            dataset=admin_dataset,
             year=product_year,
             month=product_month,
             name="別月商品",
@@ -396,6 +404,7 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
         invalid_product_id = invalid_product.id
     else:
         invalid_product = Product(
+            dataset=admin_dataset,
             year=sales_records.date.year,
             month=sales_records.date.month,
             name="販売終了商品",

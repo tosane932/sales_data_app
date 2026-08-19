@@ -36,31 +36,35 @@ def _sales_snapshot():
 
 
 @pytest.fixture()
-def dashboard_records(flask_app, monkeypatch):
+def dashboard_records(flask_app, admin_dataset, monkeypatch):
     def reject_gemini_client(*args, **kwargs):
         raise AssertionError("Gemini Client must not be used by dashboard API")
 
     monkeypatch.setattr(app_module.genai, "Client", reject_gemini_client)
 
     product_a = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="商品A",
         price=100,
     )
     product_b = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="商品B",
         price=200,
     )
     july_product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=7,
         name="7月商品",
         price=300,
     )
     previous_year_product = Product(
+        dataset=admin_dataset,
         year=2025,
         month=8,
         name="前年商品",

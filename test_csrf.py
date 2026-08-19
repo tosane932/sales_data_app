@@ -42,15 +42,17 @@ def _tamper_csrf_token(token):
 
 
 @pytest.fixture()
-def csrf_write_records(flask_app):
+def csrf_write_records(flask_app, admin_dataset):
     sale_date = datetime.date.today()
     product_a = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="商品A",
         price=100,
     )
     product_b = Product(
+        dataset=admin_dataset,
         year=sale_date.year,
         month=sale_date.month,
         name="商品B",

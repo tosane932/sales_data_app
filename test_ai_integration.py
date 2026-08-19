@@ -44,27 +44,32 @@ def test_generate_ai_advice_sends_complete_sales_prompt(monkeypatch):
 
 def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sales(
     authenticated_client,
+    admin_dataset,
     monkeypatch,
 ):
     august_product_a = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="8月商品A",
         price=100,
     )
     august_product_b = Product(
+        dataset=admin_dataset,
         year=2026,
         month=8,
         name="8月商品B",
         price=200,
     )
     july_product = Product(
+        dataset=admin_dataset,
         year=2026,
         month=7,
         name="7月対象外商品",
         price=300,
     )
     previous_year_august_product = Product(
+        dataset=admin_dataset,
         year=2025,
         month=8,
         name="前年8月対象外商品",

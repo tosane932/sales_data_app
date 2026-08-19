@@ -15,7 +15,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash
-from models import db, Product, DailySales
+from models import db, Dataset, Product, DailySales
 from google import genai
 import config
 from prompts import build_sales_prompt
@@ -79,6 +79,19 @@ def load_user(user_id):
         return None
 
     return AdminUser()
+
+
+def get_admin_dataset():
+    """system_keyから管理者Datasetを取得し、異常時は安全に失敗する。"""
+    try:
+        return Dataset.query.filter_by(
+            kind="admin",
+            system_key="admin",
+        ).one_or_none()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to load the admin Dataset.")
+        return None
 
 
 def _generate_ai_advice(ranked_sales):
@@ -283,6 +296,13 @@ def index():
                 registered_months=registered_months
             )
 
+        admin_dataset = get_admin_dataset()
+        if admin_dataset is None:
+            logger.error(
+                "Product update rejected because the admin Dataset is missing."
+            )
+            return "管理者データ領域が見つかりません。", 500
+
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
 
@@ -312,6 +332,7 @@ def index():
                     # IDがない商品は新規追加
                     db.session.add(
                         Product(
+                            dataset=admin_dataset,
                             year=year,
                             month=month,
                             name=prod["name"],
