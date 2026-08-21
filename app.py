@@ -3,6 +3,8 @@ import datetime
 import hashlib
 import hmac
 import logging  # 💡 1. ログモジュールをインポート
+import uuid
+from functools import wraps
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
@@ -47,6 +49,20 @@ login_manager.login_view = "login"
 
 class AdminUser(UserMixin):
     id = "admin"
+    is_admin = True
+    is_guest = False
+
+
+class GuestUser(UserMixin):
+    is_admin = False
+    is_guest = True
+
+    def __init__(self, dataset_id):
+        self.dataset_id = dataset_id
+
+    @property
+    def id(self):
+        return f"guest:{self.dataset_id}"
 
 
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
@@ -61,24 +77,96 @@ def _get_admin_auth_fingerprint(password_hash):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id != AdminUser.id:
+    if user_id == AdminUser.id:
+        if not app.config.get("ADMIN_USERNAME"):
+            return None
+
+        current_fingerprint = _get_admin_auth_fingerprint(
+            app.config.get("ADMIN_PASSWORD_HASH")
+        )
+        session_fingerprint = session.get(
+            ADMIN_AUTH_FINGERPRINT_SESSION_KEY
+        )
+        if not current_fingerprint or not isinstance(session_fingerprint, str):
+            return None
+        if not hmac.compare_digest(current_fingerprint, session_fingerprint):
+            return None
+
+        return AdminUser()
+
+    if not isinstance(user_id, str) or not user_id.startswith("guest:"):
         return None
 
-    if not app.config.get("ADMIN_USERNAME"):
+    guest_dataset_id_text = user_id.removeprefix("guest:")
+    try:
+        guest_dataset_id = uuid.UUID(guest_dataset_id_text)
+    except (ValueError, AttributeError):
         return None
 
-    current_fingerprint = _get_admin_auth_fingerprint(
-        app.config.get("ADMIN_PASSWORD_HASH")
-    )
-    session_fingerprint = session.get(
-        ADMIN_AUTH_FINGERPRINT_SESSION_KEY
-    )
-    if not current_fingerprint or not isinstance(session_fingerprint, str):
-        return None
-    if not hmac.compare_digest(current_fingerprint, session_fingerprint):
+    try:
+        guest_dataset = Dataset.query.filter_by(
+            id=guest_dataset_id,
+            kind="guest",
+            system_key=None,
+        ).one_or_none()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to restore a Guest from its Dataset.")
         return None
 
-    return AdminUser()
+    if guest_dataset is None:
+        return None
+
+    return GuestUser(guest_dataset.id)
+
+
+def admin_required(view_function):
+    """Adminだけが業務routeへアクセスできるようにする。"""
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            abort(403)
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
+def require_current_dataset():
+    """現在の認証利用者が使用できるDatasetだけを返す。"""
+    if not current_user.is_authenticated:
+        abort(403)
+
+    principal = current_user._get_current_object()
+    if isinstance(principal, AdminUser):
+        dataset_filters = {
+            "kind": "admin",
+            "system_key": "admin",
+        }
+        missing_status_code = 500
+    elif isinstance(principal, GuestUser):
+        dataset_filters = {
+            "id": principal.dataset_id,
+            "kind": "guest",
+            "system_key": None,
+        }
+        missing_status_code = 403
+    else:
+        abort(403)
+
+    try:
+        dataset = Dataset.query.filter_by(**dataset_filters).one_or_none()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to resolve the current Dataset.")
+        abort(503)
+
+    if dataset is None:
+        if missing_status_code == 500:
+            logger.error("The Admin Dataset is missing.")
+        abort(missing_status_code)
+
+    return dataset
 
 
 def get_admin_dataset():
@@ -200,7 +288,7 @@ def login():
 
 
 @app.route("/", methods=["GET", "POST"])
-@login_required
+@admin_required
 def index():
     if request.method == "POST":
         if not current_user.is_authenticated:
@@ -404,7 +492,7 @@ def _get_optional_integer_query_parameter(name):
 
 
 @app.route("/dashboard")
-@login_required
+@admin_required
 def dashboard():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -434,7 +522,7 @@ def dashboard():
 
 
 @app.route("/api/dashboard-data")
-@login_required
+@admin_required
 def api_dashboard_data():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -460,7 +548,7 @@ def api_dashboard_data():
     })
 
 @app.route("/api/ai-advice")
-@login_required
+@admin_required
 def api_ai_advice():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -488,7 +576,7 @@ def api_ai_advice():
     })
 
 @app.route("/input", methods=["GET", "POST"])
-@login_required
+@admin_required
 def input_sales():
     today = datetime.date.today()
 
@@ -621,7 +709,7 @@ def input_sales():
     )
 
 @app.route("/api/greeting")
-@login_required
+@admin_required
 def api_greeting():
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
