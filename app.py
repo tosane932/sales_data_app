@@ -66,6 +66,7 @@ class GuestUser(UserMixin):
 
 
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
+GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 
 
 def _get_admin_auth_fingerprint(password_hash):
@@ -167,6 +168,36 @@ def require_current_dataset():
         abort(missing_status_code)
 
     return dataset
+
+
+def start_guest_session():
+    """Guest Datasetを作成し、対応するGuest identityを発行する。"""
+    if current_user.is_authenticated:
+        abort(409)
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + GUEST_ABSOLUTE_LIFETIME,
+    )
+
+    try:
+        db.session.add(guest_dataset)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to create a Guest Dataset.")
+        abort(503)
+
+    guest_user = GuestUser(guest_dataset.id)
+    if not login_user(guest_user):
+        logger.error("Failed to establish the Guest identity.")
+        abort(500)
+
+    return guest_dataset
 
 
 def get_admin_dataset():
