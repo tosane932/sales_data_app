@@ -36,8 +36,18 @@ def seed_demo_data(reference_date=None):
         if admin_dataset is None:
             raise RuntimeError("Admin Dataset is missing.")
 
-        # 既存データがあるDBには触らない
-        if Product.query.first() is not None or DailySales.query.first() is not None:
+        # Admin Datasetに既存データがある場合は触らない
+        admin_product_exists = Product.query.filter_by(
+            dataset_id=admin_dataset.id,
+        ).first() is not None
+        admin_sales_exists = (
+            DailySales.query
+            .join(Product, DailySales.product_id == Product.id)
+            .filter(Product.dataset_id == admin_dataset.id)
+            .first()
+            is not None
+        )
+        if admin_product_exists or admin_sales_exists:
             print("Demo seed skipped: database already contains data.")
             return False
 

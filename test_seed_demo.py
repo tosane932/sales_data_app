@@ -2,8 +2,85 @@ import datetime
 
 import pytest
 
-from models import Product, DailySales
-from seed_demo import seed_demo_data
+from models import DailySales, Dataset, Product, db
+from seed_demo import DEMO_PRODUCTS, DEMO_QUANTITIES, seed_demo_data
+
+
+def _create_dataset_records(
+    dataset,
+    *,
+    name,
+    price,
+    is_active,
+    sale_date,
+    quantity,
+):
+    product = Product(
+        dataset=dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name=name,
+        price=price,
+        is_active=is_active,
+    )
+    db.session.add(product)
+    db.session.flush()
+    sale = DailySales(
+        product_id=product.id,
+        date=sale_date,
+        quantity=quantity,
+    )
+    db.session.add(sale)
+    db.session.commit()
+    return product, sale
+
+
+def _dataset_snapshot(dataset_id):
+    products = [
+        (
+            product.id,
+            product.name,
+            product.price,
+            product.is_active,
+            product.dataset_id,
+        )
+        for product in (
+            Product.query
+            .filter_by(dataset_id=dataset_id)
+            .order_by(Product.id)
+            .all()
+        )
+    ]
+    sales = [
+        (
+            sale.id,
+            sale.quantity,
+            sale.date,
+            sale.product_id,
+        )
+        for sale in (
+            DailySales.query
+            .join(Product, DailySales.product_id == Product.id)
+            .filter(Product.dataset_id == dataset_id)
+            .order_by(DailySales.id)
+            .all()
+        )
+    ]
+    return products, sales
+
+
+def _create_guest_dataset():
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    db.session.add(guest_dataset)
+    db.session.flush()
+    return guest_dataset
 
 
 def test_seed_demo_data_inserts_demo_data(flask_app, admin_dataset):
@@ -51,3 +128,89 @@ def test_seed_demo_data_requires_admin_dataset(flask_app):
 
     assert Product.query.count() == 0
     assert DailySales.query.count() == 0
+
+
+def test_admin_seed_runs_when_only_guest_dataset_has_data(
+    flask_app,
+    admin_dataset,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_dataset_records(
+        guest_dataset,
+        name="ゲスト既存商品",
+        price=987,
+        is_active=True,
+        sale_date=datetime.date(2026, 8, 1),
+        quantity=654,
+    )
+
+    result = seed_demo_data(
+        reference_date=datetime.date(2026, 8, 13)
+    )
+
+    admin_products, admin_sales = _dataset_snapshot(admin_dataset.id)
+    assert result is True
+    assert len(admin_products) == len(DEMO_PRODUCTS)
+    assert len(admin_sales) == len(DEMO_PRODUCTS) * len(DEMO_QUANTITIES)
+
+
+def test_admin_seed_does_not_modify_or_delete_guest_dataset_data(
+    flask_app,
+    admin_dataset,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_dataset_records(
+        guest_dataset,
+        name="変更禁止ゲスト商品",
+        price=4321,
+        is_active=False,
+        sale_date=datetime.date(2026, 7, 9),
+        quantity=765432,
+    )
+    guest_before = _dataset_snapshot(guest_dataset.id)
+
+    result = seed_demo_data(
+        reference_date=datetime.date(2026, 8, 13)
+    )
+
+    guest_after = _dataset_snapshot(guest_dataset.id)
+    admin_products, admin_sales = _dataset_snapshot(admin_dataset.id)
+    assert guest_after == guest_before
+    assert result is True
+    assert len(admin_products) == len(DEMO_PRODUCTS)
+    assert len(admin_sales) == len(DEMO_PRODUCTS) * len(DEMO_QUANTITIES)
+
+
+def test_admin_seed_skips_existing_admin_data_without_affecting_guest_data(
+    flask_app,
+    admin_dataset,
+):
+    admin_product, admin_sale = _create_dataset_records(
+        admin_dataset,
+        name="既存管理者商品",
+        price=321,
+        is_active=True,
+        sale_date=datetime.date(2026, 8, 2),
+        quantity=12,
+    )
+    guest_dataset = _create_guest_dataset()
+    _create_dataset_records(
+        guest_dataset,
+        name="重複確認ゲスト商品",
+        price=654,
+        is_active=False,
+        sale_date=datetime.date(2026, 6, 3),
+        quantity=34,
+    )
+    admin_before = _dataset_snapshot(admin_dataset.id)
+    guest_before = _dataset_snapshot(guest_dataset.id)
+
+    result = seed_demo_data(
+        reference_date=datetime.date(2026, 8, 13)
+    )
+
+    assert result is False
+    assert _dataset_snapshot(admin_dataset.id) == admin_before
+    assert _dataset_snapshot(guest_dataset.id) == guest_before
+    assert db.session.get(Product, admin_product.id) is not None
+    assert db.session.get(DailySales, admin_sale.id) is not None
