@@ -16,6 +16,7 @@ from flask_login import (
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import InternalServerError
 from werkzeug.security import check_password_hash
 from models import db, Dataset, Product, DailySales
 from google import genai
@@ -321,6 +322,13 @@ def login():
 @app.route("/", methods=["GET", "POST"])
 @admin_required
 def index():
+    try:
+        current_dataset = require_current_dataset()
+    except InternalServerError:
+        if request.method == "POST":
+            return "管理者データ領域が見つかりません。", 500
+        current_dataset = None
+
     if request.method == "POST":
         if not current_user.is_authenticated:
             return login_manager.unauthorized()
@@ -367,7 +375,10 @@ def index():
                     logger.warning("Rejected product update with duplicate product ID.")
                     return "同じ商品が複数回送信されています。", 400
 
-                existing_product = db.session.get(Product, parsed_product_id)
+                existing_product = Product.query.filter_by(
+                    id=parsed_product_id,
+                    dataset_id=current_dataset.id,
+                ).one_or_none()
                 if existing_product is None:
                     logger.warning("Rejected product update with unknown product ID.")
                     return "指定された商品が見つかりません。", 400
@@ -400,7 +411,10 @@ def index():
                 row[0]
                 for row in (
                     db.session.query(Product.month)
-                    .filter_by(year=year)
+                    .filter_by(
+                        dataset_id=current_dataset.id,
+                        year=year,
+                    )
                     .distinct()
                     .all()
                 )
@@ -415,17 +429,11 @@ def index():
                 registered_months=registered_months
             )
 
-        admin_dataset = get_admin_dataset()
-        if admin_dataset is None:
-            logger.error(
-                "Product update rejected because the admin Dataset is missing."
-            )
-            return "管理者データ領域が見つかりません。", 500
-
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
 
         existing_products = Product.query.filter_by(
+            dataset_id=current_dataset.id,
             year=year,
             month=month
         ).all()
@@ -451,7 +459,7 @@ def index():
                     # IDがない商品は新規追加
                     db.session.add(
                         Product(
-                            dataset=admin_dataset,
+                            dataset=current_dataset,
                             year=year,
                             month=month,
                             name=prod["name"],
@@ -488,18 +496,26 @@ def index():
     if month is None:
         month = today.month
 
-    products = Product.query.filter_by(
-        year=year,
-        month=month,
-        is_active=True
-    ).all()
+    if current_dataset is None:
+        products = []
+        registered_months = []
+    else:
+        products = Product.query.filter_by(
+            dataset_id=current_dataset.id,
+            year=year,
+            month=month,
+            is_active=True
+        ).all()
 
-    registered_months = (
-        db.session.query(Product.month)
-        .filter_by(year=year)
-        .distinct()
-        .all()
-    )
+        registered_months = (
+            db.session.query(Product.month)
+            .filter_by(
+                dataset_id=current_dataset.id,
+                year=year,
+            )
+            .distinct()
+            .all()
+        )
 
     registered_months = [m[0] for m in registered_months]
 
