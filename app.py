@@ -543,10 +543,15 @@ def _get_optional_integer_query_parameter(name):
 def dashboard():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
-    sales_data = _get_sales_from_db(target_year, target_month)
+    sales_data = _get_sales_from_db(
+        current_dataset,
+        target_year,
+        target_month,
+    )
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
@@ -573,10 +578,15 @@ def dashboard():
 def api_dashboard_data():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
 
-    sales_data = _get_sales_from_db(target_year, target_month)
+    sales_data = _get_sales_from_db(
+        current_dataset,
+        target_year,
+        target_month,
+    )
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
@@ -599,6 +609,7 @@ def api_dashboard_data():
 def api_ai_advice():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(
         f"AI advice requested for period: "
@@ -606,6 +617,7 @@ def api_ai_advice():
     )
 
     sales_data = _get_sales_from_db(
+        current_dataset,
         target_year,
         target_month
     )
@@ -826,11 +838,20 @@ def _get_today_sales_map(target_date, current_dataset):
         for sale in sales
     }
 
-def _get_sales_from_db(target_year=None, target_month=None):
+def _get_sales_from_db(
+    current_dataset,
+    target_year=None,
+    target_month=None,
+):
     query = db.session.query(
         Product.name,
         db.func.sum(DailySales.quantity)
-    ).join(DailySales, Product.id == DailySales.product_id)
+    ).join(
+        DailySales,
+        Product.id == DailySales.product_id,
+    ).filter(
+        Product.dataset_id == current_dataset.id,
+    )
 
     if target_year:
         query = query.filter(db.extract("year", DailySales.date) == target_year)

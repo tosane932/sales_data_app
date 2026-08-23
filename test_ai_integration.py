@@ -7,7 +7,7 @@ from google.genai import errors
 
 import app as app_module
 import config
-from models import DailySales, Product, db
+from models import DailySales, Dataset, Product, db
 from prompts import build_sales_prompt
 
 
@@ -132,6 +132,103 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
     assert "8月商品B: 5個" in contents
     assert "7月対象外商品" not in contents
     assert "前年8月対象外商品" not in contents
+
+
+def test_admin_ai_advice_prompt_excludes_guest_dataset_sales(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    admin_unique_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="AI管理者限定商品",
+        price=100,
+    )
+    admin_same_name_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="AI共通クロワッサン",
+        price=200,
+    )
+    guest_unique_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=8,
+        name="AIゲスト機密商品",
+        price=300,
+    )
+    guest_same_name_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=8,
+        name="AI共通クロワッサン",
+        price=400,
+    )
+    db.session.add_all([
+        guest_dataset,
+        admin_unique_product,
+        admin_same_name_product,
+        guest_unique_product,
+        guest_same_name_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=admin_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=12,
+        ),
+        DailySales(
+            product_id=admin_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=guest_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=876543,
+        ),
+        DailySales(
+            product_id=guest_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=90,
+        ),
+    ])
+    db.session.commit()
+
+    generate_content = Mock(
+        return_value=SimpleNamespace(text="モックされたAIアドバイス")
+    )
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+    client_factory = Mock(return_value=fake_client)
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
+    monkeypatch.setattr(app_module.genai, "Client", client_factory)
+
+    response = authenticated_client.get(
+        "/api/ai-advice?year=2026&month=8"
+    )
+
+    assert response.status_code == 200
+    generate_content.assert_called_once()
+    contents = generate_content.call_args.kwargs["contents"]
+    assert "AI管理者限定商品: 12個" in contents
+    assert "AIゲスト機密商品" not in contents
+    assert "876543" not in contents
+    assert "AI共通クロワッサン: 10個" in contents
+    assert "AI共通クロワッサン: 100個" not in contents
 
 
 @pytest.mark.parametrize(

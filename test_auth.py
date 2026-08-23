@@ -175,6 +175,7 @@ def test_existing_authenticated_session_is_rejected_when_auth_fingerprint_is_mis
 
 def test_existing_authenticated_session_is_restored_when_admin_password_hash_is_unchanged(
     authenticated_client,
+    admin_dataset,
     monkeypatch,
 ):
     user_loader = Mock(wraps=app_module.load_user)
