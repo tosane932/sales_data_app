@@ -200,6 +200,7 @@ def test_authenticated_non_admin_greeting_is_rejected_before_gemini_call(
 @pytest.mark.parametrize("path", ADMIN_ROUTE_PATHS)
 def test_admin_remains_allowed_to_access_admin_route(
     authenticated_client,
+    admin_dataset,
     path,
     monkeypatch,
 ):

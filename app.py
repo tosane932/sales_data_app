@@ -626,6 +626,7 @@ def api_ai_advice():
 @admin_required
 def input_sales():
     today = datetime.date.today()
+    current_dataset = require_current_dataset()
 
     if request.method == "POST":
         if not current_user.is_authenticated:
@@ -683,7 +684,10 @@ def input_sales():
 
         validated_product_sales = []
         for product_id, qty_int in validated_sales:
-            product = db.session.get(Product, product_id)
+            product = Product.query.filter_by(
+                id=product_id,
+                dataset_id=current_dataset.id,
+            ).one_or_none()
 
             if product is None:
                 logger.warning(
@@ -743,16 +747,16 @@ def input_sales():
         return render_template(
             "input.html",
             success=True,
-            products=_get_current_products(),
+            products=_get_current_products(current_dataset),
             today=today,
-            today_sales=_get_today_sales_map(today)
+            today_sales=_get_today_sales_map(today, current_dataset)
         )
 
     return render_template(
         "input.html",
-        products=_get_current_products(),
+        products=_get_current_products(current_dataset),
         today=today,
-        today_sales=_get_today_sales_map(today)
+        today_sales=_get_today_sales_map(today, current_dataset)
     )
 
 @app.route("/api/greeting")
@@ -795,18 +799,27 @@ def api_greeting():
         return jsonify({"message": f"本日は{today.month}月{today.day}日です。今日も一日お疲れ様でした！"})
 
 
-def _get_current_products():
+def _get_current_products(current_dataset):
     today = datetime.date.today()
 
     return Product.query.filter_by(
+        dataset_id=current_dataset.id,
         year=today.year,
         month=today.month,
         is_active=True
     ).all()
 
-def _get_today_sales_map(target_date):
+def _get_today_sales_map(target_date, current_dataset):
     """指定日の商品別売上個数を辞書で返す。"""
-    sales = DailySales.query.filter_by(date=target_date).all()
+    sales = (
+        DailySales.query
+        .join(Product, DailySales.product_id == Product.id)
+        .filter(
+            DailySales.date == target_date,
+            Product.dataset_id == current_dataset.id,
+        )
+        .all()
+    )
 
     return {
         sale.product_id: sale.quantity
