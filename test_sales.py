@@ -5,7 +5,8 @@ from unittest.mock import Mock
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from models import DailySales, Product, db
+import app as app_module
+from models import DailySales, Dataset, Product, db
 
 
 def _sales_snapshot():
@@ -48,6 +49,245 @@ def sales_records(flask_app, admin_dataset):
         existing_product_id=existing_product.id,
         new_product_id=new_product.id,
     )
+
+
+@pytest.fixture()
+def cross_dataset_sales_records(flask_app, admin_dataset):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    sale_date = datetime.date.today()
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    admin_product = Product(
+        dataset=admin_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="管理者売上商品",
+        price=200,
+        is_active=True,
+    )
+    guest_product = Product(
+        dataset=guest_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="ゲスト売上商品",
+        price=300,
+        is_active=True,
+    )
+    db.session.add_all([
+        guest_dataset,
+        admin_product,
+        guest_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=admin_product.id,
+            date=sale_date,
+            quantity=11,
+        ),
+        DailySales(
+            product_id=guest_product.id,
+            date=sale_date,
+            quantity=987654,
+        ),
+    ])
+    db.session.commit()
+
+    return SimpleNamespace(
+        date=sale_date,
+        admin_product_id=admin_product.id,
+        guest_product_id=guest_product.id,
+    )
+
+
+def test_admin_sales_get_excludes_guest_dataset_product(
+    authenticated_client,
+    cross_dataset_sales_records,
+):
+    response = authenticated_client.get("/input")
+    response_text = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "管理者売上商品" in response_text
+    assert "ゲスト売上商品" not in response_text
+
+
+def test_admin_sales_get_excludes_guest_dataset_today_sales(
+    authenticated_client,
+    cross_dataset_sales_records,
+    monkeypatch,
+):
+    captured_today_sales = {}
+    real_render_template = app_module.render_template
+
+    def capture_input_context(template_name, *args, **kwargs):
+        if template_name == "input.html":
+            captured_today_sales.update(kwargs["today_sales"])
+        return real_render_template(template_name, *args, **kwargs)
+
+    monkeypatch.setattr(
+        app_module,
+        "render_template",
+        capture_input_context,
+    )
+
+    response = authenticated_client.get("/input")
+    response_text = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert captured_today_sales[
+        cross_dataset_sales_records.admin_product_id
+    ] == 11
+    assert (
+        cross_dataset_sales_records.guest_product_id
+        not in captured_today_sales
+    )
+    assert "ゲスト売上商品" not in response_text
+    assert "987654" not in response_text
+    assert (
+        f'value="{cross_dataset_sales_records.guest_product_id}"'
+        not in response_text
+    )
+
+
+def test_admin_sales_post_rejects_guest_dataset_product_without_changes(
+    authenticated_client,
+    cross_dataset_sales_records,
+    csrf_post,
+):
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": cross_dataset_sales_records.date.isoformat(),
+            "product_id": [
+                str(cross_dataset_sales_records.guest_product_id),
+            ],
+            "quantity": ["99"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+    assert sales_after == sales_before
+    assert response.status_code in {400, 403}
+
+
+def test_guest_a_sales_post_rejects_guest_b_product_without_changes(
+    flask_app,
+    csrf_post,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    sale_date = datetime.date.today()
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="Guest A売上商品",
+        price=200,
+        is_active=True,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="Guest B売上商品",
+        price=300,
+        is_active=True,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_product.id,
+            date=sale_date,
+            quantity=11,
+        ),
+        DailySales(
+            product_id=guest_b_product.id,
+            date=sale_date,
+            quantity=22,
+        ),
+    ])
+    db.session.commit()
+
+    sales_before = _sales_snapshot()
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = csrf_post(
+        guest_a_client,
+        "/input",
+        {
+            "date": sale_date.isoformat(),
+            "product_id": [
+                str(guest_b_product.id),
+            ],
+            "quantity": ["999"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code in {400, 403}
+    assert sales_after == sales_before
+
+
+def test_admin_sales_post_mixed_datasets_is_atomic(
+    authenticated_client,
+    cross_dataset_sales_records,
+    csrf_post,
+):
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": cross_dataset_sales_records.date.isoformat(),
+            "product_id": [
+                str(cross_dataset_sales_records.admin_product_id),
+                str(cross_dataset_sales_records.guest_product_id),
+            ],
+            "quantity": ["55", "77"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+    assert sales_after == sales_before
+    assert response.status_code in {400, 403}
 
 
 def test_valid_sales_post_updates_existing_and_adds_new_sale(

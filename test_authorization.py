@@ -4,9 +4,24 @@ from unittest.mock import Mock
 from urllib.parse import urlparse
 
 import pytest
+from flask_login import UserMixin
 
 import app as app_module
 from models import DailySales, Product, db
+
+
+ADMIN_ROUTE_PATHS = [
+    "/",
+    "/input",
+    "/dashboard",
+    "/api/dashboard-data",
+    "/api/ai-advice",
+    "/api/greeting",
+]
+
+
+class _AuthenticatedNonAdmin(UserMixin):
+    id = "test-authenticated-non-admin"
 
 
 def _redirects_to_login(response):
@@ -45,6 +60,29 @@ def authorization_sales_record(flask_app, admin_dataset):
         )
     )
     db.session.commit()
+
+
+@pytest.fixture()
+def authenticated_non_admin_client(flask_app, monkeypatch):
+    original_user_loader = app_module.load_user
+
+    def load_test_user(user_id):
+        if user_id == _AuthenticatedNonAdmin.id:
+            return _AuthenticatedNonAdmin()
+        return original_user_loader(user_id)
+
+    monkeypatch.setattr(
+        app_module.login_manager,
+        "_user_callback",
+        load_test_user,
+    )
+
+    test_client = flask_app.test_client()
+    with test_client.session_transaction() as session_data:
+        session_data["_user_id"] = _AuthenticatedNonAdmin.id
+        session_data["_fresh"] = True
+
+    return test_client
 
 
 def test_login_page_remains_public(client):
@@ -113,3 +151,61 @@ def test_anonymous_greeting_api_redirects_to_login(client, monkeypatch):
         f"location={response.headers.get('Location')}, "
         f"gemini_calls={gemini_client.call_count}"
     )
+
+
+@pytest.mark.parametrize("path", ADMIN_ROUTE_PATHS)
+def test_authenticated_non_admin_is_forbidden_from_admin_route(
+    authenticated_non_admin_client,
+    path,
+    monkeypatch,
+):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    response = authenticated_non_admin_client.get(path)
+
+    assert response.status_code == 403
+
+
+def test_authenticated_non_admin_ai_advice_is_rejected_before_generation(
+    authenticated_non_admin_client,
+    monkeypatch,
+):
+    generate_ai_advice = Mock(return_value="呼び出してはいけないAI返答")
+    monkeypatch.setattr(
+        app_module,
+        "_generate_ai_advice",
+        generate_ai_advice,
+    )
+
+    response = authenticated_non_admin_client.get("/api/ai-advice")
+
+    assert response.status_code == 403
+    generate_ai_advice.assert_not_called()
+
+
+def test_authenticated_non_admin_greeting_is_rejected_before_gemini_call(
+    authenticated_non_admin_client,
+    monkeypatch,
+):
+    gemini_client = Mock()
+    monkeypatch.setenv("GEMINI_API_KEY", "test-api-key")
+    monkeypatch.setattr(app_module.genai, "Client", gemini_client)
+
+    response = authenticated_non_admin_client.get("/api/greeting")
+
+    assert response.status_code == 403
+    gemini_client.assert_not_called()
+
+
+@pytest.mark.parametrize("path", ADMIN_ROUTE_PATHS)
+def test_admin_remains_allowed_to_access_admin_route(
+    authenticated_client,
+    admin_dataset,
+    path,
+    monkeypatch,
+):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    response = authenticated_client.get(path)
+
+    assert response.status_code == 200

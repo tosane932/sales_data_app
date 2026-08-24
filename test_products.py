@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import DailySales, Product, db
+from models import DailySales, Dataset, Product, db
 
 
 def _product_snapshot():
@@ -74,6 +74,45 @@ def product_records(flask_app, admin_dataset):
     )
 
 
+@pytest.fixture()
+def cross_dataset_product_records(flask_app, admin_dataset):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    admin_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="管理者商品",
+        price=100,
+        is_active=True,
+    )
+    guest_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=8,
+        name="ゲスト商品",
+        price=200,
+        is_active=True,
+    )
+    db.session.add_all([
+        guest_dataset,
+        admin_product,
+        guest_product,
+    ])
+    db.session.commit()
+
+    return SimpleNamespace(
+        admin_product_id=admin_product.id,
+        guest_product_id=guest_product.id,
+    )
+
+
 def _valid_product_payload(product_records):
     return {
         "year": "2026",
@@ -101,6 +140,190 @@ def _assert_product_post_rejected_without_changes(
     assert response.status_code == 400
     assert _product_snapshot() == products_before
     assert _sales_snapshot() == sales_before
+
+
+def test_admin_product_get_excludes_guest_dataset_product(
+    authenticated_client,
+    cross_dataset_product_records,
+):
+    response = authenticated_client.get("/?year=2026&month=8")
+    response_text = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "管理者商品" in response_text
+    assert "ゲスト商品" not in response_text
+
+
+def test_admin_product_post_rejects_guest_dataset_product_id_without_changes(
+    authenticated_client,
+    cross_dataset_product_records,
+    csrf_post,
+):
+    guest_product = db.session.get(
+        Product,
+        cross_dataset_product_records.guest_product_id,
+    )
+    guest_product_before = (
+        guest_product.name,
+        guest_product.price,
+        guest_product.is_active,
+    )
+
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [str(guest_product.id)],
+            "prod_name": ["越境更新商品"],
+            "prod_price": ["999"],
+        },
+    )
+
+    db.session.refresh(guest_product)
+    assert (
+        guest_product.name,
+        guest_product.price,
+        guest_product.is_active,
+    ) == guest_product_before
+    assert response.status_code in {400, 403}
+
+
+def test_guest_a_product_post_rejects_guest_b_product_id_without_changes(
+    flask_app,
+    csrf_post,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="Guest Aの商品",
+        price=100,
+        is_active=True,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="Guest Bの商品",
+        price=200,
+        is_active=True,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.commit()
+
+    guest_a_product_before = (
+        guest_a_product.name,
+        guest_a_product.price,
+        guest_a_product.is_active,
+    )
+    guest_b_product_before = (
+        guest_b_product.name,
+        guest_b_product.price,
+        guest_b_product.is_active,
+    )
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = csrf_post(
+        guest_a_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [str(guest_b_product.id)],
+            "prod_name": ["越境更新商品"],
+            "prod_price": ["999"],
+        },
+    )
+
+    db.session.refresh(guest_a_product)
+    db.session.refresh(guest_b_product)
+
+    assert response.status_code in {400, 403}
+
+    assert (
+        guest_a_product.name,
+        guest_a_product.price,
+        guest_a_product.is_active,
+    ) == guest_a_product_before
+
+    assert (
+        guest_b_product.name,
+        guest_b_product.price,
+        guest_b_product.is_active,
+    ) == guest_b_product_before
+
+
+def test_admin_product_post_does_not_deactivate_guest_dataset_product(
+    authenticated_client,
+    cross_dataset_product_records,
+    csrf_post,
+):
+    admin_product = db.session.get(
+        Product,
+        cross_dataset_product_records.admin_product_id,
+    )
+    guest_product = db.session.get(
+        Product,
+        cross_dataset_product_records.guest_product_id,
+    )
+    guest_product_before = (
+        guest_product.name,
+        guest_product.price,
+        guest_product.is_active,
+    )
+
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [str(admin_product.id)],
+            "prod_name": ["管理者更新商品"],
+            "prod_price": ["150"],
+        },
+    )
+
+    db.session.refresh(admin_product)
+    db.session.refresh(guest_product)
+    assert response.status_code == 200
+    assert admin_product.name == "管理者更新商品"
+    assert admin_product.price == 150
+    assert admin_product.is_active is True
+    assert (
+        guest_product.name,
+        guest_product.price,
+        guest_product.is_active,
+    ) == guest_product_before
 
 
 def test_new_product_is_assigned_to_admin_dataset(

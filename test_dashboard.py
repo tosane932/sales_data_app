@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 import app as app_module
-from models import DailySales, Product, db
+from models import DailySales, Dataset, Product, db
 
 
 FIXED_AI_ADVICE = (
@@ -111,6 +111,375 @@ def dashboard_records(flask_app, admin_dataset, monkeypatch):
         "product_a_id": product_a.id,
         "product_b_id": product_b.id,
     }
+
+
+@pytest.fixture()
+def cross_dataset_dashboard_records(flask_app, admin_dataset):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    admin_unique_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="管理者限定商品",
+        price=100,
+    )
+    admin_same_name_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=200,
+    )
+    guest_unique_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=8,
+        name="ゲスト限定商品",
+        price=300,
+    )
+    guest_same_name_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=400,
+    )
+    db.session.add_all([
+        guest_dataset,
+        admin_unique_product,
+        admin_same_name_product,
+        guest_unique_product,
+        guest_same_name_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=admin_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=11,
+        ),
+        DailySales(
+            product_id=admin_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=guest_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=987654,
+        ),
+        DailySales(
+            product_id=guest_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=90,
+        ),
+    ])
+    db.session.commit()
+
+
+def test_admin_dashboard_excludes_guest_dataset_sales(
+    authenticated_client,
+    cross_dataset_dashboard_records,
+):
+    response = authenticated_client.get(
+        "/dashboard?year=2026&month=8"
+    )
+    response_text = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "管理者限定商品" in response_text
+    assert "11" in response_text
+    assert "ゲスト限定商品" not in response_text
+    assert "987654" not in response_text
+
+
+def test_admin_dashboard_does_not_combine_same_name_across_datasets(
+    authenticated_client,
+    cross_dataset_dashboard_records,
+    monkeypatch,
+):
+    captured_ranked_sales = []
+    real_render_template = app_module.render_template
+
+    def capture_dashboard_context(template_name, *args, **kwargs):
+        if template_name == "dashboard.html":
+            captured_ranked_sales.extend(kwargs["ranked_sales"])
+        return real_render_template(template_name, *args, **kwargs)
+
+    monkeypatch.setattr(
+        app_module,
+        "render_template",
+        capture_dashboard_context,
+    )
+
+    response = authenticated_client.get(
+        "/dashboard?year=2026&month=8"
+    )
+
+    assert response.status_code == 200
+    assert dict(captured_ranked_sales)["クロワッサン"] == 10
+
+
+def test_admin_dashboard_api_excludes_guest_dataset_sales(
+    authenticated_client,
+    cross_dataset_dashboard_records,
+):
+    response = authenticated_client.get(
+        "/api/dashboard-data?year=2026&month=8"
+    )
+    payload = response.get_json()
+    ranked_sales = dict(payload["ranked_sales"])
+    chart_sales = dict(zip(
+        payload["chart_labels"],
+        payload["chart_values"],
+    ))
+
+    assert response.status_code == 200
+    assert ranked_sales["管理者限定商品"] == 11
+    assert ranked_sales["クロワッサン"] == 10
+    assert "ゲスト限定商品" not in ranked_sales
+    assert 987654 not in payload["chart_values"]
+    assert chart_sales["管理者限定商品"] == 11
+    assert chart_sales["クロワッサン"] == 10
+    assert "ゲスト限定商品" not in payload["chart_labels"]
+
+
+def test_guest_a_dashboard_api_excludes_guest_b_dataset_sales(
+    flask_app,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_unique_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="Guest A限定商品",
+        price=100,
+    )
+    guest_a_same_name_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=200,
+    )
+    guest_b_unique_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="Guest B限定商品",
+        price=300,
+    )
+    guest_b_same_name_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=400,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_unique_product,
+        guest_a_same_name_product,
+        guest_b_unique_product,
+        guest_b_same_name_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=11,
+        ),
+        DailySales(
+            product_id=guest_a_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=guest_b_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=987654,
+        ),
+        DailySales(
+            product_id=guest_b_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=90,
+        ),
+    ])
+    db.session.commit()
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = guest_a_client.get(
+        "/api/dashboard-data?year=2026&month=8"
+    )
+
+    payload = response.get_json()
+    ranked_sales = dict(payload["ranked_sales"])
+    chart_sales = dict(zip(
+        payload["chart_labels"],
+        payload["chart_values"],
+    ))
+
+    assert response.status_code == 200
+
+    assert ranked_sales["Guest A限定商品"] == 11
+    assert ranked_sales["クロワッサン"] == 10
+    assert "Guest B限定商品" not in ranked_sales
+    assert 987654 not in payload["chart_values"]
+
+    assert chart_sales["Guest A限定商品"] == 11
+    assert chart_sales["クロワッサン"] == 10
+    assert "Guest B限定商品" not in payload["chart_labels"]
+
+
+def test_guest_a_dashboard_html_excludes_guest_b_dataset_sales(
+    flask_app,
+    monkeypatch,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_unique_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="Guest A限定商品",
+        price=100,
+    )
+    guest_a_same_name_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=200,
+    )
+    guest_b_unique_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="Guest B限定商品",
+        price=300,
+    )
+    guest_b_same_name_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="クロワッサン",
+        price=400,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_unique_product,
+        guest_a_same_name_product,
+        guest_b_unique_product,
+        guest_b_same_name_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=11,
+        ),
+        DailySales(
+            product_id=guest_a_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=guest_b_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=987654,
+        ),
+        DailySales(
+            product_id=guest_b_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=90,
+        ),
+    ])
+    db.session.commit()
+
+    captured_ranked_sales = []
+    real_render_template = app_module.render_template
+
+    def capture_dashboard_context(template_name, *args, **kwargs):
+        if template_name == "dashboard.html":
+            captured_ranked_sales.extend(kwargs["ranked_sales"])
+        return real_render_template(template_name, *args, **kwargs)
+
+    monkeypatch.setattr(
+        app_module,
+        "render_template",
+        capture_dashboard_context,
+    )
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = guest_a_client.get(
+        "/dashboard?year=2026&month=8"
+    )
+    response_text = response.get_data(as_text=True)
+    ranked_sales = dict(captured_ranked_sales)
+
+    assert response.status_code == 200
+
+    assert ranked_sales["Guest A限定商品"] == 11
+    assert ranked_sales["クロワッサン"] == 10
+    assert "Guest B限定商品" not in ranked_sales
+
+    assert "Guest A限定商品" in response_text
+    assert "Guest B限定商品" not in response_text
+    assert "987654" not in response_text
 
 
 def test_dashboard_api_returns_sales_aggregation_for_selected_period(

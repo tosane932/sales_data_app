@@ -3,6 +3,8 @@ import datetime
 import hashlib
 import hmac
 import logging  # 💡 1. ログモジュールをインポート
+import uuid
+from functools import wraps
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
@@ -14,6 +16,7 @@ from flask_login import (
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import InternalServerError
 from werkzeug.security import check_password_hash
 from models import db, Dataset, Product, DailySales
 from google import genai
@@ -47,9 +50,24 @@ login_manager.login_view = "login"
 
 class AdminUser(UserMixin):
     id = "admin"
+    is_admin = True
+    is_guest = False
+
+
+class GuestUser(UserMixin):
+    is_admin = False
+    is_guest = True
+
+    def __init__(self, dataset_id):
+        self.dataset_id = dataset_id
+
+    @property
+    def id(self):
+        return f"guest:{self.dataset_id}"
 
 
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
+GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 
 
 def _get_admin_auth_fingerprint(password_hash):
@@ -61,24 +79,141 @@ def _get_admin_auth_fingerprint(password_hash):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id != AdminUser.id:
+    if user_id == AdminUser.id:
+        if not app.config.get("ADMIN_USERNAME"):
+            return None
+
+        current_fingerprint = _get_admin_auth_fingerprint(
+            app.config.get("ADMIN_PASSWORD_HASH")
+        )
+        session_fingerprint = session.get(
+            ADMIN_AUTH_FINGERPRINT_SESSION_KEY
+        )
+        if not current_fingerprint or not isinstance(session_fingerprint, str):
+            return None
+        if not hmac.compare_digest(current_fingerprint, session_fingerprint):
+            return None
+
+        return AdminUser()
+
+    if not isinstance(user_id, str) or not user_id.startswith("guest:"):
         return None
 
-    if not app.config.get("ADMIN_USERNAME"):
+    guest_dataset_id_text = user_id.removeprefix("guest:")
+    try:
+        guest_dataset_id = uuid.UUID(guest_dataset_id_text)
+    except (ValueError, AttributeError):
         return None
 
-    current_fingerprint = _get_admin_auth_fingerprint(
-        app.config.get("ADMIN_PASSWORD_HASH")
+    try:
+        guest_dataset = Dataset.query.filter_by(
+            id=guest_dataset_id,
+            kind="guest",
+            system_key=None,
+        ).one_or_none()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to restore a Guest from its Dataset.")
+        return None
+
+    if guest_dataset is None:
+        return None
+
+    return GuestUser(guest_dataset.id)
+
+
+def admin_required(view_function):
+    """Adminだけが業務routeへアクセスできるようにする。"""
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            abort(403)
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
+def admin_or_guest_required(view_function):
+    """Adminまたは正規Guestだけが業務routeへアクセスできるようにする。"""
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        principal = current_user._get_current_object()
+
+        if not isinstance(principal, (AdminUser, GuestUser)):
+            abort(403)
+
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
+def require_current_dataset():
+    """現在の認証利用者が使用できるDatasetだけを返す。"""
+    if not current_user.is_authenticated:
+        abort(403)
+
+    principal = current_user._get_current_object()
+    if isinstance(principal, AdminUser):
+        dataset_filters = {
+            "kind": "admin",
+            "system_key": "admin",
+        }
+        missing_status_code = 500
+    elif isinstance(principal, GuestUser):
+        dataset_filters = {
+            "id": principal.dataset_id,
+            "kind": "guest",
+            "system_key": None,
+        }
+        missing_status_code = 403
+    else:
+        abort(403)
+
+    try:
+        dataset = Dataset.query.filter_by(**dataset_filters).one_or_none()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to resolve the current Dataset.")
+        abort(503)
+
+    if dataset is None:
+        if missing_status_code == 500:
+            logger.error("The Admin Dataset is missing.")
+        abort(missing_status_code)
+
+    return dataset
+
+
+def start_guest_session():
+    """Guest Datasetを作成し、対応するGuest identityを発行する。"""
+    if current_user.is_authenticated:
+        abort(409)
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + GUEST_ABSOLUTE_LIFETIME,
     )
-    session_fingerprint = session.get(
-        ADMIN_AUTH_FINGERPRINT_SESSION_KEY
-    )
-    if not current_fingerprint or not isinstance(session_fingerprint, str):
-        return None
-    if not hmac.compare_digest(current_fingerprint, session_fingerprint):
-        return None
 
-    return AdminUser()
+    try:
+        db.session.add(guest_dataset)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to create a Guest Dataset.")
+        abort(503)
+
+    guest_user = GuestUser(guest_dataset.id)
+    if not login_user(guest_user):
+        logger.error("Failed to establish the Guest identity.")
+        abort(500)
+
+    return guest_dataset
 
 
 def get_admin_dataset():
@@ -200,8 +335,15 @@ def login():
 
 
 @app.route("/", methods=["GET", "POST"])
-@login_required
+@admin_or_guest_required
 def index():
+    try:
+        current_dataset = require_current_dataset()
+    except InternalServerError:
+        if request.method == "POST":
+            return "管理者データ領域が見つかりません。", 500
+        current_dataset = None
+
     if request.method == "POST":
         if not current_user.is_authenticated:
             return login_manager.unauthorized()
@@ -248,7 +390,10 @@ def index():
                     logger.warning("Rejected product update with duplicate product ID.")
                     return "同じ商品が複数回送信されています。", 400
 
-                existing_product = db.session.get(Product, parsed_product_id)
+                existing_product = Product.query.filter_by(
+                    id=parsed_product_id,
+                    dataset_id=current_dataset.id,
+                ).one_or_none()
                 if existing_product is None:
                     logger.warning("Rejected product update with unknown product ID.")
                     return "指定された商品が見つかりません。", 400
@@ -281,7 +426,10 @@ def index():
                 row[0]
                 for row in (
                     db.session.query(Product.month)
-                    .filter_by(year=year)
+                    .filter_by(
+                        dataset_id=current_dataset.id,
+                        year=year,
+                    )
                     .distinct()
                     .all()
                 )
@@ -296,17 +444,11 @@ def index():
                 registered_months=registered_months
             )
 
-        admin_dataset = get_admin_dataset()
-        if admin_dataset is None:
-            logger.error(
-                "Product update rejected because the admin Dataset is missing."
-            )
-            return "管理者データ領域が見つかりません。", 500
-
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
 
         existing_products = Product.query.filter_by(
+            dataset_id=current_dataset.id,
             year=year,
             month=month
         ).all()
@@ -332,7 +474,7 @@ def index():
                     # IDがない商品は新規追加
                     db.session.add(
                         Product(
-                            dataset=admin_dataset,
+                            dataset=current_dataset,
                             year=year,
                             month=month,
                             name=prod["name"],
@@ -369,18 +511,26 @@ def index():
     if month is None:
         month = today.month
 
-    products = Product.query.filter_by(
-        year=year,
-        month=month,
-        is_active=True
-    ).all()
+    if current_dataset is None:
+        products = []
+        registered_months = []
+    else:
+        products = Product.query.filter_by(
+            dataset_id=current_dataset.id,
+            year=year,
+            month=month,
+            is_active=True
+        ).all()
 
-    registered_months = (
-        db.session.query(Product.month)
-        .filter_by(year=year)
-        .distinct()
-        .all()
-    )
+        registered_months = (
+            db.session.query(Product.month)
+            .filter_by(
+                dataset_id=current_dataset.id,
+                year=year,
+            )
+            .distinct()
+            .all()
+        )
 
     registered_months = [m[0] for m in registered_months]
 
@@ -404,14 +554,19 @@ def _get_optional_integer_query_parameter(name):
 
 
 @app.route("/dashboard")
-@login_required
+@admin_or_guest_required
 def dashboard():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
-    sales_data = _get_sales_from_db(target_year, target_month)
+    sales_data = _get_sales_from_db(
+        current_dataset,
+        target_year,
+        target_month,
+    )
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
@@ -434,14 +589,19 @@ def dashboard():
 
 
 @app.route("/api/dashboard-data")
-@login_required
+@admin_or_guest_required
 def api_dashboard_data():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
 
-    sales_data = _get_sales_from_db(target_year, target_month)
+    sales_data = _get_sales_from_db(
+        current_dataset,
+        target_year,
+        target_month,
+    )
     ranked_sales = sorted(sales_data.items(), key=lambda item: item[1], reverse=True)
 
     chart_labels = [name for name, qty in ranked_sales]
@@ -460,10 +620,11 @@ def api_dashboard_data():
     })
 
 @app.route("/api/ai-advice")
-@login_required
+@admin_or_guest_required
 def api_ai_advice():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
+    current_dataset = require_current_dataset()
 
     logger.info(
         f"AI advice requested for period: "
@@ -471,6 +632,7 @@ def api_ai_advice():
     )
 
     sales_data = _get_sales_from_db(
+        current_dataset,
         target_year,
         target_month
     )
@@ -488,9 +650,10 @@ def api_ai_advice():
     })
 
 @app.route("/input", methods=["GET", "POST"])
-@login_required
+@admin_or_guest_required
 def input_sales():
     today = datetime.date.today()
+    current_dataset = require_current_dataset()
 
     if request.method == "POST":
         if not current_user.is_authenticated:
@@ -548,7 +711,10 @@ def input_sales():
 
         validated_product_sales = []
         for product_id, qty_int in validated_sales:
-            product = db.session.get(Product, product_id)
+            product = Product.query.filter_by(
+                id=product_id,
+                dataset_id=current_dataset.id,
+            ).one_or_none()
 
             if product is None:
                 logger.warning(
@@ -608,20 +774,20 @@ def input_sales():
         return render_template(
             "input.html",
             success=True,
-            products=_get_current_products(),
+            products=_get_current_products(current_dataset),
             today=today,
-            today_sales=_get_today_sales_map(today)
+            today_sales=_get_today_sales_map(today, current_dataset)
         )
 
     return render_template(
         "input.html",
-        products=_get_current_products(),
+        products=_get_current_products(current_dataset),
         today=today,
-        today_sales=_get_today_sales_map(today)
+        today_sales=_get_today_sales_map(today, current_dataset)
     )
 
 @app.route("/api/greeting")
-@login_required
+@admin_or_guest_required
 def api_greeting():
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -660,29 +826,47 @@ def api_greeting():
         return jsonify({"message": f"本日は{today.month}月{today.day}日です。今日も一日お疲れ様でした！"})
 
 
-def _get_current_products():
+def _get_current_products(current_dataset):
     today = datetime.date.today()
 
     return Product.query.filter_by(
+        dataset_id=current_dataset.id,
         year=today.year,
         month=today.month,
         is_active=True
     ).all()
 
-def _get_today_sales_map(target_date):
+def _get_today_sales_map(target_date, current_dataset):
     """指定日の商品別売上個数を辞書で返す。"""
-    sales = DailySales.query.filter_by(date=target_date).all()
+    sales = (
+        DailySales.query
+        .join(Product, DailySales.product_id == Product.id)
+        .filter(
+            DailySales.date == target_date,
+            Product.dataset_id == current_dataset.id,
+        )
+        .all()
+    )
 
     return {
         sale.product_id: sale.quantity
         for sale in sales
     }
 
-def _get_sales_from_db(target_year=None, target_month=None):
+def _get_sales_from_db(
+    current_dataset,
+    target_year=None,
+    target_month=None,
+):
     query = db.session.query(
         Product.name,
         db.func.sum(DailySales.quantity)
-    ).join(DailySales, Product.id == DailySales.product_id)
+    ).join(
+        DailySales,
+        Product.id == DailySales.product_id,
+    ).filter(
+        Product.dataset_id == current_dataset.id,
+    )
 
     if target_year:
         query = query.filter(db.extract("year", DailySales.date) == target_year)
