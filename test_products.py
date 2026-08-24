@@ -190,6 +190,98 @@ def test_admin_product_post_rejects_guest_dataset_product_id_without_changes(
     assert response.status_code in {400, 403}
 
 
+def test_guest_a_product_post_rejects_guest_b_product_id_without_changes(
+    flask_app,
+    csrf_post,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="Guest Aの商品",
+        price=100,
+        is_active=True,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="Guest Bの商品",
+        price=200,
+        is_active=True,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.commit()
+
+    guest_a_product_before = (
+        guest_a_product.name,
+        guest_a_product.price,
+        guest_a_product.is_active,
+    )
+    guest_b_product_before = (
+        guest_b_product.name,
+        guest_b_product.price,
+        guest_b_product.is_active,
+    )
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = csrf_post(
+        guest_a_client,
+        "/",
+        {
+            "year": "2026",
+            "month": "8",
+            "product_id": [str(guest_b_product.id)],
+            "prod_name": ["越境更新商品"],
+            "prod_price": ["999"],
+        },
+    )
+
+    db.session.refresh(guest_a_product)
+    db.session.refresh(guest_b_product)
+
+    assert response.status_code in {400, 403}
+
+    assert (
+        guest_a_product.name,
+        guest_a_product.price,
+        guest_a_product.is_active,
+    ) == guest_a_product_before
+
+    assert (
+        guest_b_product.name,
+        guest_b_product.price,
+        guest_b_product.is_active,
+    ) == guest_b_product_before
+
+
 def test_admin_product_post_does_not_deactivate_guest_dataset_product(
     authenticated_client,
     cross_dataset_product_records,

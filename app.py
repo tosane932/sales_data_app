@@ -134,6 +134,21 @@ def admin_required(view_function):
     return wrapped_view
 
 
+def admin_or_guest_required(view_function):
+    """Adminまたは正規Guestだけが業務routeへアクセスできるようにする。"""
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        principal = current_user._get_current_object()
+
+        if not isinstance(principal, (AdminUser, GuestUser)):
+            abort(403)
+
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
 def require_current_dataset():
     """現在の認証利用者が使用できるDatasetだけを返す。"""
     if not current_user.is_authenticated:
@@ -320,7 +335,7 @@ def login():
 
 
 @app.route("/", methods=["GET", "POST"])
-@admin_required
+@admin_or_guest_required
 def index():
     try:
         current_dataset = require_current_dataset()
@@ -539,7 +554,7 @@ def _get_optional_integer_query_parameter(name):
 
 
 @app.route("/dashboard")
-@admin_required
+@admin_or_guest_required
 def dashboard():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -574,7 +589,7 @@ def dashboard():
 
 
 @app.route("/api/dashboard-data")
-@admin_required
+@admin_or_guest_required
 def api_dashboard_data():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -605,7 +620,7 @@ def api_dashboard_data():
     })
 
 @app.route("/api/ai-advice")
-@admin_required
+@admin_or_guest_required
 def api_ai_advice():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
@@ -635,7 +650,7 @@ def api_ai_advice():
     })
 
 @app.route("/input", methods=["GET", "POST"])
-@admin_required
+@admin_or_guest_required
 def input_sales():
     today = datetime.date.today()
     current_dataset = require_current_dataset()
@@ -772,7 +787,7 @@ def input_sales():
     )
 
 @app.route("/api/greeting")
-@admin_required
+@admin_or_guest_required
 def api_greeting():
     try:
         api_key = os.environ.get("GEMINI_API_KEY")

@@ -179,6 +179,92 @@ def test_admin_sales_post_rejects_guest_dataset_product_without_changes(
     assert response.status_code in {400, 403}
 
 
+def test_guest_a_sales_post_rejects_guest_b_product_without_changes(
+    flask_app,
+    csrf_post,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    sale_date = datetime.date.today()
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="Guest A売上商品",
+        price=200,
+        is_active=True,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=sale_date.year,
+        month=sale_date.month,
+        name="Guest B売上商品",
+        price=300,
+        is_active=True,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_product.id,
+            date=sale_date,
+            quantity=11,
+        ),
+        DailySales(
+            product_id=guest_b_product.id,
+            date=sale_date,
+            quantity=22,
+        ),
+    ])
+    db.session.commit()
+
+    sales_before = _sales_snapshot()
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = csrf_post(
+        guest_a_client,
+        "/input",
+        {
+            "date": sale_date.isoformat(),
+            "product_id": [
+                str(guest_b_product.id),
+            ],
+            "quantity": ["999"],
+        },
+    )
+
+    sales_after = _sales_snapshot()
+
+    assert response.status_code in {400, 403}
+    assert sales_after == sales_before
+
+
 def test_admin_sales_post_mixed_datasets_is_atomic(
     authenticated_client,
     cross_dataset_sales_records,

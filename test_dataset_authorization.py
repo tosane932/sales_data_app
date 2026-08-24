@@ -9,8 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import Forbidden, InternalServerError, ServiceUnavailable
 
 import app as app_module
-from models import Dataset, db
-
+from models import Dataset, Product, db
 
 class _AuthenticatedUnknownPrincipal(UserMixin):
     id = "test-authenticated-unknown"
@@ -96,6 +95,66 @@ def test_guest_a_and_guest_b_resolve_different_datasets(flask_app):
     assert resolved_guest_a.id == guest_a_dataset.id
     assert resolved_guest_b.id == guest_b_dataset.id
     assert resolved_guest_a.id != resolved_guest_b.id
+
+
+def test_guest_a_and_guest_b_only_see_their_own_products_via_route(
+    flask_app,
+):
+    today = datetime.date.today()
+
+    guest_a_dataset = _create_guest_dataset()
+    guest_b_dataset = _create_guest_dataset()
+
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=today.year,
+        month=today.month,
+        name="GUEST_A_ONLY_PRODUCT",
+        price=111,
+        is_active=True,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=today.year,
+        month=today.month,
+        name="GUEST_B_ONLY_PRODUCT",
+        price=222,
+        is_active=True,
+    )
+
+    db.session.add_all([
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.commit()
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    guest_b_client = flask_app.test_client()
+    with guest_b_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_b_dataset.id}"
+        session_data["_fresh"] = True
+
+    with flask_app.app_context():
+        guest_a_response = guest_a_client.get("/")
+
+    with flask_app.app_context():
+        guest_b_response = guest_b_client.get("/")
+
+    guest_a_html = guest_a_response.get_data(as_text=True)
+    guest_b_html = guest_b_response.get_data(as_text=True)
+
+    assert guest_a_response.status_code == 200
+    assert guest_b_response.status_code == 200
+
+    assert "GUEST_A_ONLY_PRODUCT" in guest_a_html
+    assert "GUEST_B_ONLY_PRODUCT" not in guest_a_html
+
+    assert "GUEST_A_ONLY_PRODUCT" not in guest_b_html
+    assert "GUEST_B_ONLY_PRODUCT" in guest_b_html
 
 
 def test_guest_external_dataset_ids_cannot_change_resolved_dataset(

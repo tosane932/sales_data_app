@@ -6,10 +6,9 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 import app as app_module
-from models import Dataset, db
+from models import Dataset, Product, db
 
-
-ADMIN_ROUTE_PATHS = [
+GUEST_DEMO_ROUTE_PATHS = [
     "/",
     "/input",
     "/dashboard",
@@ -188,8 +187,8 @@ def test_guest_lookup_scopes_id_kind_and_system_key(flask_app, monkeypatch):
     }
 
 
-@pytest.mark.parametrize("path", ADMIN_ROUTE_PATHS)
-def test_guest_user_is_forbidden_from_admin_route(
+@pytest.mark.parametrize("path", GUEST_DEMO_ROUTE_PATHS)
+def test_guest_user_can_access_guest_demo_route(
     flask_app,
     path,
     monkeypatch,
@@ -200,7 +199,7 @@ def test_guest_user_is_forbidden_from_admin_route(
 
     response = guest_client.get(path)
 
-    assert response.status_code == 403
+    assert response.status_code == 200
 
 
 def test_guest_cannot_escalate_with_session_role_values(
@@ -208,6 +207,25 @@ def test_guest_cannot_escalate_with_session_role_values(
     admin_dataset,
 ):
     guest_dataset = _create_guest_dataset()
+    today = datetime.date.today()
+
+    admin_product = Product(
+        dataset=admin_dataset,
+        year=today.year,
+        month=today.month,
+        name="ADMIN_ONLY_PRODUCT",
+        price=999,
+    )
+    guest_product = Product(
+        dataset=guest_dataset,
+        year=today.year,
+        month=today.month,
+        name="GUEST_ONLY_PRODUCT",
+        price=111,
+    )
+    db.session.add_all([admin_product, guest_product])
+    db.session.commit()
+
     guest_client = _guest_client(flask_app, guest_dataset)
 
     with guest_client.session_transaction() as session_data:
@@ -221,8 +239,11 @@ def test_guest_cannot_escalate_with_session_role_values(
         )
 
     response = guest_client.get("/")
+    response_text = response.get_data(as_text=True)
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert "GUEST_ONLY_PRODUCT" in response_text
+    assert "ADMIN_ONLY_PRODUCT" not in response_text
 
 
 def test_guest_id_is_not_restored_as_admin(flask_app):

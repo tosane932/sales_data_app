@@ -231,6 +231,123 @@ def test_admin_ai_advice_prompt_excludes_guest_dataset_sales(
     assert "AI共通クロワッサン: 100個" not in contents
 
 
+def test_guest_a_ai_advice_prompt_excludes_guest_b_dataset_sales(
+    flask_app,
+    monkeypatch,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+
+    guest_a_unique_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="AI Guest A限定商品",
+        price=100,
+    )
+    guest_a_same_name_product = Product(
+        dataset=guest_a_dataset,
+        year=2026,
+        month=8,
+        name="AI共通クロワッサン",
+        price=200,
+    )
+    guest_b_unique_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="AI Guest B機密商品",
+        price=300,
+    )
+    guest_b_same_name_product = Product(
+        dataset=guest_b_dataset,
+        year=2026,
+        month=8,
+        name="AI共通クロワッサン",
+        price=400,
+    )
+
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_unique_product,
+        guest_a_same_name_product,
+        guest_b_unique_product,
+        guest_b_same_name_product,
+    ])
+    db.session.flush()
+
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=12,
+        ),
+        DailySales(
+            product_id=guest_a_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=10,
+        ),
+        DailySales(
+            product_id=guest_b_unique_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=876543,
+        ),
+        DailySales(
+            product_id=guest_b_same_name_product.id,
+            date=datetime.date(2026, 8, 1),
+            quantity=90,
+        ),
+    ])
+    db.session.commit()
+
+    generate_content = Mock(
+        return_value=SimpleNamespace(text="モックされたAIアドバイス")
+    )
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+    client_factory = Mock(return_value=fake_client)
+
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
+    monkeypatch.setattr(app_module.genai, "Client", client_factory)
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = guest_a_client.get(
+        "/api/ai-advice?year=2026&month=8"
+    )
+
+    assert response.status_code == 200
+    generate_content.assert_called_once()
+
+    contents = generate_content.call_args.kwargs["contents"]
+
+    assert "AI Guest A限定商品: 12個" in contents
+    assert "AI Guest B機密商品" not in contents
+    assert "876543" not in contents
+
+    assert "AI共通クロワッサン: 10個" in contents
+    assert "AI共通クロワッサン: 100個" not in contents
+
+
 @pytest.mark.parametrize(
     ("raised_error", "expected_message"),
     [
