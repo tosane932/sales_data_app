@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from bs4 import BeautifulSoup
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 import app as app_module
@@ -14,6 +15,30 @@ def _sales_snapshot():
         (sale.id, sale.product_id, sale.date, sale.quantity)
         for sale in DailySales.query.order_by(DailySales.id).all()
     ]
+
+
+def _freeze_app_today(monkeypatch, frozen_today):
+    real_datetime = app_module.datetime
+
+    class FrozenDate(real_datetime.date):
+        @classmethod
+        def today(cls):
+            return cls(
+                frozen_today.year,
+                frozen_today.month,
+                frozen_today.day,
+            )
+
+    monkeypatch.setattr(
+        app_module,
+        "datetime",
+        SimpleNamespace(
+            date=FrozenDate,
+            datetime=real_datetime.datetime,
+            timedelta=real_datetime.timedelta,
+            timezone=real_datetime.timezone,
+        ),
+    )
 
 
 @pytest.fixture()
@@ -115,6 +140,97 @@ def test_admin_sales_get_excludes_guest_dataset_product(
     assert response.status_code == 200
     assert "管理者売上商品" in response_text
     assert "ゲスト売上商品" not in response_text
+
+
+def test_sales_input_month_rollover_shows_only_frozen_current_month_product(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    frozen_today = datetime.date(2026, 9, 1)
+    _freeze_app_today(monkeypatch, frozen_today)
+    previous_month_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=8,
+        name="月替わり前月商品",
+        price=200,
+        is_active=True,
+    )
+    current_month_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=9,
+        name="月替わり現在月商品",
+        price=300,
+        is_active=True,
+    )
+    db.session.add_all([previous_month_product, current_month_product])
+    db.session.commit()
+
+    response = authenticated_client.get("/input")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    form = document.select_one('form[method="POST"]')
+
+    assert response.status_code == 200
+    assert "月替わり現在月商品" in document.get_text()
+    assert "月替わり前月商品" not in document.get_text()
+    assert form is not None
+    csrf_input = form.select_one('input[name="csrf_token"]')
+    assert csrf_input is not None
+    assert csrf_input.get("value")
+
+
+def test_sales_input_year_rollover_shows_only_frozen_current_year_month_product(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    frozen_today = datetime.date(2027, 1, 1)
+    _freeze_app_today(monkeypatch, frozen_today)
+    previous_month_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=12,
+        name="年替わり前年12月商品",
+        price=200,
+        is_active=True,
+    )
+    previous_year_same_month_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=1,
+        name="年替わり前年同月商品",
+        price=250,
+        is_active=True,
+    )
+    current_month_product = Product(
+        dataset=admin_dataset,
+        year=2027,
+        month=1,
+        name="年替わり現在月商品",
+        price=300,
+        is_active=True,
+    )
+    db.session.add_all([
+        previous_month_product,
+        previous_year_same_month_product,
+        current_month_product,
+    ])
+    db.session.commit()
+
+    response = authenticated_client.get("/input")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    form = document.select_one('form[method="POST"]')
+
+    assert response.status_code == 200
+    assert "年替わり現在月商品" in document.get_text()
+    assert "年替わり前年12月商品" not in document.get_text()
+    assert "年替わり前年同月商品" not in document.get_text()
+    assert form is not None
+    csrf_input = form.select_one('input[name="csrf_token"]')
+    assert csrf_input is not None
+    assert csrf_input.get("value")
 
 
 def test_admin_sales_get_excludes_guest_dataset_today_sales(
