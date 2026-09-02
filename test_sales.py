@@ -325,12 +325,13 @@ def test_sales_post_does_not_update_same_product_sale_from_other_date(
     admin_dataset,
     csrf_post,
 ):
-    previous_date = datetime.date(2026, 8, 1)
-    target_date = datetime.date(2026, 8, 2)
+    today = datetime.date.today()
+    previous_date = today.replace(day=1)
+    target_date = today.replace(day=2)
     product = Product(
         dataset=admin_dataset,
-        year=2026,
-        month=8,
+        year=target_date.year,
+        month=target_date.month,
         name="別日売上テスト商品",
         price=200,
         is_active=True,
