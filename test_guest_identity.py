@@ -105,6 +105,103 @@ def test_nonexistent_guest_dataset_is_not_restored(flask_app):
     assert restored_user is None
 
 
+def test_expired_guest_dataset_is_not_restored(flask_app):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=3),
+        last_activity_at=now - datetime.timedelta(hours=3),
+        absolute_expires_at=now - datetime.timedelta(hours=1),
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    restored_user = _load_user(
+        flask_app,
+        f"guest:{guest_dataset.id}",
+    )
+
+    assert restored_user is None
+
+
+def test_inactive_guest_dataset_is_not_restored(flask_app):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=1),
+        last_activity_at=now - datetime.timedelta(minutes=31),
+        absolute_expires_at=now + datetime.timedelta(hours=1),
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    restored_user = _load_user(
+        flask_app,
+        f"guest:{guest_dataset.id}",
+    )
+
+    assert restored_user is None
+
+
+def test_restoring_active_guest_updates_last_activity_without_extending_absolute_expiration(
+    flask_app,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    initial_last_activity_at = now - datetime.timedelta(minutes=10)
+    absolute_expires_at = now + datetime.timedelta(hours=1)
+
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=1),
+        last_activity_at=initial_last_activity_at,
+        absolute_expires_at=absolute_expires_at,
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    restored_user = _load_user(
+        flask_app,
+        f"guest:{guest_dataset.id}",
+    )
+    db.session.refresh(guest_dataset)
+
+    assert restored_user is not None
+    assert (
+        app_module._as_utc(guest_dataset.last_activity_at)
+        > initial_last_activity_at
+    )
+    assert (
+        app_module._as_utc(guest_dataset.absolute_expires_at)
+        == absolute_expires_at
+    )
+
+
+def test_guest_activity_update_failure_fails_closed(
+    flask_app,
+    monkeypatch,
+):
+    guest_dataset = _create_guest_dataset()
+    failed_commit = Mock(
+        side_effect=SQLAlchemyError("test activity update failure")
+    )
+    rollback = Mock()
+
+    monkeypatch.setattr(db.session, "commit", failed_commit)
+    monkeypatch.setattr(db.session, "rollback", rollback)
+
+    restored_user = _load_user(
+        flask_app,
+        f"guest:{guest_dataset.id}",
+    )
+
+    assert restored_user is None
+    failed_commit.assert_called_once_with()
+    rollback.assert_called_once_with()
+
+
 @pytest.mark.parametrize(
     "user_id",
     [
