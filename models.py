@@ -37,6 +37,11 @@ class Dataset(db.Model):
             "absolute_expires_at IS NULL OR absolute_expires_at > created_at",
             name="ck_datasets_expiry_after_creation",
         ),
+        db.CheckConstraint(
+            "(kind = 'admin' AND guest_ai_usage_count = 0) OR "
+            "(kind = 'guest' AND guest_ai_usage_count BETWEEN 0 AND 3)",
+            name="ck_datasets_guest_ai_usage_count",
+        ),
     )
 
     id = db.Column(
@@ -61,6 +66,12 @@ class Dataset(db.Model):
     absolute_expires_at = db.Column(
         db.DateTime(timezone=True),
         nullable=True,
+    )
+    guest_ai_usage_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
     )
     products = db.relationship(
         "Product",

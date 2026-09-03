@@ -15,8 +15,9 @@ from flask_login import (
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import update
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.exceptions import InternalServerError
+from werkzeug.exceptions import HTTPException, InternalServerError
 from werkzeug.security import check_password_hash
 from models import db, Dataset, Product, DailySales
 from google import genai
@@ -69,6 +70,8 @@ class GuestUser(UserMixin):
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
 GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 GUEST_IDLE_TIMEOUT = datetime.timedelta(minutes=30)
+GUEST_AI_USAGE_LIMIT = 3
+_GUEST_AI_LIMIT_REACHED = object()
 
 
 def _as_utc(value):
@@ -281,6 +284,93 @@ def require_current_dataset():
     return dataset
 
 
+def _reserve_guest_ai_usage(current_dataset):
+    """GuestのGemini利用権をDB上でatomicに1回分確保する。"""
+    principal = current_user._get_current_object()
+
+    if isinstance(principal, AdminUser):
+        if (
+            current_dataset.kind != "admin"
+            or current_dataset.system_key != "admin"
+        ):
+            abort(403)
+        return True
+
+    if not isinstance(principal, GuestUser):
+        abort(403)
+
+    if (
+        principal.dataset_id != current_dataset.id
+        or current_dataset.kind != "guest"
+        or current_dataset.system_key is not None
+    ):
+        abort(403)
+
+    reservation_time = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        result = db.session.execute(
+            update(Dataset)
+            .execution_options(synchronize_session=False)
+            .where(
+                Dataset.id == current_dataset.id,
+                Dataset.kind == "guest",
+                Dataset.system_key.is_(None),
+                Dataset.guest_ai_usage_count < GUEST_AI_USAGE_LIMIT,
+                Dataset.absolute_expires_at > reservation_time,
+                Dataset.last_activity_at > (
+                    reservation_time - GUEST_IDLE_TIMEOUT
+                ),
+            )
+            .values(
+                guest_ai_usage_count=(
+                    Dataset.guest_ai_usage_count + 1
+                )
+            )
+        )
+
+        if result.rowcount == 1:
+            db.session.commit()
+            return True
+
+        db.session.rollback()
+        dataset_state = (
+            db.session.query(
+                Dataset.guest_ai_usage_count,
+                Dataset.last_activity_at,
+                Dataset.absolute_expires_at,
+            )
+            .filter_by(
+                id=current_dataset.id,
+                kind="guest",
+                system_key=None,
+            )
+            .one_or_none()
+        )
+        db.session.rollback()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to reserve Guest Gemini usage.")
+        abort(503)
+
+    if dataset_state is None or _guest_dataset_is_expired(dataset_state):
+        abort(403)
+
+    if dataset_state.guest_ai_usage_count >= GUEST_AI_USAGE_LIMIT:
+        return False
+
+    logger.error("Guest Gemini usage reservation affected no Dataset row.")
+    abort(503)
+
+
+def _guest_ai_limit_response():
+    return jsonify({
+        "error": "guest_ai_limit_reached",
+        "message": "ゲストデモで利用できるAI機能は合計3回までです。",
+        "limit": GUEST_AI_USAGE_LIMIT,
+        "remaining": 0,
+    }), 429
+
+
 def start_guest_session():
     """Guest Datasetを作成し、対応するGuest identityを発行する。"""
     if current_user.is_authenticated:
@@ -327,7 +417,7 @@ def get_admin_dataset():
         return None
 
 
-def _generate_ai_advice(ranked_sales):
+def _generate_ai_advice(ranked_sales, current_dataset=None):
     if not ranked_sales:
         logger.warning("AI advice requested but ranked_sales is empty.")  # 💡 注意喚起
         return "売上データがまだないため、アドバイスを生成できません。"
@@ -342,6 +432,12 @@ def _generate_ai_advice(ranked_sales):
         sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
         prompt = build_sales_prompt(sales_summary)
 
+        if (
+            current_dataset is not None
+            and not _reserve_guest_ai_usage(current_dataset)
+        ):
+            return _GUEST_AI_LIMIT_REACHED
+
         logger.info(f"Requesting Gemini AI advice for products: {len(ranked_sales)} items.")
         response = client.models.generate_content(
             model=config.GEMINI_MODEL,
@@ -350,6 +446,8 @@ def _generate_ai_advice(ranked_sales):
         logger.info("Gemini AI advice generated successfully.")
         return response.text
 
+    except HTTPException:
+        raise
     except Exception as e:
         error_text = str(e)
 
@@ -741,7 +839,9 @@ def api_ai_advice():
         reverse=True
     )
 
-    ai_advice = _generate_ai_advice(ranked_sales)
+    ai_advice = _generate_ai_advice(ranked_sales, current_dataset)
+    if ai_advice is _GUEST_AI_LIMIT_REACHED:
+        return _guest_ai_limit_response()
 
     return jsonify({
         "ai_advice": ai_advice
@@ -887,11 +987,12 @@ def input_sales():
 @app.route("/api/greeting")
 @admin_or_guest_required
 def api_greeting():
-    try:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return jsonify({"message": f"本日は{datetime.date.today().strftime('%-m月%-d日')}です。今日も一日お疲れ様でした！"})
+    current_dataset = require_current_dataset()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return jsonify({"message": f"本日は{datetime.date.today().strftime('%-m月%-d日')}です。今日も一日お疲れ様でした！"})
 
+    try:
         client = genai.Client(api_key=api_key)
         today = datetime.date.today()
 
@@ -911,6 +1012,9 @@ def api_greeting():
             - 最後は「何か特別よく売れた商品はありましたか？」で締めくくる
             - 嘘の情報は入れない（SNSトレンドは「〜が話題のようですよ」程度の表現にする）
         """
+        if not _reserve_guest_ai_usage(current_dataset):
+            return _guest_ai_limit_response()
+
         response = client.models.generate_content(
             model=config.GEMINI_MODEL,
             contents=prompt,
@@ -918,6 +1022,8 @@ def api_greeting():
         logger.info("AI daily greeting generated successfully.")
         return jsonify({"message": response.text})
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to generate AI greeting: {e}", exc_info=True)
         today = datetime.date.today()

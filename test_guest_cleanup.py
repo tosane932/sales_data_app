@@ -20,13 +20,25 @@ def enable_sqlite_foreign_keys(flask_app):
     assert db.session.execute(text("PRAGMA foreign_keys")).scalar_one() == 1
 
 
-def _create_guest_dataset(*, created_at, last_activity_at, absolute_expires_at):
+def _create_guest_dataset(
+    *,
+    created_at,
+    last_activity_at,
+    absolute_expires_at,
+    guest_ai_usage_count=None,
+):
+    dataset_values = {
+        "kind": "guest",
+        "system_key": None,
+        "created_at": created_at,
+        "last_activity_at": last_activity_at,
+        "absolute_expires_at": absolute_expires_at,
+    }
+    if guest_ai_usage_count is not None:
+        dataset_values["guest_ai_usage_count"] = guest_ai_usage_count
+
     dataset = Dataset(
-        kind="guest",
-        system_key=None,
-        created_at=created_at,
-        last_activity_at=last_activity_at,
-        absolute_expires_at=absolute_expires_at,
+        **dataset_values,
     )
     db.session.add(dataset)
     db.session.flush()
@@ -171,6 +183,48 @@ def test_cleanup_keeps_active_guest_products_and_sales_when_expired_guest_is_del
     assert db.session.get(Dataset, active_guest_id) is not None
     assert db.session.get(Product, active_product_id) is not None
     assert db.session.get(DailySales, active_sale_id) is not None
+
+
+def test_cleanup_removes_expired_guest_ai_usage_with_dataset(flask_app):
+    expired_guest = _create_guest_dataset(
+        created_at=NOW - datetime.timedelta(hours=3),
+        last_activity_at=NOW - datetime.timedelta(minutes=10),
+        absolute_expires_at=NOW - datetime.timedelta(hours=1),
+        guest_ai_usage_count=3,
+    )
+    expired_guest_id = expired_guest.id
+    db.session.commit()
+
+    deleted_count = _run_cleanup()
+
+    assert deleted_count == 1
+    assert db.session.get(Dataset, expired_guest_id) is None
+
+
+def test_cleanup_keeps_other_active_guest_ai_usage_count(flask_app):
+    expired_guest = _create_guest_dataset(
+        created_at=NOW - datetime.timedelta(hours=3),
+        last_activity_at=NOW - datetime.timedelta(minutes=10),
+        absolute_expires_at=NOW - datetime.timedelta(hours=1),
+        guest_ai_usage_count=3,
+    )
+    active_guest = _create_guest_dataset(
+        created_at=NOW - datetime.timedelta(hours=1),
+        last_activity_at=NOW - datetime.timedelta(minutes=10),
+        absolute_expires_at=NOW + datetime.timedelta(hours=1),
+        guest_ai_usage_count=2,
+    )
+    expired_guest_id = expired_guest.id
+    active_guest_id = active_guest.id
+    db.session.commit()
+
+    deleted_count = _run_cleanup()
+
+    assert deleted_count == 1
+    assert db.session.get(Dataset, expired_guest_id) is None
+    saved_active_guest = db.session.get(Dataset, active_guest_id)
+    assert saved_active_guest is not None
+    assert saved_active_guest.guest_ai_usage_count == 2
 
 
 def test_cleanup_deletes_guest_at_exact_expiration_boundary(flask_app):
