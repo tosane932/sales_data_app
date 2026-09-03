@@ -16,6 +16,7 @@ MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PREVIOUS_REVISION = "9d3c1b7e5a42"
 DATASET_REVISION = "c7a1d9e4f2b6"
 NOT_NULL_REVISION = "f2b6c8d4e1a9"
+HEAD_REVISION = "a8f3c1d5e7b9"
 
 
 def _migration_app(tmp_path, name):
@@ -106,7 +107,7 @@ def test_empty_database_reaches_not_null_head_with_dataset_schema(tmp_path):
         _assert_dataset_constraints(inspector)
         assert db.session.execute(
             text("SELECT version_num FROM alembic_version")
-        ).scalar_one() == NOT_NULL_REVISION
+        ).scalar_one() == HEAD_REVISION
 
 
 def test_existing_products_are_backfilled_to_admin_dataset(tmp_path):
