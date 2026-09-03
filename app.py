@@ -80,6 +80,24 @@ def _as_utc(value):
     return value.astimezone(datetime.timezone.utc)
 
 
+def _guest_dataset_is_expired(dataset):
+    """Guest Datasetが絶対期限または無操作期限切れか判定する。"""
+    absolute_expires_at = _as_utc(dataset.absolute_expires_at)
+    last_activity_at = _as_utc(dataset.last_activity_at)
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    if absolute_expires_at is None or absolute_expires_at <= now:
+        return True
+
+    if (
+        last_activity_at is None
+        or last_activity_at + GUEST_IDLE_TIMEOUT <= now
+    ):
+        return True
+
+    return False
+
+
 def _get_admin_auth_fingerprint(password_hash):
     if not isinstance(password_hash, str) or not password_hash:
         return None
@@ -129,21 +147,7 @@ def load_user(user_id):
     if guest_dataset is None:
         return None
 
-    absolute_expires_at = _as_utc(
-        guest_dataset.absolute_expires_at
-    )
-    last_activity_at = _as_utc(
-        guest_dataset.last_activity_at
-    )
-    now = datetime.datetime.now(datetime.timezone.utc)
-
-    if absolute_expires_at is None or absolute_expires_at <= now:
-        return None
-
-    if (
-        last_activity_at is None
-        or last_activity_at + GUEST_IDLE_TIMEOUT <= now
-    ):
+    if _guest_dataset_is_expired(guest_dataset):
         return None
 
     return GuestUser(guest_dataset.id)
@@ -209,6 +213,12 @@ def require_current_dataset():
         if missing_status_code == 500:
             logger.error("The Admin Dataset is missing.")
         abort(missing_status_code)
+
+    if (
+        isinstance(principal, GuestUser)
+        and _guest_dataset_is_expired(dataset)
+    ):
+        abort(403)
 
     return dataset
 

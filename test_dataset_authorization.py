@@ -80,6 +80,44 @@ def test_guest_b_resolves_guest_b_dataset(flask_app):
     assert resolved_dataset.id == guest_b_dataset.id
 
 
+def test_expired_guest_dataset_is_forbidden(flask_app):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=3),
+        last_activity_at=now - datetime.timedelta(hours=3),
+        absolute_expires_at=now - datetime.timedelta(hours=1),
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    with flask_app.test_request_context("/"):
+        login_user(app_module.GuestUser(guest_dataset.id))
+
+        with pytest.raises(Forbidden):
+            app_module.require_current_dataset()
+
+
+def test_inactive_guest_dataset_is_forbidden(flask_app):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=1),
+        last_activity_at=now - datetime.timedelta(minutes=31),
+        absolute_expires_at=now + datetime.timedelta(hours=1),
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    with flask_app.test_request_context("/"):
+        login_user(app_module.GuestUser(guest_dataset.id))
+
+        with pytest.raises(Forbidden):
+            app_module.require_current_dataset()
+
+
 def test_guest_a_and_guest_b_resolve_different_datasets(flask_app):
     guest_a_dataset = _create_guest_dataset()
     guest_b_dataset = _create_guest_dataset()
@@ -338,6 +376,7 @@ def test_dataset_query_uses_principal_scoped_filters(
     expected_filters,
 ):
     received_filters = {}
+    now = datetime.datetime.now(datetime.timezone.utc)
 
     class RecordingQuery:
         def filter_by(self, **kwargs):
@@ -345,7 +384,11 @@ def test_dataset_query_uses_principal_scoped_filters(
             return self
 
         def one_or_none(self):
-            return SimpleNamespace(id=expected_filters.get("id", uuid.uuid4()))
+            return SimpleNamespace(
+                id=expected_filters.get("id", uuid.uuid4()),
+                last_activity_at=now,
+                absolute_expires_at=now + datetime.timedelta(hours=2),
+            )
 
     monkeypatch.setattr(Dataset, "query", RecordingQuery())
 
