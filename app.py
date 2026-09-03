@@ -150,6 +150,17 @@ def load_user(user_id):
     if _guest_dataset_is_expired(guest_dataset):
         return None
 
+    guest_dataset.last_activity_at = datetime.datetime.now(
+        datetime.timezone.utc
+    )
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to update Guest activity.")
+        return None
+
     return GuestUser(guest_dataset.id)
 
 
