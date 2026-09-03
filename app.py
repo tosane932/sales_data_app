@@ -68,6 +68,7 @@ class GuestUser(UserMixin):
 
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
 GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
+GUEST_IDLE_TIMEOUT = datetime.timedelta(minutes=30)
 
 
 def _as_utc(value):
@@ -131,9 +132,18 @@ def load_user(user_id):
     absolute_expires_at = _as_utc(
         guest_dataset.absolute_expires_at
     )
+    last_activity_at = _as_utc(
+        guest_dataset.last_activity_at
+    )
     now = datetime.datetime.now(datetime.timezone.utc)
 
     if absolute_expires_at is None or absolute_expires_at <= now:
+        return None
+
+    if (
+        last_activity_at is None
+        or last_activity_at + GUEST_IDLE_TIMEOUT <= now
+    ):
         return None
 
     return GuestUser(guest_dataset.id)
