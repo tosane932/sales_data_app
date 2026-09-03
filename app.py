@@ -80,11 +80,13 @@ def _as_utc(value):
     return value.astimezone(datetime.timezone.utc)
 
 
-def _guest_dataset_is_expired(dataset):
+def _guest_dataset_is_expired(dataset, now=None):
     """Guest Datasetが絶対期限または無操作期限切れか判定する。"""
     absolute_expires_at = _as_utc(dataset.absolute_expires_at)
     last_activity_at = _as_utc(dataset.last_activity_at)
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = _as_utc(now) if now is not None else datetime.datetime.now(
+        datetime.timezone.utc
+    )
 
     if absolute_expires_at is None or absolute_expires_at <= now:
         return True
@@ -96,6 +98,51 @@ def _guest_dataset_is_expired(dataset):
         return True
 
     return False
+
+
+def _cleanup_expired_guest_datasets(*, now=None):
+    """現在のtransaction内で期限切れGuestと配下データを削除する。"""
+    cleanup_time = _as_utc(now) if now is not None else datetime.datetime.now(
+        datetime.timezone.utc
+    )
+    guest_datasets = Dataset.query.filter_by(
+        kind="guest",
+        system_key=None,
+    ).all()
+    expired_dataset_ids = [
+        dataset.id
+        for dataset in guest_datasets
+        if _guest_dataset_is_expired(dataset, now=cleanup_time)
+    ]
+
+    if not expired_dataset_ids:
+        return 0
+
+    product_ids = [
+        row[0]
+        for row in (
+            db.session.query(Product.id)
+            .filter(Product.dataset_id.in_(expired_dataset_ids))
+            .all()
+        )
+    ]
+
+    if product_ids:
+        DailySales.query.filter(
+            DailySales.product_id.in_(product_ids)
+        ).delete(synchronize_session=False)
+        Product.query.filter(
+            Product.id.in_(product_ids),
+            Product.dataset_id.in_(expired_dataset_ids),
+        ).delete(synchronize_session=False)
+
+    deleted_count = Dataset.query.filter(
+        Dataset.id.in_(expired_dataset_ids),
+        Dataset.kind == "guest",
+        Dataset.system_key.is_(None),
+    ).delete(synchronize_session=False)
+    db.session.flush()
+    return deleted_count
 
 
 def _get_admin_auth_fingerprint(password_hash):
@@ -249,11 +296,14 @@ def start_guest_session():
     )
 
     try:
+        _cleanup_expired_guest_datasets(now=now)
         db.session.add(guest_dataset)
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        logger.exception("Failed to create a Guest Dataset.")
+        logger.exception(
+            "Failed to clean up expired Guest data or create a Guest Dataset."
+        )
         abort(503)
 
     guest_user = GuestUser(guest_dataset.id)
