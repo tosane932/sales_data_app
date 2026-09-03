@@ -70,6 +70,15 @@ ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
 GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 
 
+def _as_utc(value):
+    """DBから取得した日時をUTCのaware datetimeへそろえる。"""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=datetime.timezone.utc)
+    return value.astimezone(datetime.timezone.utc)
+
+
 def _get_admin_auth_fingerprint(password_hash):
     if not isinstance(password_hash, str) or not password_hash:
         return None
@@ -117,6 +126,14 @@ def load_user(user_id):
         return None
 
     if guest_dataset is None:
+        return None
+
+    absolute_expires_at = _as_utc(
+        guest_dataset.absolute_expires_at
+    )
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    if absolute_expires_at is None or absolute_expires_at <= now:
         return None
 
     return GuestUser(guest_dataset.id)

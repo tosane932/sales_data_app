@@ -105,6 +105,26 @@ def test_nonexistent_guest_dataset_is_not_restored(flask_app):
     assert restored_user is None
 
 
+def test_expired_guest_dataset_is_not_restored(flask_app):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now - datetime.timedelta(hours=3),
+        last_activity_at=now - datetime.timedelta(hours=3),
+        absolute_expires_at=now - datetime.timedelta(hours=1),
+    )
+    db.session.add(guest_dataset)
+    db.session.commit()
+
+    restored_user = _load_user(
+        flask_app,
+        f"guest:{guest_dataset.id}",
+    )
+
+    assert restored_user is None
+
+
 @pytest.mark.parametrize(
     "user_id",
     [
