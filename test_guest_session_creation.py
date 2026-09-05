@@ -86,7 +86,10 @@ def test_started_guest_resolves_the_created_dataset(flask_app):
     assert resolved_dataset.id == guest_dataset.id
 
 
-def test_guest_dataset_commit_happens_before_login(flask_app, monkeypatch):
+def test_rate_limit_and_guest_dataset_commits_happen_before_login(
+    flask_app,
+    monkeypatch,
+):
     events = []
     real_commit = db.session.commit
     real_login_user = app_module.login_user
@@ -105,7 +108,7 @@ def test_guest_dataset_commit_happens_before_login(flask_app, monkeypatch):
     with flask_app.test_request_context("/"):
         app_module.start_guest_session()
 
-    assert events == ["commit", "login_user"]
+    assert events == ["commit", "commit", "login_user"]
 
 
 def test_database_failure_rolls_back_without_guest_login(

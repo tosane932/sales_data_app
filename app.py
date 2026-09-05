@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import hmac
 import logging  # 💡 1. ログモジュールをインポート
+import ipaddress
 import uuid
 from functools import wraps
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
@@ -15,11 +16,19 @@ from flask_login import (
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy import update
+from sqlalchemy import case, or_, update
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import HTTPException, InternalServerError
 from werkzeug.security import check_password_hash
-from models import db, Dataset, Product, DailySales
+from models import (
+    db,
+    Dataset,
+    GuestCreationRateLimit,
+    Product,
+    DailySales,
+)
 from google import genai
 import config
 from prompts import build_sales_prompt
@@ -40,6 +49,12 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
 app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+app.config["GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"] = (
+    config.GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS
+)
+app.config["GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS"] = (
+    config.GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS
+)
 csrf = CSRFProtect(app)
 db.init_app(app)
 
@@ -72,6 +87,9 @@ GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 GUEST_IDLE_TIMEOUT = datetime.timedelta(minutes=30)
 GUEST_AI_USAGE_LIMIT = 3
 _GUEST_AI_LIMIT_REACHED = object()
+GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
+    "guest-creation-rate-limit:v1"
+)
 
 
 def _as_utc(value):
@@ -371,10 +389,137 @@ def _guest_ai_limit_response():
     }), 429
 
 
+def _get_guest_creation_rate_limit_settings():
+    """Guest作成rate limitの必須設定を正の整数として返す。"""
+    try:
+        max_attempts = int(
+            app.config["GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"]
+        )
+        window_seconds = int(
+            app.config["GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS"]
+        )
+    except (KeyError, TypeError, ValueError):
+        logger.error("Guest creation rate limit configuration is invalid.")
+        abort(503)
+
+    if max_attempts <= 0 or window_seconds <= 0:
+        logger.error("Guest creation rate limit configuration is invalid.")
+        abort(503)
+
+    return max_attempts, window_seconds
+
+
+def _get_guest_creation_client_key():
+    """検証済みclient IPから、生IPを含まない固定長keyを作る。"""
+    if app.testing:
+        raw_ip = request.remote_addr or app.config.get(
+            "GUEST_CREATION_RATE_LIMIT_TEST_CLIENT_IP"
+        )
+    else:
+        raw_ip = request.headers.get("CF-Connecting-IP")
+
+    try:
+        parsed_ip = ipaddress.ip_address(raw_ip)
+    except (TypeError, ValueError):
+        logger.warning("Guest creation client IP is missing or invalid.")
+        abort(503)
+
+    if isinstance(parsed_ip, ipaddress.IPv6Address):
+        parsed_ip = parsed_ip.ipv4_mapped or parsed_ip
+    normalized_ip = str(parsed_ip)
+
+    secret_key = app.config.get("SECRET_KEY")
+    if isinstance(secret_key, str):
+        secret_key = secret_key.encode("utf-8")
+    if not isinstance(secret_key, bytes) or not secret_key:
+        logger.error("SECRET_KEY is unavailable for Guest rate limiting.")
+        abort(503)
+
+    message = (
+        f"{GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN}:{normalized_ip}"
+    ).encode("utf-8")
+    return hmac.new(secret_key, message, hashlib.sha256).hexdigest()
+
+
+def _reserve_guest_creation_attempt(client_key_hash, *, now=None):
+    """Guest作成試行をDBの単一UPSERTでatomicに1回分確保する。"""
+    max_attempts, window_seconds = (
+        _get_guest_creation_rate_limit_settings()
+    )
+    attempt_time = _as_utc(now) if now is not None else datetime.datetime.now(
+        datetime.timezone.utc
+    )
+    window_cutoff = attempt_time - datetime.timedelta(
+        seconds=window_seconds
+    )
+    table = GuestCreationRateLimit.__table__
+    dialect_name = db.session.get_bind().dialect.name
+
+    if dialect_name == "postgresql":
+        insert_statement = postgresql_insert(table)
+    elif dialect_name == "sqlite":
+        insert_statement = sqlite_insert(table)
+    else:
+        logger.error(
+            "Guest creation rate limiting does not support DB dialect: %s",
+            dialect_name,
+        )
+        abort(503)
+
+    insert_statement = insert_statement.values(
+        client_key_hash=client_key_hash,
+        window_started_at=attempt_time,
+        request_count=1,
+        updated_at=attempt_time,
+    )
+    window_has_expired = table.c.window_started_at <= window_cutoff
+    reservation_statement = insert_statement.on_conflict_do_update(
+        index_elements=[table.c.client_key_hash],
+        set_={
+            "window_started_at": case(
+                (window_has_expired, attempt_time),
+                else_=table.c.window_started_at,
+            ),
+            "request_count": case(
+                (window_has_expired, 1),
+                else_=table.c.request_count + 1,
+            ),
+            "updated_at": attempt_time,
+        },
+        where=or_(
+            window_has_expired,
+            table.c.request_count < max_attempts,
+        ),
+    )
+
+    try:
+        result = db.session.execute(reservation_statement)
+        if result.rowcount == 1:
+            db.session.commit()
+            return True
+
+        db.session.rollback()
+        return False
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to reserve a Guest creation attempt.")
+        abort(503)
+
+
 def start_guest_session():
     """Guest Datasetを作成し、対応するGuest identityを発行する。"""
     if current_user.is_authenticated:
         abort(409)
+
+    client_key_hash = _get_guest_creation_client_key()
+    if not _reserve_guest_creation_attempt(client_key_hash):
+        abort(
+            429,
+            description=(
+                "ゲストデモの開始回数が上限に達しました。"
+                "時間を置いてからお試しください。"
+            ),
+        )
 
     now = datetime.datetime.now(datetime.timezone.utc)
     guest_dataset = Dataset(

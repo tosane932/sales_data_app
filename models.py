@@ -81,6 +81,28 @@ class Dataset(db.Model):
     )
 
 
+class GuestCreationRateLimit(db.Model):
+    """Guest Session作成回数を匿名client単位で管理する。"""
+    __tablename__ = "guest_creation_rate_limits"
+    __table_args__ = (
+        db.CheckConstraint(
+            "request_count >= 0",
+            name="ck_guest_creation_rate_limits_request_count_nonnegative",
+        ),
+    )
+
+    client_key_hash = db.Column(db.String(64), primary_key=True)
+    window_started_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+    )
+    request_count = db.Column(db.Integer, nullable=False)
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+    )
+
+
 class Product(db.Model):
     """その月に登録された商品マスタ（商品名・単価）を表すテーブル。"""
     __tablename__ = "products"
