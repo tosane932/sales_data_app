@@ -14,6 +14,14 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
 
+# Guest Session作成rate limit（本番値は環境変数で明示する）
+GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS = os.environ.get(
+    "GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"
+)
+GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS = os.environ.get(
+    "GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS"
+)
+
 # ==========================================
 # データベース接続設定
 # ==========================================
