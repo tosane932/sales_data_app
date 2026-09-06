@@ -151,6 +151,55 @@ def test_cleanup_keeps_other_active_guest_when_expired_guest_exists(flask_app):
     assert db.session.get(Dataset, active_guest_id) is not None
 
 
+def test_cleanup_rechecks_idle_expiration_after_candidate_becomes_active(
+    flask_app,
+    monkeypatch,
+):
+    idle_expired_guest = _create_guest_dataset(
+        created_at=NOW - datetime.timedelta(hours=1),
+        last_activity_at=NOW - datetime.timedelta(minutes=31),
+        absolute_expires_at=NOW + datetime.timedelta(hours=1),
+    )
+    product, sale = _create_product_and_sale(
+        idle_expired_guest,
+        name="活動再開Guest商品",
+        quantity=93,
+    )
+    guest_id = idle_expired_guest.id
+    product_id = product.id
+    sale_id = sale.id
+    db.session.commit()
+
+    real_is_expired = app_module._guest_dataset_is_expired
+    candidate_was_refreshed = False
+
+    def refresh_activity_after_candidate_check(dataset, *, now=None):
+        nonlocal candidate_was_refreshed
+        is_expired = real_is_expired(dataset, now=now)
+
+        if dataset.id == guest_id and not candidate_was_refreshed:
+            assert is_expired is True
+            dataset.last_activity_at = NOW - datetime.timedelta(minutes=1)
+            db.session.commit()
+            candidate_was_refreshed = True
+
+        return is_expired
+
+    monkeypatch.setattr(
+        app_module,
+        "_guest_dataset_is_expired",
+        refresh_activity_after_candidate_check,
+    )
+
+    deleted_count = _run_cleanup()
+
+    assert candidate_was_refreshed is True
+    assert deleted_count == 0
+    assert db.session.get(Dataset, guest_id) is not None
+    assert db.session.get(Product, product_id) is not None
+    assert db.session.get(DailySales, sale_id) is not None
+
+
 def test_cleanup_keeps_active_guest_products_and_sales_when_expired_guest_is_deleted(
     flask_app,
 ):

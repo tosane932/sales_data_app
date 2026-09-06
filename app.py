@@ -139,6 +139,27 @@ def _cleanup_expired_guest_datasets(*, now=None):
     if not expired_dataset_ids:
         return 0
 
+    locked_guest_datasets = (
+        Dataset.query
+        .filter(
+            Dataset.id.in_(expired_dataset_ids),
+            Dataset.kind == "guest",
+            Dataset.system_key.is_(None),
+        )
+        .order_by(Dataset.id)
+        .populate_existing()
+        .with_for_update()
+        .all()
+    )
+    expired_dataset_ids = [
+        dataset.id
+        for dataset in locked_guest_datasets
+        if _guest_dataset_is_expired(dataset, now=cleanup_time)
+    ]
+
+    if not expired_dataset_ids:
+        return 0
+
     product_ids = [
         row[0]
         for row in (
