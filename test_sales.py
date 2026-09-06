@@ -142,6 +142,39 @@ def test_admin_sales_get_excludes_guest_dataset_product(
     assert "ゲスト売上商品" not in response_text
 
 
+def test_sales_quantity_input_keeps_current_value_and_selects_on_focus(
+    authenticated_client,
+    sales_records,
+):
+    response = authenticated_client.get("/input")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    product_row = next(
+        row
+        for row in document.select(".product-row")
+        if row.select_one('input[name="product_id"]').get("value")
+        == str(sales_records.existing_product_id)
+    )
+    quantity_input = product_row.select_one('input[name="quantity"]')
+    page_title = document.find("h1", string="📝 日次売上入力")
+    input_guidance = page_title.find_next_sibling("p")
+    script_text = "\n".join(
+        script.get_text()
+        for script in document.find_all("script")
+    )
+
+    assert response.status_code == 200
+    assert input_guidance is not None
+    assert input_guidance.get_text(strip=True) == (
+        "※本日の累計販売数を入力してください。"
+        "入力済みの数値は上書きされます。"
+    )
+    assert quantity_input.get("value") == "5"
+    assert "querySelectorAll('.qty-input')" in script_text
+    assert "addEventListener('focus'" in script_text
+    assert "requestAnimationFrame" in script_text
+    assert "quantityInput.select()" in script_text
+
+
 def test_sales_input_month_rollover_shows_only_frozen_current_month_product(
     authenticated_client,
     admin_dataset,
