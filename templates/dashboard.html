@@ -23,7 +23,9 @@
             <select name="month" id="selectMonth">
                 <option value="">全期間（通算）</option>
                 {% for m in range(1, 13) %}
-                <option value="{{ m }}" {% if month == m %}selected{% endif %}>{{ m }}月</option>
+                <option value="{{ m }}" {% if month == m %}selected{% endif %}>
+                    {{ m }}月{% if m in sales_months %} ✅{% endif %}
+                </option>
                 {% endfor %}
             </select>
             <button type="submit" class="btn-submit">🔍 データを抽出</button>
@@ -93,6 +95,23 @@
         element.innerText = String(value ?? '');
     }
 
+    function updateSalesMonthIndicators(salesMonths) {
+        const availableMonths = new Set(salesMonths.map(Number));
+        const monthOptions = document.querySelectorAll(
+            '#selectMonth option[value]'
+        );
+
+        monthOptions.forEach(option => {
+            if (!option.value) {
+                return;
+            }
+
+            const month = Number(option.value);
+            option.textContent =
+                `${month}月${availableMonths.has(month) ? ' ✅' : ''}`;
+        });
+    }
+
     // 初回ページ読み込み時のグラフ描画処理
     const initialLabels = {{ chart_labels | tojson if chart_labels else [] }};
     const initialValues = {{ chart_values | tojson if chart_values else [] }};
@@ -137,6 +156,7 @@
             .then(data => {
                 // 1. 表示期間タイトルの更新
                 periodTitle.innerText = data.period_text;
+                updateSalesMonthIndicators(data.sales_months);
 
                 // 2. 売上ランキングリストをDOM APIで安全に生成して反映
                 rankContainer.replaceChildren();

@@ -921,6 +921,10 @@ def dashboard():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
     current_dataset = require_current_dataset()
+    sales_months = _get_dashboard_sales_months(
+        current_dataset,
+        target_year or datetime.date.today().year,
+    )
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
@@ -947,6 +951,7 @@ def dashboard():
                            ai_advice=ai_advice,
                            year=target_year or "全期間",
                            month=target_month,
+                           sales_months=sales_months,
                            now=datetime.date.today())
 
 
@@ -956,6 +961,10 @@ def api_dashboard_data():
     target_year = _get_optional_integer_query_parameter("year")
     target_month = _get_optional_integer_query_parameter("month")
     current_dataset = require_current_dataset()
+    sales_months = _get_dashboard_sales_months(
+        current_dataset,
+        target_year,
+    )
 
     logger.info(f"API Dashboard data requested for period: year={target_year}, month={target_month}")
 
@@ -973,6 +982,7 @@ def api_dashboard_data():
         "ranked_sales": ranked_sales,
         "chart_labels": chart_labels,
         "chart_values": chart_values,
+        "sales_months": sales_months,
         "ai_advice": (
             "売上ランキングとグラフを更新しました。"
             "詳しい改善案を確認する場合は、"
@@ -1245,6 +1255,21 @@ def _get_sales_from_db(
 
     results = query.group_by(Product.name).all()
     return {name: int(qty) for name, qty in results}
+
+
+def _get_dashboard_sales_months(current_dataset, target_year=None):
+    query = (
+        db.session.query(db.extract("month", DailySales.date))
+        .join(Product, DailySales.product_id == Product.id)
+        .filter(Product.dataset_id == current_dataset.id)
+    )
+
+    if target_year:
+        query = query.filter(
+            db.extract("year", DailySales.date) == target_year
+        )
+
+    return sorted({int(row[0]) for row in query.distinct().all()})
 
 
 
