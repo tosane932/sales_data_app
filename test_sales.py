@@ -155,12 +155,19 @@ def test_sales_quantity_input_keeps_current_value_and_selects_on_focus(
         == str(sales_records.existing_product_id)
     )
     quantity_input = product_row.select_one('input[name="quantity"]')
+    page_title = document.find("h1", string="📝 日次売上入力")
+    input_guidance = page_title.find_next_sibling("p")
     script_text = "\n".join(
         script.get_text()
         for script in document.find_all("script")
     )
 
     assert response.status_code == 200
+    assert input_guidance is not None
+    assert input_guidance.get_text(strip=True) == (
+        "※本日の累計販売数を入力してください。"
+        "入力済みの数値は上書きされます。"
+    )
     assert quantity_input.get("value") == "5"
     assert "querySelectorAll('.qty-input')" in script_text
     assert "addEventListener('focus'" in script_text
