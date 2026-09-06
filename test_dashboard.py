@@ -2,6 +2,7 @@ import datetime
 from unittest.mock import Mock
 
 import pytest
+from bs4 import BeautifulSoup
 
 import app as app_module
 from models import DailySales, Dataset, Product, db
@@ -182,6 +183,85 @@ def cross_dataset_dashboard_records(flask_app, admin_dataset):
         ),
     ])
     db.session.commit()
+
+
+def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
+    authenticated_client,
+    dashboard_records,
+    admin_dataset,
+):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_september_product = Product(
+        dataset=guest_dataset,
+        year=2026,
+        month=9,
+        name="Guest 9月商品",
+        price=300,
+    )
+    admin_october_product_without_sales = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=10,
+        name="Admin 10月未入力商品",
+        price=400,
+    )
+    admin_previous_year_november_product = Product(
+        dataset=admin_dataset,
+        year=2025,
+        month=11,
+        name="Admin前年11月商品",
+        price=500,
+    )
+    db.session.add_all([
+        guest_dataset,
+        guest_september_product,
+        admin_october_product_without_sales,
+        admin_previous_year_november_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=guest_september_product.id,
+            date=datetime.date(2026, 9, 1),
+            quantity=90,
+        ),
+        DailySales(
+            product_id=admin_previous_year_november_product.id,
+            date=datetime.date(2025, 11, 1),
+            quantity=11,
+        ),
+    ])
+    db.session.commit()
+
+    response = authenticated_client.get("/dashboard?year=2026")
+    response_text = response.get_data(as_text=True)
+    document = BeautifulSoup(response_text, "html.parser")
+    month_labels = {
+        int(option["value"]): option.get_text(" ", strip=True)
+        for option in document.select("#selectMonth option[value]")
+        if option["value"]
+    }
+
+    assert response.status_code == 200
+    assert month_labels[7] == "7月 ✅"
+    assert month_labels[8] == "8月 ✅"
+    assert month_labels[9] == "9月"
+    assert month_labels[10] == "10月"
+    assert month_labels[11] == "11月"
+    assert "data.sales_months" in response_text
+
+    api_response = authenticated_client.get(
+        "/api/dashboard-data?year=2026"
+    )
+    assert api_response.status_code == 200
+    assert api_response.get_json()["sales_months"] == [7, 8]
 
 
 def test_admin_dashboard_excludes_guest_dataset_sales(
@@ -500,6 +580,7 @@ def test_dashboard_api_returns_sales_aggregation_for_selected_period(
         "ranked_sales",
         "chart_labels",
         "chart_values",
+        "sales_months",
         "ai_advice",
         "period_text",
     }
@@ -509,6 +590,7 @@ def test_dashboard_api_returns_sales_aggregation_for_selected_period(
     ]
     assert payload["ai_advice"] == FIXED_AI_ADVICE
     assert payload["period_text"] == "8月度"
+    assert payload["sales_months"] == [7, 8]
     assert _product_snapshot() == products_before
     assert _sales_snapshot() == sales_before
 
