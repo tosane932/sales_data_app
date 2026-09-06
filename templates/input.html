@@ -115,6 +115,12 @@
 </div>
 
 <script>
+    document.querySelectorAll('.qty-input').forEach(quantityInput => {
+        quantityInput.addEventListener('focus', () => {
+            window.requestAnimationFrame(() => quantityInput.select());
+        });
+    });
+
     function setTextWithLineBreaks(element, value) {
         element.innerText = String(value ?? '');
     }
