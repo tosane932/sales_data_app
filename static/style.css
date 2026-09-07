@@ -365,7 +365,7 @@ select {
    👤 ログイン・ゲストデモ入口
 ======================================== */
 
-h1 span {
+.login-title span {
     display: block;
     font-size: 0.75em;
     font-weight: normal;
