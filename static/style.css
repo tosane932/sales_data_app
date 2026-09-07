@@ -361,6 +361,69 @@ select {
 }
 
 
+/* ========================================
+   👤 ログイン・ゲストデモ入口
+======================================== */
+
+.login-title span {
+    display: block;
+    font-size: 0.75em;
+    font-weight: normal;
+    margin-top: 0.3em;
+}
+
+.login-page .guest-demo-section {
+    margin-bottom: 30px;
+    padding: 22px;
+
+    background-color: #fffdf8;
+    border: 1px solid #eee2c9;
+    border-radius: 12px;
+}
+
+.login-page .guest-demo-section h2,
+.login-page .admin-login-section h2 {
+    margin: 0 0 14px;
+
+    color: #6e543c;
+    font-size: 18px;
+}
+
+.login-page .guest-capacity,
+.login-page .guest-demo-message {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.login-page .guest-demo-message {
+    color: #8b4f25;
+    font-weight: bold;
+}
+
+.login-page .guest-demo-button:disabled {
+    background-color: #d8d2c7;
+    color: #756f66;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.login-page .admin-login-section {
+    padding-top: 4px;
+}
+
+@media (max-width: 768px) {
+    .login-page .guest-demo-section {
+        padding: 18px;
+    }
+
+    .login-page .guest-demo-button {
+        width: 100%;
+        min-height: 48px;
+    }
+}
+
+
 
 
 /* ========================================
