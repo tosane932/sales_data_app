@@ -20,7 +20,13 @@ from sqlalchemy import case, or_, text, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.exceptions import HTTPException, InternalServerError
+from werkzeug.exceptions import (
+    Conflict,
+    HTTPException,
+    InternalServerError,
+    ServiceUnavailable,
+    TooManyRequests,
+)
 from werkzeug.security import check_password_hash
 from models import (
     db,
@@ -95,6 +101,16 @@ GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
 )
 GUEST_ADMISSION_LOCK_NAMESPACE = 0x47554553  # "GUES"
 GUEST_ADMISSION_LOCK_KEY = 1
+_GUEST_CAPACITY_NOT_LOADED = object()
+
+
+class GuestCapacityFull(ServiceUnavailable):
+    """満員と他の503障害を文字列比較せず区別する。"""
+
+    def __init__(self, active_guest_count, active_dataset_limit):
+        super().__init__(description="ゲストデモは現在満員です。")
+        self.active_guest_count = active_guest_count
+        self.active_dataset_limit = active_dataset_limit
 
 
 def _as_utc(value):
@@ -636,9 +652,9 @@ def start_guest_session():
         abort(503)
 
     if capacity_is_full:
-        abort(
-            503,
-            description="ゲストデモは現在満員です。",
+        raise GuestCapacityFull(
+            active_guest_count,
+            active_dataset_limit,
         )
 
     guest_user = GuestUser(guest_dataset.id)
@@ -647,6 +663,61 @@ def start_guest_session():
         abort(500)
 
     return guest_dataset
+
+
+def _unavailable_guest_capacity(message):
+    return {
+        "available": False,
+        "active_count": None,
+        "limit": None,
+        "full": False,
+        "disabled": True,
+        "message": message,
+    }
+
+
+def _get_guest_capacity_for_display():
+    """副作用なしで、ログイン画面用の参考capacityを取得する。"""
+    try:
+        active_dataset_limit = _get_guest_active_dataset_limit()
+        active_guest_count = _get_active_guest_dataset_count()
+    except ServiceUnavailable:
+        db.session.rollback()
+        return _unavailable_guest_capacity(
+            "現在のゲストデモ利用状況を取得できません。"
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to load Guest capacity for display.")
+        return _unavailable_guest_capacity(
+            "現在のゲストデモ利用状況を取得できません。"
+        )
+
+    capacity_is_full = active_guest_count >= active_dataset_limit
+    return {
+        "available": True,
+        "active_count": active_guest_count,
+        "limit": active_dataset_limit,
+        "full": capacity_is_full,
+        "disabled": capacity_is_full,
+        "message": "ただいま満員です。" if capacity_is_full else None,
+    }
+
+
+def _render_login_page(
+    *,
+    error=None,
+    guest_capacity=_GUEST_CAPACITY_NOT_LOADED,
+    status_code=200,
+):
+    if guest_capacity is _GUEST_CAPACITY_NOT_LOADED:
+        guest_capacity = _get_guest_capacity_for_display()
+
+    return render_template(
+        "login.html",
+        error=error,
+        guest_capacity=guest_capacity,
+    ), status_code
 
 
 def get_admin_dataset():
@@ -737,6 +808,61 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
         )
 
 
+@app.route("/guest/start", methods=["POST"])
+def start_guest_demo():
+    try:
+        start_guest_session()
+    except GuestCapacityFull as error:
+        guest_capacity = {
+            "available": True,
+            "active_count": error.active_guest_count,
+            "limit": error.active_dataset_limit,
+            "full": True,
+            "disabled": True,
+            "message": (
+                "ただいまゲストデモは満員です。"
+                "時間を置いてからお試しください。"
+            ),
+        }
+        return _render_login_page(
+            guest_capacity=guest_capacity,
+            status_code=503,
+        )
+    except TooManyRequests:
+        return _render_login_page(
+            guest_capacity=_unavailable_guest_capacity(
+                "短時間にゲストデモの開始操作が繰り返されました。"
+                "時間を置いてからお試しください。"
+            ),
+            status_code=429,
+        )
+    except Conflict:
+        return _render_login_page(
+            guest_capacity=_unavailable_guest_capacity(
+                "すでにログインしています。現在の画面からご利用ください。"
+            ),
+            status_code=409,
+        )
+    except ServiceUnavailable:
+        return _render_login_page(
+            guest_capacity=_unavailable_guest_capacity(
+                "現在ゲストデモを開始できません。"
+                "時間を置いてからお試しください。"
+            ),
+            status_code=503,
+        )
+    except InternalServerError:
+        return _render_login_page(
+            guest_capacity=_unavailable_guest_capacity(
+                "ゲストデモを開始できませんでした。"
+                "時間を置いてからお試しください。"
+            ),
+            status_code=500,
+        )
+
+    return redirect(url_for("index"), code=303)
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -767,12 +893,12 @@ def login():
             return redirect(url_for("index"))
 
         logger.warning("Administrator login failed.")
-        return render_template(
-            "login.html",
+        return _render_login_page(
             error="ユーザー名またはパスワードが正しくありません。",
-        ), 401
+            status_code=401,
+        )
 
-    return render_template("login.html")
+    return _render_login_page()
 
 
 @app.route("/", methods=["GET", "POST"])
