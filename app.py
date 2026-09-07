@@ -16,7 +16,7 @@ from flask_login import (
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy import case, or_, update
+from sqlalchemy import case, or_, text, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -55,6 +55,9 @@ app.config["GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"] = (
 app.config["GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS"] = (
     config.GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS
 )
+app.config["GUEST_ACTIVE_DATASET_LIMIT"] = (
+    config.GUEST_ACTIVE_DATASET_LIMIT
+)
 csrf = CSRFProtect(app)
 db.init_app(app)
 
@@ -90,6 +93,8 @@ _GUEST_AI_LIMIT_REACHED = object()
 GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
     "guest-creation-rate-limit:v1"
 )
+GUEST_ADMISSION_LOCK_NAMESPACE = 0x47554553  # "GUES"
+GUEST_ADMISSION_LOCK_KEY = 1
 
 
 def _as_utc(value):
@@ -119,6 +124,21 @@ def _guest_dataset_is_expired(dataset, now=None):
         return True
 
     return False
+
+
+def _get_active_guest_dataset_count(*, now=None):
+    """既存の期限判定と同じ境界で有効なGuest数を返す。"""
+    active_at = _as_utc(now) if now is not None else datetime.datetime.now(
+        datetime.timezone.utc
+    )
+    idle_cutoff = active_at - GUEST_IDLE_TIMEOUT
+
+    return Dataset.query.filter(
+        Dataset.kind == "guest",
+        Dataset.system_key.is_(None),
+        Dataset.absolute_expires_at > active_at,
+        Dataset.last_activity_at > idle_cutoff,
+    ).count()
 
 
 def _cleanup_expired_guest_datasets(*, now=None):
@@ -430,6 +450,49 @@ def _get_guest_creation_rate_limit_settings():
     return max_attempts, window_seconds
 
 
+def _get_guest_active_dataset_limit():
+    """有効Guest Dataset上限を正の整数として返す。"""
+    try:
+        active_dataset_limit = int(
+            app.config["GUEST_ACTIVE_DATASET_LIMIT"]
+        )
+    except (KeyError, TypeError, ValueError):
+        logger.error("Guest active Dataset limit configuration is invalid.")
+        abort(503)
+
+    if active_dataset_limit <= 0:
+        logger.error("Guest active Dataset limit configuration is invalid.")
+        abort(503)
+
+    return active_dataset_limit
+
+
+def _acquire_guest_admission_lock():
+    """PostgreSQLではGuest作成transactionを直列化する。"""
+    dialect_name = db.session.get_bind().dialect.name
+
+    if dialect_name == "sqlite":
+        return
+
+    if dialect_name != "postgresql":
+        logger.error(
+            "Guest admission locking does not support DB dialect: %s",
+            dialect_name,
+        )
+        abort(503)
+
+    db.session.execute(
+        text(
+            "SELECT pg_advisory_xact_lock("
+            ":lock_namespace, :lock_key)"
+        ),
+        {
+            "lock_namespace": GUEST_ADMISSION_LOCK_NAMESPACE,
+            "lock_key": GUEST_ADMISSION_LOCK_KEY,
+        },
+    )
+
+
 def _get_guest_creation_client_key():
     """検証済みclient IPから、生IPを含まない固定長keyを作る。"""
     if app.testing:
@@ -542,25 +605,41 @@ def start_guest_session():
             ),
         )
 
-    now = datetime.datetime.now(datetime.timezone.utc)
-    guest_dataset = Dataset(
-        kind="guest",
-        system_key=None,
-        created_at=now,
-        last_activity_at=now,
-        absolute_expires_at=now + GUEST_ABSOLUTE_LIFETIME,
-    )
+    active_dataset_limit = _get_guest_active_dataset_limit()
+    capacity_is_full = False
+    guest_dataset = None
 
     try:
+        _acquire_guest_admission_lock()
+        now = datetime.datetime.now(datetime.timezone.utc)
         _cleanup_expired_guest_datasets(now=now)
-        db.session.add(guest_dataset)
+        active_guest_count = _get_active_guest_dataset_count(now=now)
+
+        if active_guest_count >= active_dataset_limit:
+            capacity_is_full = True
+        else:
+            guest_dataset = Dataset(
+                kind="guest",
+                system_key=None,
+                created_at=now,
+                last_activity_at=now,
+                absolute_expires_at=now + GUEST_ABSOLUTE_LIFETIME,
+            )
+            db.session.add(guest_dataset)
+
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
         logger.exception(
-            "Failed to clean up expired Guest data or create a Guest Dataset."
+            "Failed to enforce Guest capacity or create a Guest Dataset."
         )
         abort(503)
+
+    if capacity_is_full:
+        abort(
+            503,
+            description="ゲストデモは現在満員です。",
+        )
 
     guest_user = GuestUser(guest_dataset.id)
     if not login_user(guest_user):

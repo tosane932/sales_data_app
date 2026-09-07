@@ -22,6 +22,12 @@ GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS = os.environ.get(
     "GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS"
 )
 
+# 同時に存在できる有効なGuest Dataset数
+GUEST_ACTIVE_DATASET_LIMIT = os.environ.get(
+    "GUEST_ACTIVE_DATASET_LIMIT",
+    "10",
+)
+
 # ==========================================
 # データベース接続設定
 # ==========================================
