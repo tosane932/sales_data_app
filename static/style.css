@@ -365,6 +365,13 @@ select {
    👤 ログイン・ゲストデモ入口
 ======================================== */
 
+h1 span {
+    display: block;
+    font-size: 0.75em;
+    font-weight: normal;
+    margin-top: 0.3em;
+}
+
 .login-page .guest-demo-section {
     margin-bottom: 30px;
     padding: 22px;
