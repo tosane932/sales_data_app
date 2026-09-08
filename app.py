@@ -95,6 +95,14 @@ ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
 GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 GUEST_IDLE_TIMEOUT = datetime.timedelta(minutes=30)
 GUEST_AI_USAGE_LIMIT = 3
+PRODUCTS_PER_POST_LIMIT = 30
+GUEST_PRODUCT_LIFETIME_LIMIT = 30
+PRODUCT_NAME_MAX_LENGTH = 100
+PRODUCT_PRICE_MAX = 1_000_000
+PRODUCT_YEAR_MIN = 2000
+PRODUCT_YEAR_MAX = 2100
+SALES_PER_POST_LIMIT = 30
+SALES_QUANTITY_MAX = 10_000
 _GUEST_AI_LIMIT_REACHED = object()
 GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
     "guest-creation-rate-limit:v1"
@@ -120,6 +128,25 @@ def _as_utc(value):
     if value.tzinfo is None:
         return value.replace(tzinfo=datetime.timezone.utc)
     return value.astimezone(datetime.timezone.utc)
+
+
+def _parse_bounded_nonnegative_integer(value, maximum):
+    """巨大な数値文字列も例外にせず、指定上限内の整数へ変換する。"""
+    if not isinstance(value, str) or not value.isascii() or not value.isdigit():
+        return None
+
+    normalized_value = value.lstrip("0") or "0"
+    maximum_text = str(maximum)
+    if (
+        len(normalized_value) > len(maximum_text)
+        or (
+            len(normalized_value) == len(maximum_text)
+            and normalized_value > maximum_text
+        )
+    ):
+        return None
+
+    return int(normalized_value)
 
 
 def _guest_dataset_is_expired(dataset, now=None):
@@ -926,6 +953,10 @@ def index():
             logger.warning("Rejected product update with out-of-range month.")
             return "月は1から12で指定してください。", 400
 
+        if year < PRODUCT_YEAR_MIN or year > PRODUCT_YEAR_MAX:
+            logger.warning("Rejected product update with out-of-range year.")
+            return "年は2000から2100で指定してください。", 400
+
         product_names = request.form.getlist("prod_name")
         product_prices = request.form.getlist("prod_price")
         product_ids = request.form.getlist("product_id")
@@ -936,6 +967,10 @@ def index():
             logger.warning("Rejected product update with mismatched field lengths.")
             return "商品データの件数が一致しません。", 400
 
+        if current_user.is_guest and len(product_ids) > PRODUCTS_PER_POST_LIMIT:
+            logger.warning("Rejected product update with too many products.")
+            return "商品は1回につき30件まで登録できます。", 400
+
         products_data = []
         seen_product_ids = set()
 
@@ -945,6 +980,11 @@ def index():
             product_prices
         ):
             existing_product = None
+            normalized_name = name.strip()
+
+            if not 1 <= len(normalized_name) <= PRODUCT_NAME_MAX_LENGTH:
+                logger.warning("Rejected product update with invalid product name.")
+                return "商品名は1文字以上100文字以内で入力してください。", 400
 
             if product_id:
                 try:
@@ -976,17 +1016,20 @@ def index():
             else:
                 parsed_product_id = None
 
-            if not price.isascii() or not price.isdigit():
+            price_value = _parse_bounded_nonnegative_integer(
+                price,
+                PRODUCT_PRICE_MAX,
+            )
+            if price_value is None:
                 logger.warning("Rejected product update with invalid price.")
-                return "価格は0以上の整数で入力してください。", 400
+                return "価格は0から1000000の整数で入力してください。", 400
 
-            if name.strip():
-                products_data.append({
-                    "id": parsed_product_id,
-                    "product": existing_product,
-                    "name": name.strip(),
-                    "price": int(price)
-                })
+            products_data.append({
+                "id": parsed_product_id,
+                "product": existing_product,
+                "name": normalized_name,
+                "price": price_value,
+            })
 
         if not products_data:
             registered_months = [
@@ -1014,19 +1057,54 @@ def index():
         # 💡既存商品の価格更新と新商品の追加をログに残す
         logger.info(f"Updating product master for {year}-{month}.")
 
-        existing_products = Product.query.filter_by(
-            dataset_id=current_dataset.id,
-            year=year,
-            month=month
-        ).all()
-
-        submitted_ids = {
-            prod["id"]
+        new_product_count = sum(
+            prod["id"] is None
             for prod in products_data
-            if prod["id"] is not None
-        }
+        )
 
         try:
+            if current_user.is_guest:
+                locked_guest_dataset = (
+                    Dataset.query
+                    .filter_by(
+                        id=current_dataset.id,
+                        kind="guest",
+                        system_key=None,
+                    )
+                    .populate_existing()
+                    .with_for_update()
+                    .one_or_none()
+                )
+                if locked_guest_dataset is None:
+                    db.session.rollback()
+                    abort(403)
+
+                current_product_count = Product.query.filter_by(
+                    dataset_id=locked_guest_dataset.id,
+                ).count()
+                remaining_product_slots = max(
+                    GUEST_PRODUCT_LIFETIME_LIMIT - current_product_count,
+                    0,
+                )
+                if new_product_count > remaining_product_slots:
+                    db.session.rollback()
+                    logger.warning(
+                        "Rejected Guest product update exceeding lifetime limit."
+                    )
+                    return "ゲストデモの商品は合計30件まで登録できます。", 400
+
+            existing_products = Product.query.filter_by(
+                dataset_id=current_dataset.id,
+                year=year,
+                month=month,
+            ).all()
+
+            submitted_ids = {
+                prod["id"]
+                for prod in products_data
+                if prod["id"] is not None
+            }
+
             for prod in products_data:
                 product_id = prod["id"]
 
@@ -1260,6 +1338,10 @@ def input_sales():
             )
             return "商品と販売数量の件数が一致しません。", 400
 
+        if current_user.is_guest and len(product_ids) > SALES_PER_POST_LIMIT:
+            logger.warning("Rejected sales input with too many products.")
+            return "売上は1回につき30件まで入力できます。", 400
+
         validated_sales = []
         seen_product_ids = set()
         for product_id, quantity in zip(product_ids, quantities):
@@ -1279,14 +1361,15 @@ def input_sales():
 
             seen_product_ids.add(product_id_int)
 
-            if not quantity.isascii() or not quantity.isdigit():
-                logger.warning(
-                    "Invalid quantity rejected: "
-                    f"product_id={product_id}, quantity={quantity}"
-                )
-                return "販売数量は0以上の整数で入力してください。", 400
+            quantity_value = _parse_bounded_nonnegative_integer(
+                quantity,
+                SALES_QUANTITY_MAX,
+            )
+            if quantity_value is None:
+                logger.warning("Rejected sales input with invalid quantity.")
+                return "販売数量は0から10000の整数で入力してください。", 400
 
-            validated_sales.append((product_id_int, int(quantity)))
+            validated_sales.append((product_id_int, quantity_value))
 
         validated_product_sales = []
         for product_id, qty_int in validated_sales:
