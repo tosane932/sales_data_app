@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from bs4 import BeautifulSoup
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import DailySales, Dataset, Product, db
@@ -27,6 +28,28 @@ def _sales_snapshot():
         (sale.id, sale.product_id, sale.date, sale.quantity)
         for sale in DailySales.query.order_by(DailySales.id).all()
     ]
+
+
+def _create_guest_dataset():
+    now = datetime.datetime.now(datetime.timezone.utc)
+    dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    db.session.add(dataset)
+    db.session.commit()
+    return dataset
+
+
+def _guest_client(flask_app, dataset):
+    test_client = flask_app.test_client()
+    with test_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{dataset.id}"
+        session_data["_fresh"] = True
+    return test_client
 
 
 @pytest.fixture()
@@ -140,6 +163,69 @@ def _assert_product_post_rejected_without_changes(
     assert response.status_code == 400
     assert _product_snapshot() == products_before
     assert _sales_snapshot() == sales_before
+
+
+def _new_product_payload(*, count, year="2040", month="1"):
+    return {
+        "year": year,
+        "month": month,
+        "product_id": [""] * count,
+        "prod_name": [f"新規商品{index}" for index in range(count)],
+        "prod_price": ["100"] * count,
+    }
+
+
+def _create_products(
+    dataset,
+    *,
+    count,
+    year=2030,
+    month=1,
+    is_active=True,
+    name_prefix="既存商品",
+):
+    products = [
+        Product(
+            dataset=dataset,
+            year=year,
+            month=month,
+            name=f"{name_prefix}{index}",
+            price=100,
+            is_active=is_active,
+        )
+        for index in range(count)
+    ]
+    db.session.add_all(products)
+    db.session.commit()
+    return products
+
+
+def test_product_form_exposes_name_and_price_limits(
+    authenticated_client,
+    product_records,
+):
+    response = authenticated_client.get("/?year=2026&month=6")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    product_name_inputs = document.select('input[name="prod_name"]')
+    product_price_inputs = document.select('input[name="prod_price"]')
+    script_text = "\n".join(
+        script.get_text()
+        for script in document.find_all("script")
+    )
+
+    assert response.status_code == 200
+    assert product_name_inputs
+    assert all(
+        product_input.get("maxlength") == "100"
+        for product_input in product_name_inputs
+    )
+    assert product_price_inputs
+    assert all(
+        product_input.get("max") == "1000000"
+        for product_input in product_price_inputs
+    )
+    assert 'maxlength="100"' in script_text
+    assert 'max="1000000"' in script_text
 
 
 def test_admin_product_get_excludes_guest_dataset_product(
@@ -758,3 +844,346 @@ def test_product_post_rejects_invalid_year_or_month_without_changes(
         payload,
         csrf_post,
     )
+
+
+def test_product_post_accepts_thirty_products(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    guest_client = _guest_client(flask_app, guest_dataset)
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=30),
+    )
+
+    assert response.status_code == 200
+    assert Product.query.filter_by(
+        dataset_id=guest_dataset.id,
+        year=2040,
+        month=1,
+    ).count() == 30
+
+
+def test_admin_product_post_is_not_limited_to_thirty_products(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        _new_product_payload(count=31),
+    )
+
+    assert response.status_code == 200
+    assert Product.query.filter_by(
+        dataset_id=admin_dataset.id,
+        year=2040,
+        month=1,
+    ).count() == 31
+
+
+def test_guest_with_thirty_products_cannot_create_thirty_first(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=30)
+    guest_client = _guest_client(flask_app, guest_dataset)
+    products_before = _product_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=1, year="2040", month="1"),
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+
+
+def test_guest_product_lifetime_limit_counts_all_years_and_months(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=29, year=2030, month=1)
+    _create_products(guest_dataset, count=1, year=2031, month=2)
+    guest_client = _guest_client(flask_app, guest_dataset)
+    products_before = _product_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=1, year="2040", month="3"),
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+
+
+def test_guest_product_lifetime_limit_counts_inactive_products(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=29)
+    _create_products(
+        guest_dataset,
+        count=1,
+        year=2031,
+        month=2,
+        is_active=False,
+    )
+    guest_client = _guest_client(flask_app, guest_dataset)
+    products_before = _product_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=1, year="2040", month="3"),
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+
+
+def test_guest_with_twenty_nine_products_can_create_one_more(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=29)
+    guest_client = _guest_client(flask_app, guest_dataset)
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=1, year="2040", month="1"),
+    )
+
+    assert response.status_code == 200
+    assert Product.query.filter_by(dataset_id=guest_dataset.id).count() == 30
+
+
+def test_guest_with_twenty_nine_products_rejects_two_new_products_atomically(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=29)
+    guest_client = _guest_client(flask_app, guest_dataset)
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=2, year="2040", month="1"),
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+    assert _sales_snapshot() == sales_before
+
+
+def test_guest_at_lifetime_limit_can_update_and_deactivate_existing_products(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    _create_products(guest_dataset, count=28, year=2030, month=1)
+    target_product, omitted_product = _create_products(
+        guest_dataset,
+        count=2,
+        year=2040,
+        month=1,
+        name_prefix="更新対象商品",
+    )
+    guest_client = _guest_client(flask_app, guest_dataset)
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        {
+            "year": "2040",
+            "month": "1",
+            "product_id": [str(target_product.id)],
+            "prod_name": ["更新後商品"],
+            "prod_price": ["999"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert Product.query.filter_by(dataset_id=guest_dataset.id).count() == 30
+    db.session.refresh(target_product)
+    db.session.refresh(omitted_product)
+    assert target_product.name == "更新後商品"
+    assert target_product.price == 999
+    assert target_product.is_active is True
+    assert omitted_product.is_active is False
+
+
+def test_guest_a_product_limit_does_not_affect_guest_b(
+    flask_app,
+    csrf_post,
+):
+    guest_a = _create_guest_dataset()
+    guest_b = _create_guest_dataset()
+    _create_products(guest_a, count=30)
+    guest_b_client = _guest_client(flask_app, guest_b)
+
+    response = csrf_post(
+        guest_b_client,
+        "/",
+        _new_product_payload(count=1, year="2040", month="1"),
+    )
+
+    assert response.status_code == 200
+    assert Product.query.filter_by(dataset_id=guest_a.id).count() == 30
+    assert Product.query.filter_by(dataset_id=guest_b.id).count() == 1
+
+
+def test_external_dataset_id_cannot_change_guest_product_limit_scope(
+    flask_app,
+    csrf_post,
+):
+    guest_a = _create_guest_dataset()
+    guest_b = _create_guest_dataset()
+    _create_products(guest_a, count=30)
+    guest_a_client = _guest_client(flask_app, guest_a)
+    payload = _new_product_payload(count=1, year="2040", month="1")
+    payload["dataset_id"] = str(guest_b.id)
+    products_before = _product_snapshot()
+
+    response = csrf_post(guest_a_client, "/", payload)
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+
+
+def test_product_post_rejects_more_than_thirty_products_atomically(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    guest_client = _guest_client(flask_app, guest_dataset)
+    products_before = _product_snapshot()
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/",
+        _new_product_payload(count=31),
+    )
+
+    assert response.status_code == 400
+    assert _product_snapshot() == products_before
+    assert _sales_snapshot() == sales_before
+
+
+@pytest.mark.parametrize(
+    "invalid_name",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("   ", id="whitespace"),
+        pytest.param("商" * 101, id="too-long"),
+    ],
+)
+def test_product_post_rejects_name_outside_length_limit_without_changes(
+    authenticated_client,
+    product_records,
+    csrf_post,
+    invalid_name,
+):
+    payload = _valid_product_payload(product_records)
+    payload["prod_name"][0] = invalid_name
+
+    _assert_product_post_rejected_without_changes(
+        authenticated_client,
+        product_records,
+        payload,
+        csrf_post,
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid_price",
+    [
+        pytest.param("1000001", id="above-max"),
+        pytest.param("9" * 5000, id="very-long"),
+    ],
+)
+def test_product_post_rejects_price_above_limit_without_changes(
+    authenticated_client,
+    product_records,
+    csrf_post,
+    invalid_price,
+):
+    payload = _valid_product_payload(product_records)
+    payload["prod_price"][0] = invalid_price
+
+    _assert_product_post_rejected_without_changes(
+        authenticated_client,
+        product_records,
+        payload,
+        csrf_post,
+    )
+
+
+@pytest.mark.parametrize("invalid_year", ["1999", "2101"])
+def test_product_post_rejects_year_outside_limit_without_changes(
+    authenticated_client,
+    product_records,
+    csrf_post,
+    invalid_year,
+):
+    payload = _valid_product_payload(product_records)
+    payload["year"] = invalid_year
+
+    _assert_product_post_rejected_without_changes(
+        authenticated_client,
+        product_records,
+        payload,
+        csrf_post,
+    )
+
+
+@pytest.mark.parametrize(
+    ("year", "name", "price"),
+    [
+        pytest.param("2000", "商", "0", id="minimums"),
+        pytest.param("2100", "商" * 100, "1000000", id="maximums"),
+    ],
+)
+def test_product_post_accepts_input_limit_boundaries(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+    year,
+    name,
+    price,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": year,
+            "month": "1",
+            "product_id": [""],
+            "prod_name": [name],
+            "prod_price": [price],
+        },
+    )
+
+    assert response.status_code == 200
+    product = Product.query.filter_by(
+        dataset_id=admin_dataset.id,
+        year=int(year),
+        month=1,
+    ).one()
+    assert product.name == name
+    assert product.price == int(price)

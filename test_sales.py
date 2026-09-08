@@ -41,6 +41,44 @@ def _freeze_app_today(monkeypatch, frozen_today):
     )
 
 
+def _create_products_for_sales(dataset, *, count, sale_date):
+    products = [
+        Product(
+            dataset=dataset,
+            year=sale_date.year,
+            month=sale_date.month,
+            name=f"売上入力商品{index}",
+            price=100,
+        )
+        for index in range(count)
+    ]
+    db.session.add_all(products)
+    db.session.commit()
+    return products
+
+
+def _create_guest_dataset():
+    now = datetime.datetime.now(datetime.timezone.utc)
+    dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    db.session.add(dataset)
+    db.session.commit()
+    return dataset
+
+
+def _guest_client(flask_app, dataset):
+    test_client = flask_app.test_client()
+    with test_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{dataset.id}"
+        session_data["_fresh"] = True
+    return test_client
+
+
 @pytest.fixture()
 def sales_records(flask_app, admin_dataset):
     sale_date = datetime.date.today()
@@ -169,6 +207,7 @@ def test_sales_quantity_input_keeps_current_value_and_selects_on_focus(
         "入力済みの数値は上書きされます。"
     )
     assert quantity_input.get("value") == "5"
+    assert quantity_input.get("max") == "10000"
     assert "querySelectorAll('.qty-input')" in script_text
     assert "addEventListener('focus'" in script_text
     assert "requestAnimationFrame" in script_text
@@ -843,3 +882,119 @@ def test_sales_rejects_unknown_wrong_month_and_inactive_products(
         product_id=sales_records.existing_product_id,
         date=sales_records.date,
     ).one().quantity == 5
+
+
+def test_admin_sales_post_is_not_limited_to_thirty_products(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+):
+    sale_date = datetime.date.today()
+    products = _create_products_for_sales(
+        admin_dataset,
+        count=31,
+        sale_date=sale_date,
+    )
+
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": sale_date.isoformat(),
+            "product_id": [str(product.id) for product in products],
+            "quantity": ["1"] * 31,
+        },
+    )
+
+    assert response.status_code == 200
+    assert DailySales.query.count() == 31
+
+
+def test_sales_post_rejects_more_than_thirty_products_atomically(
+    flask_app,
+    csrf_post,
+):
+    guest_dataset = _create_guest_dataset()
+    guest_client = _guest_client(flask_app, guest_dataset)
+    sale_date = datetime.date.today()
+
+    products = _create_products_for_sales(
+        guest_dataset,
+        count=31,
+        sale_date=sale_date,
+    )
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        guest_client,
+        "/input",
+        {
+            "date": sale_date.isoformat(),
+            "product_id": [str(product.id) for product in products],
+            "quantity": ["1"] * 31,
+        },
+    )
+
+    assert response.status_code == 400
+    assert _sales_snapshot() == sales_before
+
+
+@pytest.mark.parametrize(
+    "invalid_quantity",
+    [
+        pytest.param("10001", id="above-max"),
+        pytest.param("9" * 5000, id="very-long"),
+    ],
+)
+def test_sales_post_rejects_quantity_above_limit_without_changes(
+    authenticated_client,
+    sales_records,
+    csrf_post,
+    invalid_quantity,
+):
+    sales_before = _sales_snapshot()
+
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                str(sales_records.new_product_id),
+            ],
+            "quantity": ["9", invalid_quantity],
+        },
+    )
+
+    assert response.status_code == 400
+    assert _sales_snapshot() == sales_before
+
+
+def test_sales_post_accepts_quantity_limit_boundaries(
+    authenticated_client,
+    sales_records,
+    csrf_post,
+):
+    response = csrf_post(
+        authenticated_client,
+        "/input",
+        {
+            "date": sales_records.date.isoformat(),
+            "product_id": [
+                str(sales_records.existing_product_id),
+                str(sales_records.new_product_id),
+            ],
+            "quantity": ["0", "10000"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert DailySales.query.filter_by(
+        product_id=sales_records.existing_product_id,
+        date=sales_records.date,
+    ).one().quantity == 0
+    assert DailySales.query.filter_by(
+        product_id=sales_records.new_product_id,
+        date=sales_records.date,
+    ).one().quantity == 10000
