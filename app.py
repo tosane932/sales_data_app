@@ -103,6 +103,11 @@ PRODUCT_YEAR_MIN = 2000
 PRODUCT_YEAR_MAX = 2100
 SALES_PER_POST_LIMIT = 30
 SALES_QUANTITY_MAX = 10_000
+# 各Productは1年月に所属し、売上は1日1行・最大10,000個。
+# 1商品につき最大31日、同名を全30商品で合算した数量を上限とする。
+GUEST_AI_AGGREGATE_QUANTITY_MAX = (
+    GUEST_PRODUCT_LIFETIME_LIMIT * 31 * SALES_QUANTITY_MAX
+)
 _GUEST_AI_LIMIT_REACHED = object()
 GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
     "guest-creation-rate-limit:v1"
@@ -765,11 +770,23 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
         logger.warning("AI advice requested but ranked_sales is empty.")  # 💡 注意喚起
         return "売上データがまだないため、アドバイスを生成できません。"
 
+    if current_dataset is not None and current_dataset.kind == "guest":
+        # SQLの件数制限に加え、legacy等の不正な集計を送信前に拒否する。
+        # 完成したpromptを途中で切らず、商品名・数量を完全な形で保つ。
+        if len(ranked_sales) > GUEST_PRODUCT_LIFETIME_LIMIT or any(
+            not isinstance(name, str)
+            or not 1 <= len(name) <= PRODUCT_NAME_MAX_LENGTH
+            or type(qty) is not int
+            or not 0 <= qty <= GUEST_AI_AGGREGATE_QUANTITY_MAX
+            for name, qty in ranked_sales
+        ):
+            abort(400, description="AI分析対象データが上限を超えています。")
+
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             logger.error("GEMINI_API_KEY is missing from environment variables.")  # 💡 設定エラーの記録
-            return "🚨【設定未完了】環境変数に GEMINI_API_KEY が登録されていません。ダッシュボードの設定を確認してください。"
+            return "現在AIアドバイスを利用できません。時間を置いてからお試しください。"
 
         client = genai.Client(api_key=api_key)
         sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
@@ -796,7 +813,7 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
 
         if "GenerateRequestsPerDayPerProjectPerModel-FreeTier" in error_text:
             logger.warning(
-                f"Gemini API daily free-tier quota reached: {e}"
+                "Gemini API daily free-tier quota reached."
             )
             return (
                 "☕【本日のAI分析回数が上限に達しました】\n"
@@ -806,7 +823,7 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
 
         if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
             logger.warning(
-                f"Gemini API rate limit hit (429): {e}"
+                "Gemini API rate limit hit (429)."
             )
             return (
                 "☕【AIが少し休憩中です】\n"
@@ -817,7 +834,7 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
 
         if "503" in error_text or "UNAVAILABLE" in error_text:
             logger.warning(
-                f"Gemini API temporarily unavailable (503): {e}"
+                "Gemini API temporarily unavailable (503)."
             )
             return (
                 "🥐【AIアシスタントが混み合っています】\n"
@@ -826,8 +843,7 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
             )
 
         logger.error(
-            "Unexpected error during AI advice generation",
-            exc_info=True
+            "Unexpected error during AI advice generation."
         )
         return (
             "🚨 AIアドバイスの生成中に一時的なエラーが発生しました。"
@@ -1274,7 +1290,7 @@ def api_dashboard_data():
         "period_text": f"{target_month}月度" if target_month else "全期間"
     })
 
-@app.route("/api/ai-advice")
+@app.route("/api/ai-advice", methods=["POST"])
 @admin_or_guest_required
 def api_ai_advice():
     target_year = _get_optional_integer_query_parameter("year")
@@ -1289,7 +1305,12 @@ def api_ai_advice():
     sales_data = _get_sales_from_db(
         current_dataset,
         target_year,
-        target_month
+        target_month,
+        row_limit=(
+            GUEST_PRODUCT_LIFETIME_LIMIT
+            if current_dataset.kind == "guest"
+            else None
+        ),
     )
 
     ranked_sales = sorted(
@@ -1448,7 +1469,7 @@ def input_sales():
         today_sales=_get_today_sales_map(today, current_dataset)
     )
 
-@app.route("/api/greeting")
+@app.route("/api/greeting", methods=["POST"])
 @admin_or_guest_required
 def api_greeting():
     current_dataset = require_current_dataset()
@@ -1488,8 +1509,8 @@ def api_greeting():
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Failed to generate AI greeting: {e}", exc_info=True)
+    except Exception:
+        logger.error("Failed to generate AI greeting.")
         today = datetime.date.today()
         return jsonify({"message": f"本日は{today.month}月{today.day}日です。今日も一日お疲れ様でした！"})
 
@@ -1525,6 +1546,8 @@ def _get_sales_from_db(
     current_dataset,
     target_year=None,
     target_month=None,
+    *,
+    row_limit=None,
 ):
     query = db.session.query(
         Product.name,
@@ -1541,7 +1564,13 @@ def _get_sales_from_db(
     if target_month:
         query = query.filter(db.extract("month", DailySales.date) == target_month)
 
-    results = query.group_by(Product.name).all()
+    query = query.group_by(Product.name)
+    if row_limit is not None:
+        # Datasetと期間で絞った集計からのみ選ぶ。通常の画面集計は制限しない。
+        query = query.order_by(
+            db.func.sum(DailySales.quantity).desc(), Product.name.asc(),
+        ).limit(row_limit)
+    results = query.all()
     return {name: int(qty) for name, qty in results}
 
 

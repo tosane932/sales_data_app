@@ -5,6 +5,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 import app as app_module
+from conftest import post_ai
 from models import DailySales, Dataset, Product, db
 
 
@@ -703,7 +704,11 @@ def test_dashboard_routes_reject_noninteger_query_with_bad_request(
     monkeypatch.setattr(app_module.genai, "Client", gemini_client)
     monkeypatch.setitem(flask_app.config, "PROPAGATE_EXCEPTIONS", False)
 
-    response = authenticated_client.get(f"{route}?{invalid_query}")
+    response = (
+        post_ai(authenticated_client, f"{route}?{invalid_query}")
+        if route == "/api/ai-advice"
+        else authenticated_client.get(f"{route}?{invalid_query}")
+    )
 
     if route == "/api/ai-advice":
         assert response.status_code == 400 and not gemini_client.called, (

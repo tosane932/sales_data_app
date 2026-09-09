@@ -7,6 +7,7 @@ from google.genai import errors
 
 import app as app_module
 import config
+from conftest import post_ai
 from models import DailySales, Dataset, Product, db
 from prompts import build_sales_prompt
 
@@ -116,7 +117,8 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
     monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
     monkeypatch.setattr(app_module.genai, "Client", client_factory)
 
-    response = authenticated_client.get(
+    response = post_ai(
+        authenticated_client,
         "/api/ai-advice?year=2026&month=8"
     )
 
@@ -217,7 +219,8 @@ def test_admin_ai_advice_prompt_excludes_guest_dataset_sales(
     monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
     monkeypatch.setattr(app_module.genai, "Client", client_factory)
 
-    response = authenticated_client.get(
+    response = post_ai(
+        authenticated_client,
         "/api/ai-advice?year=2026&month=8"
     )
 
@@ -331,7 +334,8 @@ def test_guest_a_ai_advice_prompt_excludes_guest_b_dataset_sales(
         session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
         session_data["_fresh"] = True
 
-    response = guest_a_client.get(
+    response = post_ai(
+        guest_a_client,
         "/api/ai-advice?year=2026&month=8"
     )
 

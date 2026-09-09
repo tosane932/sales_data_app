@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>日次売上入力</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -141,7 +142,12 @@
         greetingButton.disabled = true;
         greetingButton.textContent = '考え中...';
 
-        fetch('/api/greeting')
+        fetch('/api/greeting', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('API response was not successful');

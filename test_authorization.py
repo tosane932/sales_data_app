@@ -7,6 +7,7 @@ import pytest
 from flask_login import UserMixin
 
 import app as app_module
+from conftest import post_ai
 from models import DailySales, Product, db
 
 
@@ -127,7 +128,7 @@ def test_anonymous_ai_advice_api_redirects_to_login(
     monkeypatch.setenv("GEMINI_API_KEY", "test-api-key")
     monkeypatch.setattr(app_module.genai, "Client", gemini_client)
 
-    response = client.get("/api/ai-advice")
+    response = post_ai(client, "/api/ai-advice")
 
     assert _redirects_to_login(response) and not gemini_client.called, (
         f"status={response.status_code}, "
@@ -144,7 +145,7 @@ def test_anonymous_greeting_api_redirects_to_login(client, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-api-key")
     monkeypatch.setattr(app_module.genai, "Client", gemini_client)
 
-    response = client.get("/api/greeting")
+    response = post_ai(client, "/api/greeting")
 
     assert _redirects_to_login(response) and not gemini_client.called, (
         f"status={response.status_code}, "
@@ -161,7 +162,11 @@ def test_authenticated_non_admin_is_forbidden_from_admin_route(
 ):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
-    response = authenticated_non_admin_client.get(path)
+    response = (
+        post_ai(authenticated_non_admin_client, path)
+        if path in ("/api/ai-advice", "/api/greeting")
+        else authenticated_non_admin_client.get(path)
+    )
 
     assert response.status_code == 403
 
@@ -177,7 +182,7 @@ def test_authenticated_non_admin_ai_advice_is_rejected_before_generation(
         generate_ai_advice,
     )
 
-    response = authenticated_non_admin_client.get("/api/ai-advice")
+    response = post_ai(authenticated_non_admin_client, "/api/ai-advice")
 
     assert response.status_code == 403
     generate_ai_advice.assert_not_called()
@@ -191,7 +196,7 @@ def test_authenticated_non_admin_greeting_is_rejected_before_gemini_call(
     monkeypatch.setenv("GEMINI_API_KEY", "test-api-key")
     monkeypatch.setattr(app_module.genai, "Client", gemini_client)
 
-    response = authenticated_non_admin_client.get("/api/greeting")
+    response = post_ai(authenticated_non_admin_client, "/api/greeting")
 
     assert response.status_code == 403
     gemini_client.assert_not_called()
@@ -206,6 +211,10 @@ def test_admin_remains_allowed_to_access_admin_route(
 ):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
-    response = authenticated_client.get(path)
+    response = (
+        post_ai(authenticated_client, path)
+        if path in ("/api/ai-advice", "/api/greeting")
+        else authenticated_client.get(path)
+    )
 
     assert response.status_code == 200
