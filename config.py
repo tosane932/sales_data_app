@@ -14,6 +14,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
 
+SESSION_COOKIE_SECURE = (
+    os.environ.get("SESSION_COOKIE_SECURE", "true").strip().lower()
+    != "false"
+)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
 # Adminログイン失敗rate limit（5回 / 15分）
 ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES = os.environ.get(
     "ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES",

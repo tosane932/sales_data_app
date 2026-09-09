@@ -57,6 +57,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
 app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+
+app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
+app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
+app.config["SESSION_COOKIE_SAMESITE"] = config.SESSION_COOKIE_SAMESITE
 app.config["ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES"] = (
     config.ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES
 )
@@ -79,6 +83,27 @@ migrate = Migrate(app, db)
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=()"
+    )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = (
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "object-src 'none'; "
+        "form-action 'self'"
+    )
+
+    if request.endpoint != "static":
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
 
 
 class AdminUser(UserMixin):

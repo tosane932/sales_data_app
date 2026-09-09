@@ -47,6 +47,7 @@ def post_ai(test_client, path, **kwargs):
 def flask_app():
     app_module.app.config.update(
         TESTING=True,
+        SESSION_COOKIE_SECURE=False,
         SECRET_KEY=TEST_SECRET_KEY,
         ADMIN_USERNAME=TEST_ADMIN_USERNAME,
         ADMIN_PASSWORD_HASH=TEST_ADMIN_PASSWORD_HASH,
