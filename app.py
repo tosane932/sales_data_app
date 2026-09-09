@@ -4,7 +4,9 @@ import hashlib
 import hmac
 import logging  # 💡 1. ログモジュールをインポート
 import ipaddress
+import threading
 import uuid
+from contextlib import contextmanager
 from functools import wraps
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
@@ -16,7 +18,7 @@ from flask_login import (
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy import case, or_, text, update
+from sqlalchemy import case, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -55,6 +57,12 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
 app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+app.config["ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES"] = (
+    config.ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES
+)
+app.config["ADMIN_LOGIN_RATE_LIMIT_WINDOW_SECONDS"] = (
+    config.ADMIN_LOGIN_RATE_LIMIT_WINDOW_SECONDS
+)
 app.config["GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"] = (
     config.GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS
 )
@@ -112,9 +120,11 @@ _GUEST_AI_LIMIT_REACHED = object()
 GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN = (
     "guest-creation-rate-limit:v1"
 )
+ADMIN_LOGIN_RATE_LIMIT_HMAC_DOMAIN = "admin-login-rate-limit:v1"
 GUEST_ADMISSION_LOCK_NAMESPACE = 0x47554553  # "GUES"
 GUEST_ADMISSION_LOCK_KEY = 1
 _GUEST_CAPACITY_NOT_LOADED = object()
+_ADMIN_LOGIN_SQLITE_LOCK = threading.Lock()
 
 
 class GuestCapacityFull(ServiceUnavailable):
@@ -498,6 +508,26 @@ def _get_guest_creation_rate_limit_settings():
     return max_attempts, window_seconds
 
 
+def _get_admin_login_rate_limit_settings():
+    """Adminログインrate limit設定を正の整数として返す。"""
+    try:
+        max_failures = int(
+            app.config["ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES"]
+        )
+        window_seconds = int(
+            app.config["ADMIN_LOGIN_RATE_LIMIT_WINDOW_SECONDS"]
+        )
+    except (KeyError, TypeError, ValueError):
+        logger.error("Admin login rate limit configuration is invalid.")
+        abort(503)
+
+    if max_failures <= 0 or window_seconds <= 0:
+        logger.error("Admin login rate limit configuration is invalid.")
+        abort(503)
+
+    return max_failures, window_seconds
+
+
 def _get_guest_active_dataset_limit():
     """有効Guest Dataset上限を正の整数として返す。"""
     try:
@@ -541,11 +571,71 @@ def _acquire_guest_admission_lock():
     )
 
 
-def _get_guest_creation_client_key():
-    """検証済みclient IPから、生IPを含まない固定長keyを作る。"""
+def _get_admin_login_advisory_lock_key(client_key_hash):
+    """HMAC client keyをPostgreSQL用の符号付き64-bit keyへ変換する。"""
+    try:
+        client_key_bytes = bytes.fromhex(client_key_hash)
+    except (TypeError, ValueError):
+        logger.error("Admin login client key is invalid.")
+        abort(503)
+
+    if len(client_key_bytes) != hashlib.sha256().digest_size:
+        logger.error("Admin login client key is invalid.")
+        abort(503)
+
+    return int.from_bytes(client_key_bytes[:8], "big", signed=True)
+
+
+@contextmanager
+def _serialize_admin_login_attempt(client_key_hash):
+    """同一clientの上限確認から認証結果確定までを直列化する。"""
+    dialect_name = db.session.get_bind().dialect.name
+
+    if dialect_name == "sqlite":
+        _ADMIN_LOGIN_SQLITE_LOCK.acquire()
+        try:
+            yield
+        finally:
+            db.session.rollback()
+            _ADMIN_LOGIN_SQLITE_LOCK.release()
+        return
+
+    if dialect_name != "postgresql":
+        logger.error(
+            "Admin login locking does not support DB dialect: %s",
+            dialect_name,
+        )
+        abort(503)
+
+    advisory_lock_key = _get_admin_login_advisory_lock_key(
+        client_key_hash
+    )
+    try:
+        db.session.execute(
+            text("SELECT pg_advisory_xact_lock(:lock_key)"),
+            {"lock_key": advisory_lock_key},
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to lock an Admin login attempt.")
+        abort(503)
+
+    try:
+        yield
+    finally:
+        db.session.rollback()
+
+
+def _get_rate_limit_client_key(
+    hmac_domain,
+    *,
+    purpose,
+    test_client_ip_config_key,
+):
+    """検証済みclient IPを用途分離した匿名keyへ変換する。"""
     if app.testing:
         raw_ip = request.remote_addr or app.config.get(
-            "GUEST_CREATION_RATE_LIMIT_TEST_CLIENT_IP"
+            test_client_ip_config_key
         )
     else:
         raw_ip = request.headers.get("CF-Connecting-IP")
@@ -553,7 +643,7 @@ def _get_guest_creation_client_key():
     try:
         parsed_ip = ipaddress.ip_address(raw_ip)
     except (TypeError, ValueError):
-        logger.warning("Guest creation client IP is missing or invalid.")
+        logger.warning("%s client IP is missing or invalid.", purpose)
         abort(503)
 
     if isinstance(parsed_ip, ipaddress.IPv6Address):
@@ -564,20 +654,44 @@ def _get_guest_creation_client_key():
     if isinstance(secret_key, str):
         secret_key = secret_key.encode("utf-8")
     if not isinstance(secret_key, bytes) or not secret_key:
-        logger.error("SECRET_KEY is unavailable for Guest rate limiting.")
+        logger.error("SECRET_KEY is unavailable for %s.", purpose)
         abort(503)
 
-    message = (
-        f"{GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN}:{normalized_ip}"
-    ).encode("utf-8")
+    message = f"{hmac_domain}:{normalized_ip}".encode("utf-8")
     return hmac.new(secret_key, message, hashlib.sha256).hexdigest()
 
 
-def _reserve_guest_creation_attempt(client_key_hash, *, now=None):
-    """Guest作成試行をDBの単一UPSERTでatomicに1回分確保する。"""
-    max_attempts, window_seconds = (
-        _get_guest_creation_rate_limit_settings()
+def _get_guest_creation_client_key():
+    """Guest作成用の匿名client keyを返す。"""
+    return _get_rate_limit_client_key(
+        GUEST_CREATION_RATE_LIMIT_HMAC_DOMAIN,
+        purpose="Guest creation rate limiting",
+        test_client_ip_config_key=(
+            "GUEST_CREATION_RATE_LIMIT_TEST_CLIENT_IP"
+        ),
     )
+
+
+def _get_admin_login_client_key():
+    """Adminログイン用の匿名client keyを返す。"""
+    return _get_rate_limit_client_key(
+        ADMIN_LOGIN_RATE_LIMIT_HMAC_DOMAIN,
+        purpose="Admin login rate limiting",
+        test_client_ip_config_key=(
+            "ADMIN_LOGIN_RATE_LIMIT_TEST_CLIENT_IP"
+        ),
+    )
+
+
+def _reserve_fixed_window_attempt(
+    client_key_hash,
+    max_attempts,
+    window_seconds,
+    *,
+    now=None,
+    purpose,
+):
+    """DBの単一UPSERTでfixed-windowの1回分をatomicに確保する。"""
     attempt_time = _as_utc(now) if now is not None else datetime.datetime.now(
         datetime.timezone.utc
     )
@@ -634,8 +748,82 @@ def _reserve_guest_creation_attempt(client_key_hash, *, now=None):
         return False
     except SQLAlchemyError:
         db.session.rollback()
-        logger.exception("Failed to reserve a Guest creation attempt.")
+        logger.exception("Failed to reserve a %s attempt.", purpose)
         abort(503)
+
+
+def _reserve_guest_creation_attempt(client_key_hash, *, now=None):
+    """Guest作成試行をatomicに1回分確保する。"""
+    max_attempts, window_seconds = (
+        _get_guest_creation_rate_limit_settings()
+    )
+    return _reserve_fixed_window_attempt(
+        client_key_hash,
+        max_attempts,
+        window_seconds,
+        now=now,
+        purpose="Guest creation",
+    )
+
+
+def _reserve_admin_login_failure(client_key_hash, *, now=None):
+    """Adminログイン失敗をatomicに1回分記録する。"""
+    max_failures, window_seconds = _get_admin_login_rate_limit_settings()
+    return _reserve_fixed_window_attempt(
+        client_key_hash,
+        max_failures,
+        window_seconds,
+        now=now,
+        purpose="Admin login failure",
+    )
+
+
+def _admin_login_rate_limit_is_reached(
+    client_key_hash,
+    *,
+    now=None,
+    end_transaction=True,
+):
+    """現在の時間窓でAdminログイン失敗上限に達したか確認する。"""
+    max_failures, window_seconds = _get_admin_login_rate_limit_settings()
+    check_time = _as_utc(now) if now is not None else datetime.datetime.now(
+        datetime.timezone.utc
+    )
+    window_cutoff = check_time - datetime.timedelta(seconds=window_seconds)
+    table = GuestCreationRateLimit.__table__
+
+    try:
+        row = db.session.execute(
+            select(
+                table.c.window_started_at,
+                table.c.request_count,
+            ).where(table.c.client_key_hash == client_key_hash)
+        ).one_or_none()
+        if end_transaction:
+            db.session.rollback()
+    except SQLAlchemyError:
+        db.session.rollback()
+        logger.exception("Failed to check the Admin login rate limit.")
+        abort(503)
+
+    if row is None:
+        return False
+
+    return (
+        _as_utc(row.window_started_at) > window_cutoff
+        and row.request_count >= max_failures
+    )
+
+
+def _admin_login_rate_limit_response():
+    logger.warning("Admin login rate limit reached.")
+    return _render_login_page(
+        error=(
+            "ログイン試行回数が上限に達しました。"
+            "時間を置いてからお試しください。"
+        ),
+        status_code=429,
+    )
 
 
 def start_guest_session():
@@ -909,37 +1097,55 @@ def start_guest_demo():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-        configured_username = app.config.get("ADMIN_USERNAME")
-        configured_password_hash = app.config.get("ADMIN_PASSWORD_HASH")
+        client_key_hash = _get_admin_login_client_key()
+        with _serialize_admin_login_attempt(client_key_hash):
+            if _admin_login_rate_limit_is_reached(
+                client_key_hash,
+                end_transaction=False,
+            ):
+                return _admin_login_rate_limit_response()
 
-        password_matches = False
-        if configured_password_hash:
-            try:
-                password_matches = check_password_hash(
-                    configured_password_hash,
-                    password,
-                )
-            except (TypeError, ValueError):
-                logger.exception("Invalid administrator password hash configuration.")
-
-        if (
-            configured_username
-            and username == configured_username
-            and password_matches
-        ):
-            login_user(AdminUser())
-            session[ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = (
-                _get_admin_auth_fingerprint(configured_password_hash)
+            username = request.form.get("username", "")
+            password = request.form.get("password", "")
+            configured_username = app.config.get("ADMIN_USERNAME")
+            configured_password_hash = app.config.get(
+                "ADMIN_PASSWORD_HASH"
             )
-            return redirect(url_for("index"))
 
-        logger.warning("Administrator login failed.")
-        return _render_login_page(
-            error="ユーザー名またはパスワードが正しくありません。",
-            status_code=401,
-        )
+            password_matches = False
+            if configured_password_hash:
+                try:
+                    password_matches = check_password_hash(
+                        configured_password_hash,
+                        password,
+                    )
+                except (TypeError, ValueError):
+                    logger.exception(
+                        "Invalid administrator password hash configuration."
+                    )
+
+            if (
+                configured_username
+                and username == configured_username
+                and password_matches
+            ):
+                login_user(AdminUser())
+                session[ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = (
+                    _get_admin_auth_fingerprint(configured_password_hash)
+                )
+                return redirect(url_for("index"))
+
+            if not _reserve_admin_login_failure(client_key_hash):
+                return _admin_login_rate_limit_response()
+
+            logger.warning("Administrator login failed.")
+            return _render_login_page(
+                error=(
+                    "ユーザー名またはパスワードが"
+                    "正しくありません。"
+                ),
+                status_code=401,
+            )
 
     return _render_login_page()
 

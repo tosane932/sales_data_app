@@ -14,6 +14,16 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
 
+# Adminログイン失敗rate limit（5回 / 15分）
+ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES = os.environ.get(
+    "ADMIN_LOGIN_RATE_LIMIT_MAX_FAILURES",
+    "5",
+)
+ADMIN_LOGIN_RATE_LIMIT_WINDOW_SECONDS = os.environ.get(
+    "ADMIN_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+    "900",
+)
+
 # Guest Session作成rate limit（本番値は環境変数で明示する）
 GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS = os.environ.get(
     "GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS"
