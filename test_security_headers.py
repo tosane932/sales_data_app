@@ -36,8 +36,10 @@ def test_dynamic_response_has_minimum_security_headers_and_no_store(client):
 
     assert "no-store" in response.headers.get("Cache-Control", "").lower()
 
-    # HSTSは今回の実装対象外。
-    assert "Strict-Transport-Security" not in response.headers
+    assert (
+        response.headers.get("Strict-Transport-Security")
+        == "max-age=86400"
+    )
 
 
 def test_static_asset_is_not_forced_to_no_store(client):

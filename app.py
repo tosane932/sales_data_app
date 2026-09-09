@@ -93,6 +93,7 @@ def add_security_headers(response):
         "camera=(), microphone=(), geolocation=()"
     )
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = "max-age=86400"
     response.headers["Content-Security-Policy"] = (
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
