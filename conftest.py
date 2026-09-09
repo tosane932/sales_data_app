@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from types import SimpleNamespace
 
 import pytest
+from flask import g
 from werkzeug.security import generate_password_hash
 
 
@@ -26,6 +27,20 @@ class _CSRFTokenParser(HTMLParser):
         attributes = dict(attrs)
         if tag == "input" and attributes.get("name") == "csrf_token":
             self.token = attributes.get("value")
+
+
+def post_ai(test_client, path, **kwargs):
+    """AI POSTにも通常画面で発行された本物のCSRF tokenを送る。"""
+    # fixtureの長寿命app contextで別clientのtokenを再利用しない。
+    g.pop("csrf_token", None)
+    response = test_client.get("/login")
+    assert response.status_code == 200
+    parser = _CSRFTokenParser()
+    parser.feed(response.get_data(as_text=True))
+    assert parser.token
+    headers = dict(kwargs.pop("headers", {}))
+    headers["X-CSRFToken"] = parser.token
+    return test_client.post(path, headers=headers, **kwargs)
 
 
 @pytest.fixture()

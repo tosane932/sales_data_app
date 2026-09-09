@@ -6,6 +6,7 @@ from flask import g
 from sqlalchemy.exc import SQLAlchemyError
 
 import app as app_module
+from conftest import post_ai
 from models import DailySales, Dataset, Product, db
 
 
@@ -81,7 +82,7 @@ def _mock_gemini(monkeypatch, *, side_effect=None):
 
 
 def _advice(client):
-    return client.get("/api/ai-advice?year=2026&month=9")
+    return post_ai(client, "/api/ai-advice?year=2026&month=9")
 
 
 def _usage_count(dataset_id):
@@ -134,10 +135,10 @@ def test_guest_greeting_and_advice_share_three_use_limit(
     generate_content = _mock_gemini(monkeypatch)
 
     responses = [
-        client.get("/api/greeting"),
-        client.get("/api/greeting"),
+        post_ai(client, "/api/greeting"),
+        post_ai(client, "/api/greeting"),
         _advice(client),
-        client.get("/api/greeting"),
+        post_ai(client, "/api/greeting"),
     ]
 
     assert [response.status_code for response in responses] == [
@@ -158,7 +159,7 @@ def test_three_guest_advice_calls_block_greeting(flask_app, monkeypatch):
     generate_content = _mock_gemini(monkeypatch)
 
     advice_responses = [_advice(client) for _ in range(3)]
-    greeting_response = client.get("/api/greeting")
+    greeting_response = post_ai(client, "/api/greeting")
 
     assert all(response.status_code == 200 for response in advice_responses)
     assert greeting_response.status_code == 429
@@ -173,9 +174,9 @@ def test_guest_a_limit_does_not_affect_guest_b(flask_app, monkeypatch):
     client_b = _guest_client(flask_app, guest_b)
     generate_content = _mock_gemini(monkeypatch)
 
-    guest_a_responses = [client_a.get("/api/greeting") for _ in range(4)]
+    guest_a_responses = [post_ai(client_a, "/api/greeting") for _ in range(4)]
     g.pop("_login_user", None)
-    guest_b_response = client_b.get("/api/greeting")
+    guest_b_response = post_ai(client_b, "/api/greeting")
 
     assert [response.status_code for response in guest_a_responses] == [
         200,
@@ -199,7 +200,7 @@ def test_guest_usage_does_not_change_other_guest_or_admin_dataset(
     client_a = _guest_client(flask_app, guest_a)
     _mock_gemini(monkeypatch)
 
-    response = client_a.get("/api/greeting")
+    response = post_ai(client_a, "/api/greeting")
 
     assert response.status_code == 200
     assert _usage_count(guest_a.id) == 1
@@ -217,7 +218,7 @@ def test_guest_cannot_reset_ai_limit_with_session_values(
     generate_content = _mock_gemini(monkeypatch)
 
     for _ in range(3):
-        assert client.get("/api/greeting").status_code == 200
+        assert post_ai(client, "/api/greeting").status_code == 200
 
     with client.session_transaction() as session_data:
         session_data["guest_ai_usage_count"] = 0
@@ -225,7 +226,7 @@ def test_guest_cannot_reset_ai_limit_with_session_values(
         session_data["role"] = "admin"
         session_data["is_admin"] = True
 
-    response = client.get("/api/greeting")
+    response = post_ai(client, "/api/greeting")
 
     assert response.status_code == 429
     assert response.get_json() == LIMIT_RESPONSE
@@ -241,7 +242,7 @@ def test_admin_can_use_ai_more_than_three_times(
 ):
     generate_content = _mock_gemini(monkeypatch)
 
-    responses = [authenticated_client.get("/api/greeting") for _ in range(5)]
+    responses = [post_ai(authenticated_client, "/api/greeting") for _ in range(5)]
 
     assert all(response.status_code == 200 for response in responses)
     assert generate_content.call_count == 5
@@ -255,7 +256,7 @@ def test_admin_ai_usage_keeps_guest_counter_zero(
     _mock_gemini(monkeypatch)
 
     for _ in range(4):
-        assert authenticated_client.get("/api/greeting").status_code == 200
+        assert post_ai(authenticated_client, "/api/greeting").status_code == 200
 
     assert _usage_count(admin_dataset.id) == 0
 
@@ -307,7 +308,7 @@ def test_guest_ai_reservation_database_failure_does_not_call_gemini(
 
     monkeypatch.setattr(db.session, "execute", fail_conditional_update)
 
-    response = client.get("/api/greeting")
+    response = post_ai(client, "/api/greeting")
 
     assert response.status_code == 503
     generate_content.assert_not_called()
@@ -322,7 +323,7 @@ def test_gemini_failure_does_not_refund_guest_usage(flask_app, monkeypatch):
         side_effect=RuntimeError("test Gemini failure"),
     )
 
-    response = client.get("/api/greeting")
+    response = post_ai(client, "/api/greeting")
 
     assert response.status_code == 200
     generate_content.assert_called_once()
@@ -339,7 +340,7 @@ def test_missing_api_key_does_not_consume_guest_usage(
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setattr(app_module.genai, "Client", client_factory)
 
-    response = client.get("/api/greeting")
+    response = post_ai(client, "/api/greeting")
 
     assert response.status_code == 200
     client_factory.assert_not_called()

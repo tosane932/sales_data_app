@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 import app as app_module
+from conftest import post_ai
 from models import Dataset, Product, db
 
 GUEST_DEMO_ROUTE_PATHS = [
@@ -294,7 +295,11 @@ def test_guest_user_can_access_guest_demo_route(
     guest_client = _guest_client(flask_app, guest_dataset)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
-    response = guest_client.get(path)
+    response = (
+        post_ai(guest_client, path)
+        if path in ("/api/ai-advice", "/api/greeting")
+        else guest_client.get(path)
+    )
 
     assert response.status_code == 200
 
