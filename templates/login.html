@@ -56,7 +56,11 @@
             <div role="alert">{{ error }}</div>
             {% endif %}
 
-            <form id="admin-login-form" method="POST">
+            <form
+                id="admin-login-form"
+                method="POST"
+                action="{{ url_for('login') }}"
+            >
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div>

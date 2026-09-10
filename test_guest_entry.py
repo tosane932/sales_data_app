@@ -310,6 +310,50 @@ def test_guest_start_rate_limit_returns_429_without_dataset_or_second_query(
     login.assert_not_called()
 
 
+def test_admin_login_form_on_guest_start_error_submits_to_login_endpoint(
+    client,
+    admin_auth_config,
+    monkeypatch,
+):
+    csrf_token = _guest_csrf_token(client)
+    monkeypatch.setattr(
+        app_module,
+        "_reserve_guest_creation_attempt",
+        Mock(return_value=False),
+    )
+
+    error_response = client.post(
+        "/guest/start",
+        data={"csrf_token": csrf_token},
+    )
+    error_document = _document(error_response)
+    admin_form = error_document.select_one("form#admin-login-form")
+
+    assert error_response.status_code == 429
+    assert admin_form is not None
+
+    admin_action = admin_form.get("action") or "/guest/start"
+    admin_csrf_input = admin_form.select_one('input[name="csrf_token"]')
+    assert admin_csrf_input is not None
+    assert admin_csrf_input.get("value")
+
+    login_response = client.post(
+        admin_action,
+        data={
+            "username": admin_auth_config.username,
+            "password": admin_auth_config.password,
+            "csrf_token": admin_csrf_input["value"],
+        },
+        follow_redirects=False,
+    )
+
+    assert admin_action == "/login"
+    assert login_response.status_code == 302
+    assert urlparse(login_response.headers["Location"]).path == "/"
+    with client.session_transaction() as session_data:
+        assert session_data["_user_id"] == "admin"
+
+
 @pytest.mark.parametrize("failure_kind", ["database", "configuration"])
 def test_guest_start_infrastructure_failure_returns_safe_503(
     client,
