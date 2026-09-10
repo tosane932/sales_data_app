@@ -852,11 +852,17 @@ def test_product_post_accepts_thirty_products(
 ):
     guest_dataset = _create_guest_dataset()
     guest_client = _guest_client(flask_app, guest_dataset)
+    payload = _new_product_payload(count=30)
+    payload["prod_name"] = [
+        ("商" * 98) + f"{index:02d}"
+        for index in range(30)
+    ]
+    payload["prod_price"] = ["1000000"] * 30
 
     response = csrf_post(
         guest_client,
         "/",
-        _new_product_payload(count=30),
+        payload,
     )
 
     assert response.status_code == 200
@@ -865,6 +871,14 @@ def test_product_post_accepts_thirty_products(
         year=2040,
         month=1,
     ).count() == 30
+    assert all(
+        len(product.name) == 100 and product.price == 1_000_000
+        for product in Product.query.filter_by(
+            dataset_id=guest_dataset.id,
+            year=2040,
+            month=1,
+        ).all()
+    )
 
 
 def test_admin_product_post_is_not_limited_to_thirty_products(
