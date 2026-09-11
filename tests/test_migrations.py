@@ -10,7 +10,7 @@ from sqlalchemy.engine import make_url
 from models import db
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 
 

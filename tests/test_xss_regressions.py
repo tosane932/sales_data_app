@@ -9,7 +9,7 @@ from app import app as flask_app
 from models import DailySales, Product, db
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DASHBOARD_TEMPLATE = PROJECT_ROOT / "templates" / "dashboard.html"
 INPUT_TEMPLATE = PROJECT_ROOT / "templates" / "input.html"
 
