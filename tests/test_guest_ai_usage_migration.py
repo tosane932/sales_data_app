@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from models import db
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PREVIOUS_REVISION = "f2b6c8d4e1a9"
 AI_USAGE_REVISION = "a8f3c1d5e7b9"

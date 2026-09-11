@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from models import db
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PREVIOUS_REVISION = "a8f3c1d5e7b9"
 RATE_LIMIT_REVISION = "e6b4c2d8f0a1"
