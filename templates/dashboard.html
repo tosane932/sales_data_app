@@ -11,6 +11,17 @@
 
 <div class="container">
     <h1>📊 お店の健康診断書（売上データ分析）</h1>
+    <div class="session-actions">
+        <span class="session-user-label">
+            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
+        </span>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn logout-button">
+                🚪 ログアウト
+            </button>
+        </form>
+    </div>
     <p class="dashboard-filter-guidance">
         ※表示期間を変更した後は、【🔍 データを抽出】ボタンを押してください。
     </p>
@@ -19,13 +30,15 @@
         <form id="filterForm" onsubmit="updateDashboard(event)" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <strong>表示期間：</strong>
             <select name="year" id="selectYear">
-                {% set current_year = now.year %}
-                {% for y in range(current_year, current_year - 4, -1) %}
+                <option value="" {% if year is none %}selected{% endif %}>
+                    全年度
+                </option>
+                {% for y in available_years %}
                 <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}年</option>
                 {% endfor %}
             </select>
-            <select name="month" id="selectMonth">
-                <option value="">全期間（通算）</option>
+            <select name="month" id="selectMonth" {% if year is none %}disabled{% endif %}>
+                <option value="" {% if month is none %}selected{% endif %}>全月</option>
                 {% for m in range(1, 13) %}
                 <option value="{{ m }}" {% if month == m %}selected{% endif %}>
                     {{ m }}月{% if m in sales_months %} ✅{% endif %}
@@ -34,9 +47,12 @@
             </select>
             <button type="submit" class="btn-submit">🔍 データを抽出</button>
         </form>
+        <small>※年を選ぶと、売上データがある月に✅が付きます。</small>
     </div>
 
-    <h2>🏆 売上数量ランキング（<span id="periodTitle">{% if month %}{{ month }}月度{% else %}全期間{% endif %}</span>）</h2>
+    <p>📅 表示中の期間：<strong id="periodTitle">{{ period_text }}</strong></p>
+
+    <h2>🏆 売上数量ランキング</h2>
 
     <div class="ranking-container" id="rankingContainer">
         {% if ranked_sales %}
@@ -95,6 +111,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    const yearSelect = document.getElementById('selectYear');
+    const monthSelect = document.getElementById('selectMonth');
+    let activeYear = {{ year | tojson }};
+    let activeMonth = {{ month | tojson }};
+
     function setTextWithLineBreaks(element, value) {
         element.innerText = String(value ?? '');
     }
@@ -115,6 +136,22 @@
                 `${month}月${availableMonths.has(month) ? ' ✅' : ''}`;
         });
     }
+
+    function syncDashboardMonthSelect() {
+        const allYearsSelected = !yearSelect.value;
+
+        if (allYearsSelected) {
+            monthSelect.value = '';
+        }
+
+        monthSelect.disabled = allYearsSelected;
+    }
+
+    yearSelect.addEventListener('change', () => {
+        syncDashboardMonthSelect();
+        updateSalesMonthIndicators([]);
+    });
+    syncDashboardMonthSelect();
 
     // 初回ページ読み込み時のグラフ描画処理
     const initialLabels = {{ chart_labels | tojson if chart_labels else [] }};
@@ -145,8 +182,8 @@
     function updateDashboard(event) {
         event.preventDefault(); // フォーム送信によるページリロードを抑止
 
-        const year = document.getElementById('selectYear').value;
-        const month = document.getElementById('selectMonth').value;
+        const year = yearSelect.value;
+        const month = monthSelect.value;
         const aiText = document.getElementById('aiAdviceText');
         const rankContainer = document.getElementById('rankingContainer');
         const periodTitle = document.getElementById('periodTitle');
@@ -161,6 +198,8 @@
                 // 1. 表示期間タイトルの更新
                 periodTitle.innerText = data.period_text;
                 updateSalesMonthIndicators(data.sales_months);
+                activeYear = year || null;
+                activeMonth = month || null;
 
                 // 2. 売上ランキングリストをDOM APIで安全に生成して反映
                 rankContainer.replaceChildren();
@@ -238,8 +277,8 @@
             });
     }
     function loadAiAdvice() {
-        const year = document.getElementById('selectYear').value;
-        const month = document.getElementById('selectMonth').value;
+        const year = activeYear ?? '';
+        const month = activeMonth ?? '';
         const aiText = document.getElementById('aiAdviceText');
         const aiButton = document.getElementById('aiAdviceButton');
 

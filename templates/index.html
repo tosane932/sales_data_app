@@ -22,6 +22,17 @@
 
 <div class="container">
     <h1>🍞 ベーカリー売上管理システム</h1>
+    <div class="session-actions">
+        <span class="session-user-label">
+            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
+        </span>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn logout-button">
+                🚪 ログアウト
+            </button>
+        </form>
+    </div>
     {% if error %}
     <div style="background-color: #fff0f0; color: #c0392b; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
         ⚠️ {{ error }}
@@ -35,11 +46,12 @@
             <div class="section-title">① 作成する年月を選択してください</div>
             <div class="select-group">
                 <select name="year" id="year-select">
-                    <option value="2026"
-                        {% if selected_year == 2026 %}selected{% endif %}>
-                        2026年
+                    {% for year_option in year_options %}
+                    <option value="{{ year_option }}"
+                        {% if selected_year == year_option %}selected{% endif %}>
+                        {{ year_option }}年
                     </option>
-                    
+                    {% endfor %}
                 </select>
                 <select name="month" id="month-select">
                     <option value="1" {% if selected_month == 1 %}selected{% endif %}>
@@ -179,6 +191,14 @@
         📊 お店の健康診断書（売上分析・ランキング）を見る
     </a>
 </div>
+
+{% if current_user.is_guest %}
+<div class="login-back-link">
+    <a href="{{ url_for('login') }}">
+        ← ログイン画面に戻る
+    </a>
+</div>
+{% endif %}
 
 <script>
     // 🌟 パパっと追加・消去するための軽快なJavaScript

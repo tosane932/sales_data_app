@@ -8,6 +8,7 @@ __pycache__/
 過去売上高/
 *.xlsx
 *.db
+local.db.backup-*
 .env
 
 # その他不要ファイル

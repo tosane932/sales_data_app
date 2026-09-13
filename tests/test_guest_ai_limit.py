@@ -2,6 +2,7 @@ import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import httpx
 from flask import g
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -326,6 +327,25 @@ def test_gemini_failure_does_not_refund_guest_usage(flask_app, monkeypatch):
     response = post_ai(client, "/api/greeting")
 
     assert response.status_code == 200
+    generate_content.assert_called_once()
+    assert _usage_count(guest_dataset.id) == 1
+
+
+def test_gemini_timeout_returns_fallback_without_refunding_guest_usage(
+    flask_app,
+    monkeypatch,
+):
+    guest_dataset = _create_guest_dataset()
+    client = _guest_client(flask_app, guest_dataset)
+    generate_content = _mock_gemini(
+        monkeypatch,
+        side_effect=httpx.ReadTimeout("test Gemini request timeout"),
+    )
+
+    response = post_ai(client, "/api/greeting")
+
+    assert response.status_code == 200
+    assert "本日は" in response.get_json()["message"]
     generate_content.assert_called_once()
     assert _usage_count(guest_dataset.id) == 1
 

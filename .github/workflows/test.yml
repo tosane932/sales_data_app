@@ -26,3 +26,53 @@ jobs:
       - name: pytestを実行
         run: |
           pytest -v
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_test_user
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: sales_data_app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_test_user -d sales_data_app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_POSTGRESQL_DATABASE_URL: >-
+        postgresql+psycopg2://ci_test_user:ci_test_password@127.0.0.1:5432/sales_data_app_test
+      ALLOW_POSTGRESQL_TEST_DATABASE_RESET: "1"
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 依存パッケージをインストール
+        run: |
+          pip install -r requirements.txt
+
+      - name: PostgreSQL migrationを検証
+        run: |
+          pytest tests/test_migrations_postgresql.py -v
+
+      - name: PostgreSQL実並行処理を検証
+        run: |
+          pytest \
+            tests/test_admin_login_rate_limit_postgresql.py \
+            tests/test_guest_active_dataset_limit_postgresql.py \
+            tests/test_guest_product_lifetime_limit_postgresql.py \
+            tests/test_guest_cleanup_postgresql.py \
+            tests/test_sales_postgresql.py \
+            -v

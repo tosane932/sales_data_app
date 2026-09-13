@@ -14,6 +14,7 @@ __pycache__/
 
 # ローカルデータ・旧資料
 *.db
+local.db.backup-*
 *.xlsx
 過去売上高/
 *.bak

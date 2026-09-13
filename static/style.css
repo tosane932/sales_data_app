@@ -158,6 +158,35 @@ select {
     transition: all 0.2s ease;
 }
 
+.session-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: -10px 0 20px;
+}
+
+.session-actions form {
+    margin: 0;
+}
+
+.session-user-label {
+    color: #786b60;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.logout-button {
+    padding: 9px 14px;
+    background-color: #665c54;
+    color: #ffffff;
+}
+
+.logout-button:hover {
+    background-color: #4f4741;
+}
+
 
 /* ========================================
    ➕ 追加ボタン    index.html
@@ -365,39 +394,88 @@ select {
    👤 ログイン・ゲストデモ入口
 ======================================== */
 
-.login-title span {
-    display: block;
-    font-size: 0.75em;
-    font-weight: normal;
-    margin-top: 0.3em;
+/* カード外：sales_data_app 共通タイトル */
+.login-page .login-system-header {
+    max-width: 650px;
+    margin: 0 auto 18px;
+
+    text-align: center;
 }
 
+.login-page .login-system-header h1 {
+    display: block;
+    margin: 0;
+    padding: 0;
+
+    color: #8b5a1a;
+    border: none;
+
+    font-size: 22px;
+    line-height: 1.4;
+}
+
+.login-page .login-system-header h1 span {
+    display: block;
+    margin-top: 4px;
+
+    font-size: 14px;
+    font-weight: normal;
+}
+
+
+/* カード内：ベーカリー版タイトル */
+.login-page .login-edition-title {
+    margin: 0 0 24px;
+    padding-bottom: 14px;
+
+    color: #8b5a1a;
+    border-bottom: 2px solid #f7eed6;
+
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.login-page .login-edition-title span {
+    font-size: 16px;
+    font-weight: normal;
+}
+
+
+/* ゲストデモ */
 .login-page .guest-demo-section {
-    margin-bottom: 30px;
-    padding: 22px;
+    margin-bottom: 26px;
+    padding: 18px;
 
     background-color: #fffdf8;
     border: 1px solid #eee2c9;
     border-radius: 12px;
 }
 
-.login-page .guest-demo-section h2,
-.login-page .admin-login-section h2 {
-    margin: 0 0 14px;
+.login-page .guest-demo-section h2 {
+    margin: 0 0 10px;
 
     color: #6e543c;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .login-page .guest-capacity,
 .login-page .guest-demo-message {
-    margin: 8px 0;
-    line-height: 1.6;
+    margin: 6px 0;
+
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .login-page .guest-demo-message {
     color: #8b4f25;
     font-weight: bold;
+}
+
+.login-page .guest-demo-button {
+    margin-top: 8px;
+    padding: 12px;
+
+    font-size: 15px;
 }
 
 .login-page .guest-demo-button:disabled {
@@ -408,23 +486,112 @@ select {
     transform: none;
 }
 
+
+/* 管理者ログインは補助的な表示として小さく・左寄せ */
 .login-page .admin-login-section {
-    padding-top: 4px;
+    width: 100%;
+    max-width: 210px;
+    margin: 0 0 0 22px;
+    padding-top: 2px;
+
+    text-align: left;
 }
 
+.login-page .admin-login-section h2 {
+    margin: 0 0 6px;
+
+    color: #6e543c;
+    font-size: 13px;
+}
+
+.login-page .admin-login-section label {
+    display: block;
+    margin-bottom: 2px;
+
+    font-size: 11px;
+}
+
+.login-page .admin-login-section input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+    padding: 5px 6px;
+
+    background-color: #ffffff;
+    color: #4a3c31;
+    border: 1px solid #dcd1be;
+    border-radius: 8px;
+    outline: none;
+
+    font-size: 12px;
+}
+
+.login-page .admin-login-section input:focus {
+    border-color: #c9a063;
+    box-shadow: 0 0 0 2px rgba(201, 160, 99, 0.15);
+}
+
+.login-page .admin-login-section button {
+    padding: 5px 10px;
+
+    font-size: 11px;
+}
+
+
+/* Guest画面からログイン画面へ戻るリンク */
+.login-back-link {
+    max-width: 650px;
+    margin: 12px auto 0;
+
+    text-align: right;
+}
+
+.login-back-link a {
+    color: #8c7e72;
+
+    font-size: 13px;
+    text-decoration: underline;
+}
+
+
+/* スマートフォン */
 @media (max-width: 768px) {
+    .login-page .login-system-header {
+        margin-bottom: 14px;
+    }
+
+    .login-page .login-system-header h1 {
+        font-size: 19px;
+    }
+
+    .login-page .login-system-header h1 span {
+        font-size: 12px;
+    }
+
+    .login-page .login-edition-title {
+        margin-bottom: 20px;
+
+        font-size: 18px;
+    }
+
+    .login-page .login-edition-title span {
+        font-size: 14px;
+    }
+
     .login-page .guest-demo-section {
-        padding: 18px;
+        padding: 16px;
     }
 
     .login-page .guest-demo-button {
         width: 100%;
         min-height: 48px;
     }
+
+    .login-page .admin-login-section {
+        max-width: 210px;
+        margin-left: 18px;
+    }
 }
-
-
-
 
 /* ========================================
    📊 ダッシュボード    dashboard.html

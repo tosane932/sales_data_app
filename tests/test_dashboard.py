@@ -37,6 +37,17 @@ def _sales_snapshot():
     ]
 
 
+def _dashboard_document(response):
+    return BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+
+def _dashboard_year_values(document):
+    return [
+        option["value"]
+        for option in document.select("#selectYear option")
+    ]
+
+
 @pytest.fixture()
 def dashboard_records(flask_app, admin_dataset, monkeypatch):
     def reject_gemini_client(*args, **kwargs):
@@ -186,6 +197,322 @@ def cross_dataset_dashboard_records(flask_app, admin_dataset):
     db.session.commit()
 
 
+def test_dashboard_initial_all_year_period_matches_same_filter_api(
+    authenticated_client,
+    dashboard_records,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 12, 31),
+    )
+    captured_ranked_sales = []
+    real_render_template = app_module.render_template
+
+    def capture_dashboard_context(template_name, *args, **kwargs):
+        if template_name == "dashboard.html":
+            captured_ranked_sales.extend(kwargs["ranked_sales"])
+        return real_render_template(template_name, *args, **kwargs)
+
+    monkeypatch.setattr(
+        app_module,
+        "render_template",
+        capture_dashboard_context,
+    )
+
+    html_response = authenticated_client.get("/dashboard")
+    document = _dashboard_document(html_response)
+    year_select = document.select_one("#selectYear")
+    month_select = document.select_one("#selectMonth")
+    selected_year = year_select.select_one("option[selected]")
+    period_title = document.select_one("#periodTitle")
+
+    api_response = authenticated_client.get("/api/dashboard-data")
+    payload = api_response.get_json()
+
+    assert html_response.status_code == 200
+    assert api_response.status_code == 200
+    assert _dashboard_year_values(document) == ["", "2025", "2026"]
+    assert selected_year is not None
+    assert selected_year["value"] == ""
+    assert month_select.has_attr("disabled")
+    assert period_title.get_text(" ", strip=True) == "全年度・全月"
+    assert payload["period_text"] == "全年度・全月"
+    assert payload["sales_months"] == []
+    assert payload["ranked_sales"] == [
+        list(item)
+        for item in captured_ranked_sales
+    ]
+
+
+def test_dashboard_without_sales_shows_current_year_and_empty_state(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 6, 1),
+    )
+
+    response = authenticated_client.get("/dashboard")
+    document = _dashboard_document(response)
+
+    assert response.status_code == 200
+    assert _dashboard_year_values(document) == ["", "2026"]
+    assert document.select_one("#selectMonth").has_attr("disabled")
+    assert "該当期間の売上データ（数量）が見つかりませんでした。" in (
+        response.get_data(as_text=True)
+    )
+
+
+def test_dashboard_year_options_use_daily_sales_in_current_dataset(
+    authenticated_client,
+    dashboard_records,
+    admin_dataset,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 6, 1),
+    )
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    admin_past_sales_product = Product(
+        dataset=admin_dataset,
+        year=2023,
+        month=4,
+        name="管理者2023年売上商品",
+        price=200,
+    )
+    admin_product_without_sales = Product(
+        dataset=admin_dataset,
+        year=2022,
+        month=4,
+        name="管理者2022年未売上商品",
+        price=300,
+    )
+    guest_sales_product = Product(
+        dataset=guest_dataset,
+        year=2024,
+        month=4,
+        name="Guest 2024年売上商品",
+        price=400,
+    )
+    db.session.add_all([
+        guest_dataset,
+        admin_past_sales_product,
+        admin_product_without_sales,
+        guest_sales_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=admin_past_sales_product.id,
+            date=datetime.date(2023, 4, 1),
+            quantity=1,
+        ),
+        DailySales(
+            product_id=guest_sales_product.id,
+            date=datetime.date(2024, 4, 1),
+            quantity=1,
+        ),
+    ])
+    db.session.commit()
+
+    response = authenticated_client.get("/dashboard")
+    document = _dashboard_document(response)
+    year_values = _dashboard_year_values(document)
+
+    assert response.status_code == 200
+    assert year_values == ["", "2023", "2025", "2026"]
+    assert "2022" not in year_values
+    assert "2024" not in year_values
+
+
+def test_guest_dashboard_year_options_exclude_other_guest_years(
+    flask_app,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 6, 1),
+    )
+    now = datetime.datetime.now(datetime.timezone.utc)
+    guest_a_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_b_dataset = Dataset(
+        kind="guest",
+        system_key=None,
+        created_at=now,
+        last_activity_at=now,
+        absolute_expires_at=now + datetime.timedelta(hours=2),
+    )
+    guest_a_product = Product(
+        dataset=guest_a_dataset,
+        year=2024,
+        month=3,
+        name="Guest A 2024年商品",
+        price=200,
+    )
+    guest_b_product = Product(
+        dataset=guest_b_dataset,
+        year=2025,
+        month=3,
+        name="Guest B 2025年商品",
+        price=300,
+    )
+    db.session.add_all([
+        guest_a_dataset,
+        guest_b_dataset,
+        guest_a_product,
+        guest_b_product,
+    ])
+    db.session.flush()
+    db.session.add_all([
+        DailySales(
+            product_id=guest_a_product.id,
+            date=datetime.date(2024, 3, 1),
+            quantity=1,
+        ),
+        DailySales(
+            product_id=guest_b_product.id,
+            date=datetime.date(2025, 3, 1),
+            quantity=1,
+        ),
+    ])
+    db.session.commit()
+
+    guest_a_client = flask_app.test_client()
+    with guest_a_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{guest_a_dataset.id}"
+        session_data["_fresh"] = True
+
+    response = guest_a_client.get("/dashboard")
+    year_values = _dashboard_year_values(_dashboard_document(response))
+
+    assert response.status_code == 200
+    assert year_values == ["", "2024", "2026"]
+    assert "2025" not in year_values
+
+
+def test_dashboard_selected_year_without_sales_stays_explicit(
+    authenticated_client,
+    dashboard_records,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 6, 1),
+    )
+
+    response = authenticated_client.get("/dashboard?year=2024")
+    document = _dashboard_document(response)
+    selected_year = document.select_one("#selectYear option[selected]")
+    period_title = document.select_one("#periodTitle")
+
+    assert response.status_code == 200
+    assert selected_year is not None
+    assert selected_year["value"] == "2024"
+    assert period_title.get_text(" ", strip=True) == "2024年・全月"
+    assert "該当期間の売上データ（数量）が見つかりませんでした。" in (
+        response.get_data(as_text=True)
+    )
+
+
+def test_all_year_period_ignores_month_for_html_api_and_ai(
+    authenticated_client,
+    dashboard_records,
+    monkeypatch,
+):
+    captured_ai_sales = []
+
+    def capture_ai_sales(ranked_sales, current_dataset=None):
+        captured_ai_sales.extend(ranked_sales)
+        return "期間整合性テスト"
+
+    monkeypatch.setattr(
+        app_module,
+        "_generate_ai_advice",
+        capture_ai_sales,
+    )
+
+    html_response = authenticated_client.get("/dashboard?month=8")
+    document = _dashboard_document(html_response)
+    month_select = document.select_one("#selectMonth")
+    selected_month = month_select.select_one("option[selected]")
+
+    api_response = authenticated_client.get(
+        "/api/dashboard-data?month=8"
+    )
+    ai_response = post_ai(
+        authenticated_client,
+        "/api/ai-advice?month=8",
+    )
+    payload = api_response.get_json()
+
+    assert html_response.status_code == 200
+    assert api_response.status_code == 200
+    assert ai_response.status_code == 200
+    assert month_select.has_attr("disabled")
+    assert selected_month is not None
+    assert selected_month["value"] == ""
+    assert document.select_one("#periodTitle").get_text(
+        " ", strip=True
+    ) == "全年度・全月"
+    assert payload["period_text"] == "全年度・全月"
+    assert payload["ranked_sales"] == [
+        ["前年商品", 30],
+        ["7月商品", 20],
+        ["商品A", 10],
+        ["商品B", 5],
+    ]
+    assert captured_ai_sales == [
+        ("前年商品", 30),
+        ("7月商品", 20),
+        ("商品A", 10),
+        ("商品B", 5),
+    ]
+
+
+def test_ai_advice_uses_applied_dashboard_period(
+    authenticated_client,
+    admin_dataset,
+):
+    response = authenticated_client.get("/dashboard")
+    script_text = "\n".join(
+        script.get_text()
+        for script in _dashboard_document(response).find_all("script")
+    )
+    advice_source = script_text.split("function loadAiAdvice()", 1)[1]
+
+    assert response.status_code == 200
+    assert "activeYear" in advice_source
+    assert "activeMonth" in advice_source
+    assert "document.getElementById('selectYear').value" not in (
+        advice_source
+    )
+    assert "document.getElementById('selectMonth').value" not in (
+        advice_source
+    )
+
+
 def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
     authenticated_client,
     dashboard_records,
@@ -220,11 +547,19 @@ def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
         name="Admin前年11月商品",
         price=500,
     )
+    admin_march_zero_sales_product = Product(
+        dataset=admin_dataset,
+        year=2026,
+        month=3,
+        name="Admin 3月ゼロ売上商品",
+        price=600,
+    )
     db.session.add_all([
         guest_dataset,
         guest_september_product,
         admin_october_product_without_sales,
         admin_previous_year_november_product,
+        admin_march_zero_sales_product,
     ])
     db.session.flush()
     db.session.add_all([
@@ -237,6 +572,11 @@ def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
             product_id=admin_previous_year_november_product.id,
             date=datetime.date(2025, 11, 1),
             quantity=11,
+        ),
+        DailySales(
+            product_id=admin_march_zero_sales_product.id,
+            date=datetime.date(2026, 3, 1),
+            quantity=0,
         ),
     ])
     db.session.commit()
@@ -251,6 +591,10 @@ def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
     }
 
     assert response.status_code == 200
+    assert document.select_one("#periodTitle").get_text(
+        " ", strip=True
+    ) == "2026年・全月"
+    assert month_labels[3] == "3月 ✅"
     assert month_labels[7] == "7月 ✅"
     assert month_labels[8] == "8月 ✅"
     assert month_labels[9] == "9月"
@@ -262,7 +606,10 @@ def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
         "/api/dashboard-data?year=2026"
     )
     assert api_response.status_code == 200
-    assert api_response.get_json()["sales_months"] == [7, 8]
+    api_payload = api_response.get_json()
+    assert api_payload["sales_months"] == [3, 7, 8]
+    assert ["前年商品", 30] not in api_payload["ranked_sales"]
+    assert ["Admin前年11月商品", 11] not in api_payload["ranked_sales"]
 
 
 def test_admin_dashboard_excludes_guest_dataset_sales(
@@ -273,8 +620,12 @@ def test_admin_dashboard_excludes_guest_dataset_sales(
         "/dashboard?year=2026&month=8"
     )
     response_text = response.get_data(as_text=True)
+    document = _dashboard_document(response)
 
     assert response.status_code == 200
+    assert document.select_one("#periodTitle").get_text(
+        " ", strip=True
+    ) == "2026年8月"
     assert "管理者限定商品" in response_text
     assert "11" in response_text
     assert "ゲスト限定商品" not in response_text
@@ -590,7 +941,7 @@ def test_dashboard_api_returns_sales_aggregation_for_selected_period(
         ["商品B", 5],
     ]
     assert payload["ai_advice"] == FIXED_AI_ADVICE
-    assert payload["period_text"] == "8月度"
+    assert payload["period_text"] == "2026年8月"
     assert payload["sales_months"] == [7, 8]
     assert _product_snapshot() == products_before
     assert _sales_snapshot() == sales_before
@@ -663,7 +1014,7 @@ def test_dashboard_api_returns_all_periods_without_filters(
         "商品B",
     ]
     assert payload["chart_values"] == [30, 20, 10, 5]
-    assert payload["period_text"] == "全期間"
+    assert payload["period_text"] == "全年度・全月"
 
 
 @pytest.mark.parametrize(
@@ -717,3 +1068,43 @@ def test_dashboard_routes_reject_noninteger_query_with_bad_request(
         )
     else:
         assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    ("route", "invalid_month"),
+    [
+        pytest.param("/dashboard", "0", id="dashboard-month-zero"),
+        pytest.param(
+            "/api/dashboard-data",
+            "13",
+            id="dashboard-api-month-thirteen",
+        ),
+        pytest.param(
+            "/api/ai-advice",
+            "-1",
+            id="ai-advice-negative-month",
+        ),
+    ],
+)
+def test_dashboard_routes_reject_out_of_range_month(
+    authenticated_client,
+    admin_dataset,
+    flask_app,
+    monkeypatch,
+    route,
+    invalid_month,
+):
+    gemini_client = Mock()
+    monkeypatch.setattr(app_module.genai, "Client", gemini_client)
+    monkeypatch.setitem(flask_app.config, "PROPAGATE_EXCEPTIONS", False)
+
+    path = f"{route}?year=2026&month={invalid_month}"
+    response = (
+        post_ai(authenticated_client, path)
+        if route == "/api/ai-advice"
+        else authenticated_client.get(path)
+    )
+
+    assert response.status_code == 400
+    if route == "/api/ai-advice":
+        assert not gemini_client.called

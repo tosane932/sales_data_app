@@ -138,7 +138,7 @@ def test_guest_a_and_guest_b_resolve_different_datasets(flask_app):
 def test_guest_a_and_guest_b_only_see_their_own_products_via_route(
     flask_app,
 ):
-    today = datetime.date.today()
+    today = app_module.business_today()
 
     guest_a_dataset = _create_guest_dataset()
     guest_b_dataset = _create_guest_dataset()

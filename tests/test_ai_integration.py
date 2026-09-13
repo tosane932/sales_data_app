@@ -2,6 +2,7 @@ import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import httpx
 import pytest
 from google.genai import errors
 
@@ -35,12 +36,45 @@ def test_generate_ai_advice_sends_complete_sales_prompt(monkeypatch):
         "メロンパン: 12個, あんぱん: 7個"
     )
 
-    client_factory.assert_called_once_with(api_key="dummy-test-key")
+    client_factory.assert_called_once_with(
+        api_key="dummy-test-key",
+        http_options={
+            "timeout": app_module.GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+        },
+    )
     generate_content.assert_called_once_with(
         model=config.GEMINI_MODEL,
         contents=expected_prompt
     )
     assert result == "モックされたAIアドバイス"
+
+
+def test_greeting_client_receives_explicit_request_timeout(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    generate_content = Mock(
+        return_value=SimpleNamespace(text="モックされた挨拶")
+    )
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+    client_factory = Mock(return_value=fake_client)
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-test-key")
+    monkeypatch.setattr(app_module.genai, "Client", client_factory)
+
+    response = post_ai(authenticated_client, "/api/greeting")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"message": "モックされた挨拶"}
+    client_factory.assert_called_once_with(
+        api_key="dummy-test-key",
+        http_options={
+            "timeout": app_module.GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+        },
+    )
+    generate_content.assert_called_once()
 
 
 def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sales(
@@ -127,7 +161,12 @@ def test_authenticated_ai_advice_api_returns_generated_advice_from_filtered_sale
     assert response.get_json() == {
         "ai_advice": "モックされたAIアドバイス"
     }
-    client_factory.assert_called_once_with(api_key="dummy-test-key")
+    client_factory.assert_called_once_with(
+        api_key="dummy-test-key",
+        http_options={
+            "timeout": app_module.GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+        },
+    )
     generate_content.assert_called_once()
     contents = generate_content.call_args.kwargs["contents"]
     assert "8月商品A: 10個" in contents
@@ -400,6 +439,14 @@ def test_guest_a_ai_advice_prompt_excludes_guest_b_dataset_sales(
             ),
             id="generic-error",
         ),
+        pytest.param(
+            httpx.ReadTimeout("test Gemini request timeout"),
+            (
+                "🚨 AIアドバイスの生成中に一時的なエラーが発生しました。"
+                "時間を置いてから、もう一度お試しください。"
+            ),
+            id="timeout",
+        ),
     ],
 )
 def test_generate_ai_advice_returns_fallback_when_gemini_fails(
@@ -417,6 +464,11 @@ def test_generate_ai_advice_returns_fallback_when_gemini_fails(
 
     result = app_module._generate_ai_advice([("テスト商品", 1)])
 
-    client_factory.assert_called_once_with(api_key="dummy-test-key")
+    client_factory.assert_called_once_with(
+        api_key="dummy-test-key",
+        http_options={
+            "timeout": app_module.GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+        },
+    )
     generate_content.assert_called_once()
     assert result == expected_message

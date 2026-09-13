@@ -1,10 +1,10 @@
-import datetime
 from types import SimpleNamespace
 from urllib.parse import urlparse
 
 import pytest
 from bs4 import BeautifulSoup
 
+import app as app_module
 from models import DailySales, Product, db
 
 
@@ -43,7 +43,7 @@ def _tamper_csrf_token(token):
 
 @pytest.fixture()
 def csrf_write_records(flask_app, admin_dataset):
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     product_a = Product(
         dataset=admin_dataset,
         year=sale_date.year,

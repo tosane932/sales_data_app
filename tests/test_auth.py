@@ -1,4 +1,3 @@
-import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 from urllib.parse import urlparse
@@ -41,7 +40,7 @@ def _assert_redirects_to_login(response):
 
 @pytest.fixture()
 def unauthenticated_write_records(flask_app, admin_dataset):
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     product_a = Product(
         dataset=admin_dataset,
         year=sale_date.year,

@@ -18,26 +18,10 @@ def _sales_snapshot():
 
 
 def _freeze_app_today(monkeypatch, frozen_today):
-    real_datetime = app_module.datetime
-
-    class FrozenDate(real_datetime.date):
-        @classmethod
-        def today(cls):
-            return cls(
-                frozen_today.year,
-                frozen_today.month,
-                frozen_today.day,
-            )
-
     monkeypatch.setattr(
         app_module,
-        "datetime",
-        SimpleNamespace(
-            date=FrozenDate,
-            datetime=real_datetime.datetime,
-            timedelta=real_datetime.timedelta,
-            timezone=real_datetime.timezone,
-        ),
+        "business_today",
+        lambda: frozen_today,
     )
 
 
@@ -81,7 +65,7 @@ def _guest_client(flask_app, dataset):
 
 @pytest.fixture()
 def sales_records(flask_app, admin_dataset):
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     existing_product = Product(
         dataset=admin_dataset,
         year=sale_date.year,
@@ -117,7 +101,7 @@ def sales_records(flask_app, admin_dataset):
 @pytest.fixture()
 def cross_dataset_sales_records(flask_app, admin_dataset):
     now = datetime.datetime.now(datetime.timezone.utc)
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     guest_dataset = Dataset(
         kind="guest",
         system_key=None,
@@ -372,7 +356,7 @@ def test_guest_a_sales_post_rejects_guest_b_product_without_changes(
     csrf_post,
 ):
     now = datetime.datetime.now(datetime.timezone.utc)
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
 
     guest_a_dataset = Dataset(
         kind="guest",
@@ -513,7 +497,7 @@ def test_sales_post_does_not_update_same_product_sale_from_other_date(
     admin_dataset,
     csrf_post,
 ):
-    today = datetime.date.today()
+    today = app_module.business_today()
     previous_date = today.replace(day=1)
     target_date = today.replace(day=2)
     product = Product(
@@ -610,7 +594,7 @@ def test_daily_sales_product_and_date_are_unique_at_database_level(
     flask_app,
     admin_dataset,
 ):
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     product = Product(
         dataset=admin_dataset,
         year=sale_date.year,
@@ -889,7 +873,7 @@ def test_admin_sales_post_is_not_limited_to_thirty_products(
     admin_dataset,
     csrf_post,
 ):
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
     products = _create_products_for_sales(
         admin_dataset,
         count=31,
@@ -916,7 +900,7 @@ def test_sales_post_rejects_more_than_thirty_products_atomically(
 ):
     guest_dataset = _create_guest_dataset()
     guest_client = _guest_client(flask_app, guest_dataset)
-    sale_date = datetime.date.today()
+    sale_date = app_module.business_today()
 
     products = _create_products_for_sales(
         guest_dataset,

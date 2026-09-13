@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 
+import seed_demo as seed_demo_module
 from models import DailySales, Dataset, Product, db
 from seed_demo import DEMO_PRODUCTS, DEMO_QUANTITIES, seed_demo_data
 
@@ -101,6 +102,27 @@ def test_seed_demo_data_inserts_demo_data(flask_app, admin_dataset):
         product.dataset_id == admin_dataset.id
         for product in products
     )
+
+
+def test_seed_demo_data_uses_business_today_by_default(
+    flask_app,
+    admin_dataset,
+    monkeypatch,
+):
+    frozen_today = datetime.date(2027, 1, 1)
+    monkeypatch.setattr(
+        seed_demo_module,
+        "business_today",
+        lambda: frozen_today,
+    )
+
+    result = seed_demo_data()
+
+    products = Product.query.all()
+    assert result is True
+    assert products
+    assert all(product.year == 2027 for product in products)
+    assert all(product.month == 1 for product in products)
 
 
 def test_seed_demo_data_does_not_duplicate_existing_data(

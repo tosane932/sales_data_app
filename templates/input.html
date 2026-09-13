@@ -10,6 +10,17 @@
 <body class="input-page">
 <div class="container">
     <h1>📝 日次売上入力</h1>
+    <div class="session-actions">
+        <span class="session-user-label">
+            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
+        </span>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn logout-button">
+                🚪 ログアウト
+            </button>
+        </form>
+    </div>
 
     <p
         class="sales-input-guidance"

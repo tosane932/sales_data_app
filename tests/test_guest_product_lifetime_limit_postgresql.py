@@ -11,11 +11,10 @@ import pytest
 from sqlalchemy import create_engine, text
 
 from models import Dataset, Product, db
+from postgresql_test_utils import get_isolated_postgresql_test_url
 
 
-POSTGRESQL_TEST_DATABASE_URL = os.environ.get(
-    "TEST_POSTGRESQL_DATABASE_URL"
-)
+POSTGRESQL_TEST_DATABASE_URL = get_isolated_postgresql_test_url()
 
 pytestmark = pytest.mark.skipif(
     not POSTGRESQL_TEST_DATABASE_URL,
@@ -221,7 +220,7 @@ def test_concurrent_product_posts_never_exceed_guest_lifetime_limit(
         POSTGRESQL_TEST_DATABASE_URL,
         pool_pre_ping=True,
     )
-    repository_root = Path(__file__).resolve().parent
+    repository_root = Path(__file__).resolve().parent.parent
     guest_a_id = uuid.uuid4()
     guest_b_id = uuid.uuid4()
     admin_id = uuid.uuid4()

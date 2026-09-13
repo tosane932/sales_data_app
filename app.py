@@ -8,6 +8,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from functools import wraps
+from zoneinfo import ZoneInfo
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager,
@@ -15,6 +16,7 @@ from flask_login import (
     current_user,
     login_required,
     login_user,
+    logout_user,
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
@@ -127,6 +129,8 @@ class GuestUser(UserMixin):
 
 
 ADMIN_AUTH_FINGERPRINT_SESSION_KEY = "admin_auth_fingerprint"
+BUSINESS_TIMEZONE = ZoneInfo("Asia/Tokyo")
+GEMINI_REQUEST_TIMEOUT_MILLISECONDS = 15_000
 GUEST_ABSOLUTE_LIFETIME = datetime.timedelta(hours=2)
 GUEST_IDLE_TIMEOUT = datetime.timedelta(minutes=30)
 GUEST_AI_USAGE_LIMIT = 3
@@ -161,6 +165,11 @@ class GuestCapacityFull(ServiceUnavailable):
         super().__init__(description="ゲストデモは現在満員です。")
         self.active_guest_count = active_guest_count
         self.active_dataset_limit = active_dataset_limit
+
+
+def business_today():
+    """日本の店舗業務で扱う今日の日付を返す。"""
+    return datetime.datetime.now(BUSINESS_TIMEZONE).date()
 
 
 def _as_utc(value):
@@ -1003,7 +1012,12 @@ def _generate_ai_advice(ranked_sales, current_dataset=None):
             logger.error("GEMINI_API_KEY is missing from environment variables.")  # 💡 設定エラーの記録
             return "現在AIアドバイスを利用できません。時間を置いてからお試しください。"
 
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(
+            api_key=api_key,
+            http_options={
+                "timeout": GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+            },
+        )
         sales_summary = ", ".join([f"{name}: {qty}個" for name, qty in ranked_sales])
         prompt = build_sales_prompt(sales_summary)
 
@@ -1177,6 +1191,46 @@ def login():
     return _render_login_page()
 
 
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    """現在のAdminまたはGuestの認証Sessionだけを終了する。"""
+    logout_user()
+    session.pop(ADMIN_AUTH_FINGERPRINT_SESSION_KEY, None)
+    return redirect(url_for("login"))
+
+
+def _get_product_year_options(
+    current_dataset,
+    current_year,
+    selected_year=None,
+):
+    """商品画面に必要な年だけを、現在のDatasetに限定して返す。"""
+    year_options = {
+        current_year - 1,
+        current_year,
+        current_year + 1,
+    }
+
+    if current_dataset is not None:
+        existing_years = (
+            db.session.query(Product.year)
+            .filter(Product.dataset_id == current_dataset.id)
+            .distinct()
+            .all()
+        )
+        year_options.update(row[0] for row in existing_years)
+
+    if selected_year is not None:
+        year_options.add(selected_year)
+
+    return sorted(
+        year
+        for year in year_options
+        if PRODUCT_YEAR_MIN <= year <= PRODUCT_YEAR_MAX
+    )
+
+
 @app.route("/", methods=["GET", "POST"])
 @admin_or_guest_required
 def index():
@@ -1186,6 +1240,8 @@ def index():
         if request.method == "POST":
             return "管理者データ領域が見つかりません。", 500
         current_dataset = None
+
+    today = business_today()
 
     if request.method == "POST":
         if not current_user.is_authenticated:
@@ -1300,7 +1356,12 @@ def index():
                 products=[],
                 selected_year=year,
                 selected_month=month,
-                registered_months=registered_months
+                registered_months=registered_months,
+                year_options=_get_product_year_options(
+                    current_dataset,
+                    today.year,
+                    year,
+                ),
             )
 
         # 💡既存商品の価格更新と新商品の追加をログに残す
@@ -1397,8 +1458,6 @@ def index():
     year = request.args.get("year", type=int)
     month = request.args.get("month", type=int)
 
-    today = datetime.date.today()
-
     if year is None:
         year = today.year
 
@@ -1433,7 +1492,12 @@ def index():
         products=products,
         selected_year=year,
         selected_month=month,
-        registered_months=registered_months
+        registered_months=registered_months,
+        year_options=_get_product_year_options(
+            current_dataset,
+            today.year,
+            year,
+        ),
     )
 
 def _get_optional_integer_query_parameter(name):
@@ -1447,16 +1511,43 @@ def _get_optional_integer_query_parameter(name):
         abort(400)
 
 
+def _get_dashboard_period():
+    target_year = _get_optional_integer_query_parameter("year")
+    target_month = _get_optional_integer_query_parameter("month")
+
+    if target_month is not None and not 1 <= target_month <= 12:
+        abort(400)
+
+    if target_year is None:
+        target_month = None
+
+    return target_year, target_month
+
+
+def _dashboard_period_label(target_year, target_month):
+    if target_year is None:
+        return "全年度・全月"
+    if target_month is None:
+        return f"{target_year}年・全月"
+    return f"{target_year}年{target_month}月"
+
+
 @app.route("/dashboard")
 @admin_or_guest_required
 def dashboard():
-    target_year = _get_optional_integer_query_parameter("year")
-    target_month = _get_optional_integer_query_parameter("month")
+    target_year, target_month = _get_dashboard_period()
     current_dataset = require_current_dataset()
+    today = business_today()
+    available_years = _get_dashboard_sales_years(
+        current_dataset,
+        today.year,
+        target_year,
+    )
     sales_months = _get_dashboard_sales_months(
         current_dataset,
-        target_year or datetime.date.today().year,
+        target_year,
     )
+    period_text = _dashboard_period_label(target_year, target_month)
 
     logger.info(f"Dashboard accessed for period: year={target_year}, month={target_month}")
 
@@ -1481,17 +1572,17 @@ def dashboard():
                            chart_labels=chart_labels,
                            chart_values=chart_values,
                            ai_advice=ai_advice,
-                           year=target_year or "全期間",
+                           year=target_year,
                            month=target_month,
+                           available_years=available_years,
                            sales_months=sales_months,
-                           now=datetime.date.today())
+                           period_text=period_text)
 
 
 @app.route("/api/dashboard-data")
 @admin_or_guest_required
 def api_dashboard_data():
-    target_year = _get_optional_integer_query_parameter("year")
-    target_month = _get_optional_integer_query_parameter("month")
+    target_year, target_month = _get_dashboard_period()
     current_dataset = require_current_dataset()
     sales_months = _get_dashboard_sales_months(
         current_dataset,
@@ -1520,14 +1611,13 @@ def api_dashboard_data():
             "詳しい改善案を確認する場合は、"
             "「詳しいアドバイスを聞く」ボタンを押してください。"
         ),
-        "period_text": f"{target_month}月度" if target_month else "全期間"
+        "period_text": _dashboard_period_label(target_year, target_month),
     })
 
 @app.route("/api/ai-advice", methods=["POST"])
 @admin_or_guest_required
 def api_ai_advice():
-    target_year = _get_optional_integer_query_parameter("year")
-    target_month = _get_optional_integer_query_parameter("month")
+    target_year, target_month = _get_dashboard_period()
     current_dataset = require_current_dataset()
 
     logger.info(
@@ -1563,7 +1653,7 @@ def api_ai_advice():
 @app.route("/input", methods=["GET", "POST"])
 @admin_or_guest_required
 def input_sales():
-    today = datetime.date.today()
+    today = business_today()
     current_dataset = require_current_dataset()
 
     if request.method == "POST":
@@ -1662,20 +1752,44 @@ def input_sales():
 
         try:
             for product, qty_int in validated_product_sales:
+                daily_sales_table = DailySales.__table__
+                sale_values = {
+                    "product_id": product.id,
+                    "date": sale_date,
+                    "quantity": qty_int,
+                }
+                dialect_name = db.session.get_bind().dialect.name
+
+                if dialect_name == "postgresql":
+                    insert_statement = postgresql_insert(
+                        daily_sales_table
+                    ).values(**sale_values)
+                elif dialect_name == "sqlite":
+                    insert_statement = sqlite_insert(
+                        daily_sales_table
+                    ).values(**sale_values)
+                else:
+                    insert_statement = None
+
+                if insert_statement is not None:
+                    upsert_statement = insert_statement.on_conflict_do_update(
+                        index_elements=[
+                            daily_sales_table.c.product_id,
+                            daily_sales_table.c.date,
+                        ],
+                        set_={"quantity": qty_int},
+                    )
+                    db.session.execute(upsert_statement)
+                    continue
+
                 existing = DailySales.query.filter_by(
                     product_id=product.id,
-                    date=sale_date
+                    date=sale_date,
                 ).first()
-
                 if existing:
                     existing.quantity = qty_int
                 else:
-                    sale = DailySales(
-                        product_id=product.id,
-                        date=sale_date,
-                        quantity=qty_int
-                    )
-                    db.session.add(sale)
+                    db.session.add(DailySales(**sale_values))
 
             db.session.commit()
         except SQLAlchemyError:
@@ -1690,14 +1804,14 @@ def input_sales():
         return render_template(
             "input.html",
             success=True,
-            products=_get_current_products(current_dataset),
+            products=_get_current_products(current_dataset, today),
             today=today,
             today_sales=_get_today_sales_map(today, current_dataset)
         )
 
     return render_template(
         "input.html",
-        products=_get_current_products(current_dataset),
+        products=_get_current_products(current_dataset, today),
         today=today,
         today_sales=_get_today_sales_map(today, current_dataset)
     )
@@ -1706,13 +1820,18 @@ def input_sales():
 @admin_or_guest_required
 def api_greeting():
     current_dataset = require_current_dataset()
+    today = business_today()
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return jsonify({"message": f"本日は{datetime.date.today().strftime('%-m月%-d日')}です。今日も一日お疲れ様でした！"})
+        return jsonify({"message": f"本日は{today.strftime('%-m月%-d日')}です。今日も一日お疲れ様でした！"})
 
     try:
-        client = genai.Client(api_key=api_key)
-        today = datetime.date.today()
+        client = genai.Client(
+            api_key=api_key,
+            http_options={
+                "timeout": GEMINI_REQUEST_TIMEOUT_MILLISECONDS,
+            },
+        )
 
         # 💡 どんなプロンプトでリクエストを投げようとしているかINFOで記録
         logger.info("Generating AI daily greeting...")
@@ -1744,12 +1863,11 @@ def api_greeting():
         raise
     except Exception:
         logger.error("Failed to generate AI greeting.")
-        today = datetime.date.today()
         return jsonify({"message": f"本日は{today.month}月{today.day}日です。今日も一日お疲れ様でした！"})
 
 
-def _get_current_products(current_dataset):
-    today = datetime.date.today()
+def _get_current_products(current_dataset, target_date=None):
+    today = target_date if target_date is not None else business_today()
 
     return Product.query.filter_by(
         dataset_id=current_dataset.id,
@@ -1792,9 +1910,9 @@ def _get_sales_from_db(
         Product.dataset_id == current_dataset.id,
     )
 
-    if target_year:
+    if target_year is not None:
         query = query.filter(db.extract("year", DailySales.date) == target_year)
-    if target_month:
+    if target_month is not None:
         query = query.filter(db.extract("month", DailySales.date) == target_month)
 
     query = query.group_by(Product.name)
@@ -1808,18 +1926,41 @@ def _get_sales_from_db(
 
 
 def _get_dashboard_sales_months(current_dataset, target_year=None):
+    if target_year is None:
+        return []
+
     query = (
         db.session.query(db.extract("month", DailySales.date))
         .join(Product, DailySales.product_id == Product.id)
         .filter(Product.dataset_id == current_dataset.id)
     )
 
-    if target_year:
-        query = query.filter(
-            db.extract("year", DailySales.date) == target_year
-        )
+    query = query.filter(
+        db.extract("year", DailySales.date) == target_year
+    )
 
     return sorted({int(row[0]) for row in query.distinct().all()})
+
+
+def _get_dashboard_sales_years(
+    current_dataset,
+    current_year,
+    selected_year=None,
+):
+    existing_years = (
+        db.session.query(db.extract("year", DailySales.date))
+        .join(Product, DailySales.product_id == Product.id)
+        .filter(Product.dataset_id == current_dataset.id)
+        .distinct()
+        .all()
+    )
+    available_years = {current_year}
+    available_years.update(int(row[0]) for row in existing_years)
+
+    if selected_year is not None:
+        available_years.add(selected_year)
+
+    return sorted(available_years)
 
 
 

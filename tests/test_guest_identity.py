@@ -309,7 +309,7 @@ def test_guest_cannot_escalate_with_session_role_values(
     admin_dataset,
 ):
     guest_dataset = _create_guest_dataset()
-    today = datetime.date.today()
+    today = app_module.business_today()
 
     admin_product = Product(
         dataset=admin_dataset,

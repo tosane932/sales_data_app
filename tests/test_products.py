@@ -6,6 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 from sqlalchemy.exc import SQLAlchemyError
 
+import app as app_module
 from models import DailySales, Dataset, Product, db
 
 
@@ -28,6 +29,13 @@ def _sales_snapshot():
         (sale.id, sale.product_id, sale.date, sale.quantity)
         for sale in DailySales.query.order_by(DailySales.id).all()
     ]
+
+
+def _product_year_select(response):
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    year_select = document.select_one("#year-select")
+    assert year_select is not None
+    return year_select
 
 
 def _create_guest_dataset():
@@ -198,6 +206,136 @@ def _create_products(
     db.session.add_all(products)
     db.session.commit()
     return products
+
+
+def test_product_year_options_include_current_and_next_year_at_year_end(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 12, 31),
+    )
+
+    response = authenticated_client.get("/")
+    year_select = _product_year_select(response)
+    year_options = [
+        int(option["value"])
+        for option in year_select.select("option")
+    ]
+    selected_option = year_select.select_one("option[selected]")
+
+    assert response.status_code == 200
+    assert year_options == [2025, 2026, 2027]
+    assert selected_option is not None
+    assert selected_option["value"] == "2026"
+
+
+def test_product_year_options_roll_forward_at_jst_new_year(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2027, 1, 1),
+    )
+
+    response = authenticated_client.get("/")
+    year_select = _product_year_select(response)
+    year_options = [
+        int(option["value"])
+        for option in year_select.select("option")
+    ]
+    selected_option = year_select.select_one("option[selected]")
+
+    assert response.status_code == 200
+    assert year_options == [2026, 2027, 2028]
+    assert selected_option is not None
+    assert selected_option["value"] == "2027"
+
+
+def test_product_year_options_include_only_current_dataset_product_years(
+    authenticated_client,
+    admin_dataset,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2026, 6, 1),
+    )
+    guest_dataset = _create_guest_dataset()
+    db.session.add_all([
+        Product(
+            dataset=admin_dataset,
+            year=2023,
+            month=4,
+            name="管理者の過年度商品",
+            price=200,
+        ),
+        Product(
+            dataset=guest_dataset,
+            year=2022,
+            month=4,
+            name="別Datasetの過年度商品",
+            price=300,
+        ),
+    ])
+    db.session.commit()
+
+    response = authenticated_client.get("/?year=2023&month=4")
+    year_select = _product_year_select(response)
+    year_options = [
+        int(option["value"])
+        for option in year_select.select("option")
+    ]
+    selected_option = year_select.select_one("option[selected]")
+
+    assert response.status_code == 200
+    assert year_options == [2023, 2025, 2026, 2027]
+    assert 2022 not in year_options
+    assert selected_option is not None
+    assert selected_option["value"] == "2023"
+    assert "管理者の過年度商品" in response.get_data(as_text=True)
+    assert "別Datasetの過年度商品" not in response.get_data(as_text=True)
+
+
+def test_product_year_selection_survives_validation_error_redisplay(
+    authenticated_client,
+    admin_dataset,
+    csrf_post,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        app_module,
+        "business_today",
+        lambda: datetime.date(2027, 1, 1),
+    )
+
+    response = csrf_post(
+        authenticated_client,
+        "/",
+        {
+            "year": "2024",
+            "month": "11",
+            "product_id": [],
+            "prod_name": [],
+            "prod_price": [],
+        },
+    )
+    year_select = _product_year_select(response)
+    selected_option = year_select.select_one("option[selected]")
+
+    assert response.status_code == 200
+    assert "商品を1つ以上入力してください。" in response.get_data(
+        as_text=True
+    )
+    assert selected_option is not None
+    assert selected_option["value"] == "2024"
 
 
 def test_product_form_exposes_name_and_price_limits(
