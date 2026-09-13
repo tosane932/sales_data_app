@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>材料発注リスト</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="material-orders-page">
+<main class="material-orders-container">
+    <h1>🛒 材料発注リスト</h1>
+
+    <div class="session-actions">
+        <span class="session-user-label">
+            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
+        </span>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn logout-button">
+                🚪 ログアウト
+            </button>
+        </form>
+    </div>
+
+    {% if error %}
+    <div class="material-orders-error" role="alert">
+        ⚠️ {{ error }}
+    </div>
+    {% endif %}
+
+    <section class="material-order-create-section" aria-labelledby="material-create-heading">
+        <h2 id="material-create-heading">材料をリストに追加</h2>
+        <form method="POST" action="{{ url_for('material_orders.create_item') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="material-order-field">
+                <label for="material-name">材料名 <span aria-hidden="true">※</span></label>
+                <input
+                    id="material-name"
+                    name="name"
+                    type="text"
+                    value="{{ form_values.name }}"
+                    maxlength="100"
+                    required>
+            </div>
+
+            <div class="material-order-field">
+                <label for="material-quantity">数量・単位（任意）</label>
+                <input
+                    id="material-quantity"
+                    name="quantity_text"
+                    type="text"
+                    value="{{ form_values.quantity_text }}"
+                    maxlength="30">
+            </div>
+
+            <div class="material-order-field">
+                <label for="material-memo">メモ（任意）</label>
+                <textarea
+                    id="material-memo"
+                    name="memo"
+                    maxlength="300"
+                    rows="3">{{ form_values.memo }}</textarea>
+            </div>
+
+            <button type="submit" class="btn material-order-add-button">
+                ＋ リストに追加
+            </button>
+        </form>
+    </section>
+
+    <section class="material-order-list-section" aria-labelledby="incomplete-heading">
+        <h2 id="incomplete-heading">未完了 {{ incomplete_items|length }}件</h2>
+        {% if incomplete_items %}
+        <div class="material-order-list">
+            {% for item in incomplete_items %}
+            <article class="material-order-card">
+                <div class="material-order-state">□ 未完了</div>
+                <h3>{{ item.name }}</h3>
+                {% if item.quantity_text %}
+                <p class="material-order-quantity">数量・単位：{{ item.quantity_text }}</p>
+                {% endif %}
+                {% if item.memo %}
+                <p class="material-order-memo">メモ：{{ item.memo }}</p>
+                {% endif %}
+
+                <div class="material-order-actions">
+                    <form method="POST" action="{{ url_for('material_orders.set_completion', item_id=item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="completed" value="1">
+                        <button type="submit" class="btn material-order-complete-button">
+                            完了にする
+                        </button>
+                    </form>
+                    <details class="material-order-delete-confirmation">
+                        <summary>削除</summary>
+                        <p>この材料を削除しますか？</p>
+                        <form method="POST" action="{{ url_for('material_orders.delete_item', item_id=item.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn material-order-delete-button">
+                                本当に削除する
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="material-order-empty">未完了の材料はありません。</p>
+        {% endif %}
+    </section>
+
+    <section class="material-order-list-section" aria-labelledby="completed-heading">
+        <h2 id="completed-heading">完了済み {{ completed_items|length }}件</h2>
+        {% if completed_items %}
+        <div class="material-order-list">
+            {% for item in completed_items %}
+            <article class="material-order-card material-order-card-completed">
+                <div class="material-order-state">☑ 完了済み</div>
+                <h3>{{ item.name }}</h3>
+                {% if item.quantity_text %}
+                <p class="material-order-quantity">数量・単位：{{ item.quantity_text }}</p>
+                {% endif %}
+                {% if item.memo %}
+                <p class="material-order-memo">メモ：{{ item.memo }}</p>
+                {% endif %}
+
+                <div class="material-order-actions">
+                    <form method="POST" action="{{ url_for('material_orders.set_completion', item_id=item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="completed" value="0">
+                        <button type="submit" class="btn material-order-reopen-button">
+                            未完了に戻す
+                        </button>
+                    </form>
+                    <details class="material-order-delete-confirmation">
+                        <summary>削除</summary>
+                        <p>この材料を削除しますか？</p>
+                        <form method="POST" action="{{ url_for('material_orders.delete_item', item_id=item.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn material-order-delete-button">
+                                本当に削除する
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="material-order-empty">完了済みの材料はありません。</p>
+        {% endif %}
+    </section>
+
+    <a href="{{ url_for('index') }}" class="material-orders-back-link">
+        ← メニューへ戻る
+    </a>
+</main>
+</body>
+</html>
