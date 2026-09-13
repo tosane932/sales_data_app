@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import ServiceUnavailable
 
 import app as app_module
-from models import DailySales, Dataset, Product, db
+from models import DailySales, Dataset, MaterialOrderItem, Product, db
 
 
 NOW = datetime.datetime(2026, 9, 3, 12, 0, tzinfo=datetime.timezone.utc)
@@ -80,6 +80,16 @@ def _create_product_and_sale(dataset, *, name, quantity):
     db.session.add(sale)
     db.session.flush()
     return product, sale
+
+
+def _create_material_order_item(dataset, *, name):
+    item = MaterialOrderItem(
+        dataset=dataset,
+        name=name,
+    )
+    db.session.add(item)
+    db.session.flush()
+    return item
 
 
 def _run_cleanup():
@@ -234,6 +244,43 @@ def test_cleanup_keeps_active_guest_products_and_sales_when_expired_guest_is_del
     assert db.session.get(DailySales, active_sale_id) is not None
 
 
+def test_cleanup_deletes_only_expired_guest_material_order_items(
+    flask_app,
+    admin_dataset,
+):
+    expired_guest = _create_absolute_expired_guest_dataset()
+    active_guest = _create_active_guest_dataset()
+    expired_item = _create_material_order_item(
+        expired_guest,
+        name="期限切れGuest A材料",
+    )
+    active_item = _create_material_order_item(
+        active_guest,
+        name="有効Guest B材料",
+    )
+    admin_item = _create_material_order_item(
+        admin_dataset,
+        name="Admin材料",
+    )
+    expired_guest_id = expired_guest.id
+    active_guest_id = active_guest.id
+    admin_dataset_id = admin_dataset.id
+    expired_item_id = expired_item.id
+    active_item_id = active_item.id
+    admin_item_id = admin_item.id
+    db.session.commit()
+
+    deleted_count = _run_cleanup()
+
+    assert deleted_count == 1
+    assert db.session.get(Dataset, expired_guest_id) is None
+    assert db.session.get(MaterialOrderItem, expired_item_id) is None
+    assert db.session.get(Dataset, active_guest_id) is not None
+    assert db.session.get(MaterialOrderItem, active_item_id) is not None
+    assert db.session.get(Dataset, admin_dataset_id) is not None
+    assert db.session.get(MaterialOrderItem, admin_item_id) is not None
+
+
 def test_cleanup_removes_expired_guest_ai_usage_with_dataset(flask_app):
     expired_guest = _create_guest_dataset(
         created_at=NOW - datetime.timedelta(hours=3),
@@ -376,12 +423,20 @@ def test_cleanup_database_failure_rolls_back_without_guest_login(
         name="rollback確認商品",
         quantity=81,
     )
+    material_item = _create_material_order_item(
+        expired_guest,
+        name="rollback確認材料",
+    )
     expired_guest_id = expired_guest.id
     product_id = product.id
     sale_id = sale.id
+    material_item_id = material_item.id
     db.session.commit()
 
     def failing_cleanup(*, now):
+        MaterialOrderItem.query.filter_by(id=material_item_id).delete(
+            synchronize_session=False
+        )
         DailySales.query.filter_by(id=sale_id).delete(
             synchronize_session=False
         )
@@ -411,6 +466,7 @@ def test_cleanup_database_failure_rolls_back_without_guest_login(
     assert rollback.call_count == 1
     login.assert_not_called()
     assert db.session.get(Dataset, expired_guest_id) is not None
+    assert db.session.get(MaterialOrderItem, material_item_id) is not None
     assert db.session.get(Product, product_id) is not None
     assert db.session.get(DailySales, sale_id) is not None
     assert Dataset.query.filter_by(kind="guest").count() == 1

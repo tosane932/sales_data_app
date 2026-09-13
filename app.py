@@ -36,6 +36,7 @@ from models import (
     db,
     Dataset,
     GuestCreationRateLimit,
+    MaterialOrderItem,
     Product,
     DailySales,
 )
@@ -273,6 +274,10 @@ def _cleanup_expired_guest_datasets(*, now=None):
 
     if not expired_dataset_ids:
         return 0
+
+    MaterialOrderItem.query.filter(
+        MaterialOrderItem.dataset_id.in_(expired_dataset_ids)
+    ).delete(synchronize_session=False)
 
     product_ids = [
         row[0]

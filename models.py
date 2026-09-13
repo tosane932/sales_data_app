@@ -79,6 +79,11 @@ class Dataset(db.Model):
         cascade="all, delete",
         passive_deletes=True,
     )
+    material_order_items = db.relationship(
+        "MaterialOrderItem",
+        back_populates="dataset",
+        passive_deletes="all",
+    )
 
 
 class GuestCreationRateLimit(db.Model):
@@ -100,6 +105,59 @@ class GuestCreationRateLimit(db.Model):
     updated_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
+    )
+
+
+class MaterialOrderItem(db.Model):
+    """Datasetごとの独立した材料発注チェック項目を表す。"""
+    __tablename__ = "material_order_items"
+    __table_args__ = (
+        db.CheckConstraint(
+            "(is_completed = false AND completed_at IS NULL) OR "
+            "(is_completed = true AND completed_at IS NOT NULL)",
+            name="ck_material_order_items_completion_timestamp",
+        ),
+        db.Index(
+            "ix_material_order_items_dataset_status_created_id",
+            "dataset_id",
+            "is_completed",
+            "created_at",
+            "id",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(
+        db.Uuid(as_uuid=True),
+        db.ForeignKey(
+            "datasets.id",
+            name="fk_material_order_items_dataset_id_datasets",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    name = db.Column(db.String(100), nullable=False)
+    quantity_text = db.Column(db.String(30), nullable=True)
+    memo = db.Column(db.String(300), nullable=True)
+    is_completed = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=db.func.now(),
+    )
+    completed_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )
+    dataset = db.relationship(
+        "Dataset",
+        back_populates="material_order_items",
     )
 
 
