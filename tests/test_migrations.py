@@ -12,6 +12,7 @@ from models import db
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
+PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
 
 
 def test_empty_database_upgrades_from_base_to_head(tmp_path):
@@ -53,9 +54,14 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
 
         inspector = inspect(db.engine)
         table_names = set(inspector.get_table_names())
-        assert {"products", "daily_sales", "alembic_version"}.issubset(
-            table_names
-        )
+        assert {
+            "datasets",
+            "products",
+            "daily_sales",
+            "guest_creation_rate_limits",
+            "material_order_items",
+            "alembic_version",
+        }.issubset(table_names)
 
         product_columns = {
             column["name"]
@@ -87,8 +93,160 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
             for constraint in unique_constraints
         )
 
+        material_order_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("material_order_items")
+        }
+        assert set(material_order_columns) == {
+            "id",
+            "dataset_id",
+            "name",
+            "quantity_text",
+            "memo",
+            "is_completed",
+            "created_at",
+            "completed_at",
+        }
+        assert material_order_columns["dataset_id"]["nullable"] is False
+        assert material_order_columns["name"]["nullable"] is False
+        assert material_order_columns["quantity_text"]["nullable"] is True
+        assert material_order_columns["memo"]["nullable"] is True
+        assert material_order_columns["is_completed"]["nullable"] is False
+        assert material_order_columns["created_at"]["nullable"] is False
+        assert material_order_columns["completed_at"]["nullable"] is True
+
+        material_order_foreign_keys = inspector.get_foreign_keys(
+            "material_order_items"
+        )
+        assert len(material_order_foreign_keys) == 1
+        material_order_foreign_key = material_order_foreign_keys[0]
+        assert material_order_foreign_key["name"] == (
+            "fk_material_order_items_dataset_id_datasets"
+        )
+        assert material_order_foreign_key["constrained_columns"] == [
+            "dataset_id"
+        ]
+        assert material_order_foreign_key["referred_table"] == "datasets"
+        assert material_order_foreign_key["referred_columns"] == ["id"]
+        assert (
+            material_order_foreign_key["options"].get("ondelete", "").upper()
+            == "CASCADE"
+        )
+
+        material_order_checks = inspector.get_check_constraints(
+            "material_order_items"
+        )
+        assert {
+            constraint["name"] for constraint in material_order_checks
+        } == {"ck_material_order_items_completion_timestamp"}
+
+        material_order_indexes = inspector.get_indexes("material_order_items")
+        assert any(
+            index["name"]
+            == "ix_material_order_items_dataset_status_created_id"
+            and index["column_names"]
+            == ["dataset_id", "is_completed", "created_at", "id"]
+            and not index["unique"]
+            for index in material_order_indexes
+        )
+
         current_revision = db.session.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
         assert expected_head is not None
         assert current_revision == expected_head
+
+
+def test_material_order_migration_preserves_existing_sqlite_data(tmp_path):
+    database_path = tmp_path / "material_order_upgrade_test.sqlite"
+    database_uri = f"sqlite:///{database_path}"
+    migration_app = Flask("material_order_upgrade_test")
+    migration_app.config.update(
+        SQLALCHEMY_DATABASE_URI=database_uri,
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
+    db.init_app(migration_app)
+    Migrate(migration_app, db, directory=str(MIGRATIONS_DIR))
+
+    with migration_app.app_context():
+        upgrade(
+            directory=str(MIGRATIONS_DIR),
+            revision=PRE_MATERIAL_ORDER_REVISION,
+        )
+        admin_dataset_id = db.session.execute(
+            text("SELECT id FROM datasets WHERE system_key = 'admin'")
+        ).scalar_one()
+        guest_dataset_id = "11111111111111111111111111111111"
+        db.session.execute(
+            text(
+                "INSERT INTO datasets "
+                "(id, kind, system_key, created_at, last_activity_at, "
+                "absolute_expires_at, guest_ai_usage_count) "
+                "VALUES (:id, 'guest', NULL, :created_at, :activity_at, "
+                ":expires_at, 2)"
+            ),
+            {
+                "id": guest_dataset_id,
+                "created_at": "2026-09-13 03:00:00",
+                "activity_at": "2026-09-13 03:00:00",
+                "expires_at": "2026-09-13 05:00:00",
+            },
+        )
+        db.session.execute(
+            text(
+                "INSERT INTO products "
+                "(id, dataset_id, year, month, name, price, is_active) "
+                "VALUES (901, :dataset_id, 2026, 9, '既存商品', 250, 1)"
+            ),
+            {"dataset_id": admin_dataset_id},
+        )
+        db.session.execute(
+            text(
+                "INSERT INTO daily_sales "
+                "(id, product_id, date, quantity) "
+                "VALUES (902, 901, '2026-09-12', 7)"
+            )
+        )
+        db.session.execute(
+            text(
+                "INSERT INTO guest_creation_rate_limits "
+                "(client_key_hash, window_started_at, request_count, "
+                "updated_at) "
+                "VALUES (:client_key_hash, :started_at, 2, :updated_at)"
+            ),
+            {
+                "client_key_hash": "b" * 64,
+                "started_at": "2026-09-13 03:00:00",
+                "updated_at": "2026-09-13 03:00:00",
+            },
+        )
+        db.session.commit()
+
+        upgrade(directory=str(MIGRATIONS_DIR), revision="head")
+
+        assert db.session.execute(
+            text("SELECT COUNT(*) FROM datasets")
+        ).scalar_one() == 2
+        assert db.session.execute(
+            text(
+                "SELECT kind, guest_ai_usage_count FROM datasets "
+                "WHERE id = :id"
+            ),
+            {"id": guest_dataset_id},
+        ).one() == ("guest", 2)
+        assert db.session.execute(
+            text("SELECT name, price FROM products WHERE id = 901")
+        ).one() == ("既存商品", 250)
+        assert db.session.execute(
+            text("SELECT quantity FROM daily_sales WHERE id = 902")
+        ).scalar_one() == 7
+        assert db.session.execute(
+            text(
+                "SELECT request_count FROM guest_creation_rate_limits "
+                "WHERE client_key_hash = :client_key_hash"
+            ),
+            {"client_key_hash": "b" * 64},
+        ).scalar_one() == 2
+        assert db.session.execute(
+            text("SELECT COUNT(*) FROM material_order_items")
+        ).scalar_one() == 0

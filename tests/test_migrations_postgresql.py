@@ -1,4 +1,6 @@
 from pathlib import Path
+import datetime
+import uuid
 
 import pytest
 from alembic.config import Config
@@ -21,6 +23,7 @@ pytestmark = pytest.mark.skipif(
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PRE_DATASET_REVISION = "9d3c1b7e5a42"
+PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
 
 
 def _reset_public_schema(engine):
@@ -78,6 +81,49 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
             )
             db.session.commit()
 
+            upgrade(
+                directory=str(MIGRATIONS_DIR),
+                revision=PRE_MATERIAL_ORDER_REVISION,
+            )
+            guest_dataset_id = uuid.uuid4()
+            now = datetime.datetime(
+                2026,
+                9,
+                13,
+                3,
+                0,
+                tzinfo=datetime.timezone.utc,
+            )
+            db.session.execute(
+                text(
+                    "INSERT INTO datasets "
+                    "(id, kind, system_key, created_at, last_activity_at, "
+                    "absolute_expires_at, guest_ai_usage_count) "
+                    "VALUES (:id, 'guest', NULL, :created_at, :activity_at, "
+                    ":expires_at, 2)"
+                ),
+                {
+                    "id": guest_dataset_id,
+                    "created_at": now,
+                    "activity_at": now,
+                    "expires_at": now + datetime.timedelta(hours=2),
+                },
+            )
+            db.session.execute(
+                text(
+                    "INSERT INTO guest_creation_rate_limits "
+                    "(client_key_hash, window_started_at, request_count, "
+                    "updated_at) "
+                    "VALUES (:client_key_hash, :started_at, 2, :updated_at)"
+                ),
+                {
+                    "client_key_hash": "a" * 64,
+                    "started_at": now,
+                    "updated_at": now,
+                },
+            )
+            db.session.commit()
+
             upgrade(directory=str(MIGRATIONS_DIR), revision="head")
 
             inspector = inspect(db.engine)
@@ -86,6 +132,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 "products",
                 "daily_sales",
                 "guest_creation_rate_limits",
+                "material_order_items",
                 "alembic_version",
             }.issubset(inspector.get_table_names())
             assert db.session.execute(
@@ -121,6 +168,98 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 ),
                 {"dataset_id": product.dataset_id},
             ).scalar_one() == 1
+            assert db.session.execute(
+                text("SELECT COUNT(*) FROM products")
+            ).scalar_one() == 1
+            assert db.session.execute(
+                text("SELECT COUNT(*) FROM daily_sales")
+            ).scalar_one() == 1
+            guest_dataset = db.session.execute(
+                text(
+                    "SELECT kind, system_key, guest_ai_usage_count "
+                    "FROM datasets WHERE id = :dataset_id"
+                ),
+                {"dataset_id": guest_dataset_id},
+            ).one()
+            assert guest_dataset.kind == "guest"
+            assert guest_dataset.system_key is None
+            assert guest_dataset.guest_ai_usage_count == 2
+            assert db.session.execute(
+                text(
+                    "SELECT request_count "
+                    "FROM guest_creation_rate_limits "
+                    "WHERE client_key_hash = :client_key_hash"
+                ),
+                {"client_key_hash": "a" * 64},
+            ).scalar_one() == 2
+
+            material_order_columns = {
+                column["name"]: column
+                for column in inspector.get_columns("material_order_items")
+            }
+            assert set(material_order_columns) == {
+                "id",
+                "dataset_id",
+                "name",
+                "quantity_text",
+                "memo",
+                "is_completed",
+                "created_at",
+                "completed_at",
+            }
+            material_order_foreign_keys = inspector.get_foreign_keys(
+                "material_order_items"
+            )
+            assert len(material_order_foreign_keys) == 1
+            assert material_order_foreign_keys[0]["constrained_columns"] == [
+                "dataset_id"
+            ]
+            assert material_order_foreign_keys[0]["referred_table"] == (
+                "datasets"
+            )
+            assert (
+                material_order_foreign_keys[0]["options"]["ondelete"].upper()
+                == "CASCADE"
+            )
+            assert {
+                constraint["name"]
+                for constraint in inspector.get_check_constraints(
+                    "material_order_items"
+                )
+            } == {"ck_material_order_items_completion_timestamp"}
+            assert any(
+                index["name"]
+                == "ix_material_order_items_dataset_status_created_id"
+                and index["column_names"]
+                == ["dataset_id", "is_completed", "created_at", "id"]
+                and not index["unique"]
+                for index in inspector.get_indexes("material_order_items")
+            )
+
+            material_order_item_id = db.session.execute(
+                text(
+                    "INSERT INTO material_order_items "
+                    "(dataset_id, name, is_completed, created_at) "
+                    "VALUES (:dataset_id, 'cascade確認材料', false, :now) "
+                    "RETURNING id"
+                ),
+                {"dataset_id": guest_dataset_id, "now": now},
+            ).scalar_one()
+            db.session.commit()
+
+            db.session.execute(
+                text("DELETE FROM datasets WHERE id = :dataset_id"),
+                {"dataset_id": guest_dataset_id},
+            )
+            db.session.commit()
+
+            assert db.session.execute(
+                text(
+                    "SELECT COUNT(*) FROM material_order_items "
+                    "WHERE id = :item_id"
+                ),
+                {"item_id": material_order_item_id},
+            ).scalar_one() == 0
             assert db.session.execute(
                 text("SELECT COUNT(*) FROM products")
             ).scalar_one() == 1

@@ -10,7 +10,7 @@ import uuid
 import pytest
 from sqlalchemy import create_engine, text
 
-from models import DailySales, Dataset, Product, db
+from models import DailySales, Dataset, MaterialOrderItem, Product, db
 from postgresql_test_utils import get_isolated_postgresql_test_url
 
 
@@ -125,6 +125,37 @@ with app_module.app.test_request_context("/"):
     restored_user = app_module.load_user(f"guest:{dataset_id}")
 
 result_path.write_text(json.dumps({"restored": restored_user is not None}))
+"""
+
+ROLLBACK_WORKER_CODE = r"""
+import datetime
+import json
+import os
+from pathlib import Path
+
+from sqlalchemy.exc import SQLAlchemyError
+
+import app as app_module
+
+
+cleanup_time = datetime.datetime.fromisoformat(os.environ["TEST_CLEANUP_TIME"])
+result_path = Path(os.environ["TEST_RESULT_PATH"])
+
+with app_module.app.app_context():
+    try:
+        deleted_count = app_module._cleanup_expired_guest_datasets(
+            now=cleanup_time,
+        )
+        if deleted_count != 1:
+            raise AssertionError(
+                f"expected one cleanup candidate, got {deleted_count}"
+            )
+        raise SQLAlchemyError("forced cleanup rollback")
+    except SQLAlchemyError:
+        app_module.db.session.rollback()
+        result_path.write_text(json.dumps({"rolled_back": True}))
+    finally:
+        app_module.db.session.remove()
 """
 
 
@@ -271,6 +302,20 @@ def _seed_cleanup_scenario(engine, cleanup_time):
                 for product_id, _dataset_id in product_ids
             ],
         )
+        connection.execute(
+            MaterialOrderItem.__table__.insert(),
+            [
+                {
+                    "dataset_id": dataset_id,
+                    "name": name,
+                }
+                for dataset_id, name in (
+                    (expired_guest_id, "削除候補材料"),
+                    (active_guest_id, "別Guest保護材料"),
+                    (admin_id, "Admin保護材料"),
+                )
+            ],
+        )
 
     return expired_guest_id, active_guest_id, admin_id
 
@@ -295,6 +340,13 @@ def _assert_preserved_dataset_counts(engine, expected):
                         "SELECT COUNT(*) FROM daily_sales sales "
                         "JOIN products product ON product.id = sales.product_id "
                         "WHERE product.dataset_id = :id"
+                    ),
+                    {"id": dataset_id},
+                ).scalar_one(),
+                connection.execute(
+                    text(
+                        "SELECT COUNT(*) FROM material_order_items "
+                        "WHERE dataset_id = :id"
                     ),
                     {"id": dataset_id},
                 ).scalar_one(),
@@ -368,9 +420,9 @@ def test_activity_committed_before_cleanup_lock_preserves_guest_data(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (1, 1, 1),
-                active_guest_id: (1, 1, 1),
-                admin_id: (1, 1, 1),
+                expired_guest_id: (1, 1, 1, 1),
+                active_guest_id: (1, 1, 1, 1),
+                admin_id: (1, 1, 1, 1),
             },
         )
     finally:
@@ -450,9 +502,9 @@ def test_cleanup_lock_prevents_late_activity_from_resurrecting_guest(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (0, 0, 0),
-                active_guest_id: (1, 1, 1),
-                admin_id: (1, 1, 1),
+                expired_guest_id: (0, 0, 0, 0),
+                active_guest_id: (1, 1, 1, 1),
+                admin_id: (1, 1, 1, 1),
             },
         )
     finally:
@@ -461,6 +513,53 @@ def test_cleanup_lock_prevents_late_activity_from_resurrecting_guest(tmp_path):
             if process is not None and process.poll() is None:
                 process.terminate()
                 process.wait(timeout=10)
+        with engine.begin() as connection:
+            db.metadata.drop_all(connection)
+        engine.dispose()
+
+
+def test_cleanup_failure_rolls_back_all_guest_data_on_postgresql(tmp_path):
+    engine = create_engine(POSTGRESQL_TEST_DATABASE_URL, pool_pre_ping=True)
+    cleanup_time = (
+        datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(minutes=2)
+    )
+    expired_guest_id, active_guest_id, admin_id = _seed_cleanup_scenario(
+        engine,
+        cleanup_time,
+    )
+    result_path = tmp_path / "cleanup-rollback-result.json"
+
+    try:
+        process = subprocess.run(
+            [sys.executable, "-c", ROLLBACK_WORKER_CODE],
+            cwd=REPOSITORY_ROOT,
+            env=_worker_environment(
+                dataset_id=expired_guest_id,
+                result_path=result_path,
+                application_name=f"cleanup-rollback-{uuid.uuid4()}",
+                cleanup_time=cleanup_time,
+                pause_stage="unused",
+                pause_marker=tmp_path / "unused-pause",
+                release_marker=tmp_path / "unused-release",
+            ),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+            check=False,
+        )
+
+        assert process.returncode == 0
+        assert json.loads(result_path.read_text()) == {"rolled_back": True}
+        _assert_preserved_dataset_counts(
+            engine,
+            {
+                expired_guest_id: (1, 1, 1, 1),
+                active_guest_id: (1, 1, 1, 1),
+                admin_id: (1, 1, 1, 1),
+            },
+        )
+    finally:
         with engine.begin() as connection:
             db.metadata.drop_all(connection)
         engine.dispose()
