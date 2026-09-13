@@ -74,5 +74,6 @@ jobs:
             tests/test_guest_active_dataset_limit_postgresql.py \
             tests/test_guest_product_lifetime_limit_postgresql.py \
             tests/test_guest_cleanup_postgresql.py \
+            tests/test_material_orders_postgresql.py \
             tests/test_sales_postgresql.py \
             -v

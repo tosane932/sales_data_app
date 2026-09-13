@@ -308,6 +308,17 @@ select {
     color: #ffffff;
 }
 
+.menu-link-material-orders {
+    background-color: #527f66;
+    color: #ffffff;
+    border-color: #527f66;
+}
+
+.menu-link-material-orders:hover {
+    background-color: #3f6851;
+    color: #ffffff;
+}
+
 /* ========================================
    ✨ フェードイン    index.html
 ======================================== */
@@ -386,6 +397,227 @@ select {
     .btn-add,
     .btn-submit {
         width: 100%;
+    }
+}
+
+
+/* ========================================
+   🛒 材料発注リスト
+======================================== */
+
+.material-orders-page {
+    background-color: #f5f7f4;
+}
+
+.material-orders-container {
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 30px;
+    background: #ffffff;
+    border: 1px solid #dfe8df;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(52, 82, 62, 0.08);
+}
+
+.material-orders-container h2 {
+    margin: 0 0 16px;
+    color: #405b49;
+    font-size: 19px;
+}
+
+.material-orders-error {
+    margin-bottom: 20px;
+    padding: 14px;
+    color: #872c2c;
+    background: #fff0f0;
+    border: 1px solid #efb8b8;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.material-order-create-section,
+.material-order-list-section {
+    margin-bottom: 28px;
+    padding: 20px;
+    background: #fbfdfb;
+    border: 1px solid #dfe8df;
+    border-radius: 12px;
+}
+
+.material-order-field {
+    margin-bottom: 16px;
+}
+
+.material-order-field label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+.material-order-field input,
+.material-order-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px;
+    color: #4a3c31;
+    background: #ffffff;
+    border: 1px solid #bdcdbf;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.material-order-field textarea {
+    resize: vertical;
+}
+
+.material-order-field input:focus,
+.material-order-field textarea:focus {
+    border-color: #527f66;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(82, 127, 102, 0.16);
+}
+
+.material-order-add-button {
+    width: 100%;
+    min-height: 48px;
+    background: #527f66;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.material-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.material-order-card {
+    padding: 18px;
+    background: #ffffff;
+    border: 2px solid #d7e3d9;
+    border-radius: 12px;
+}
+
+.material-order-card h3 {
+    margin: 7px 0 10px;
+    font-size: 20px;
+    overflow-wrap: anywhere;
+}
+
+.material-order-card p {
+    margin: 7px 0;
+    overflow-wrap: anywhere;
+}
+
+.material-order-card-completed {
+    background: #f1f1f1;
+    border-style: dashed;
+}
+
+.material-order-card-completed h3 {
+    color: #5f5f5f;
+    text-decoration: line-through;
+}
+
+.material-order-state {
+    color: #405b49;
+    font-weight: bold;
+}
+
+.material-order-actions {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.material-order-actions form {
+    margin: 0;
+}
+
+.material-order-complete-button,
+.material-order-reopen-button,
+.material-order-delete-button,
+.material-order-delete-confirmation summary {
+    min-height: 46px;
+    box-sizing: border-box;
+}
+
+.material-order-complete-button {
+    background: #527f66;
+    color: #ffffff;
+}
+
+.material-order-reopen-button {
+    background: #e6eee8;
+    color: #355140;
+    border: 1px solid #9fb6a5;
+}
+
+.material-order-delete-confirmation summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 11px 18px;
+    color: #8a3030;
+    background: #fff0f0;
+    border: 1px solid #e6adad;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.material-order-delete-confirmation p {
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+.material-order-delete-button {
+    background: #a33b3b;
+    color: #ffffff;
+}
+
+.material-order-empty {
+    margin: 0;
+    color: #6d746e;
+}
+
+.material-orders-back-link {
+    display: block;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 12px 18px;
+    color: #405b49;
+    background: #edf3ee;
+    border: 1px solid #c9d8cc;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .material-orders-container {
+        padding: 18px;
+        border-radius: 12px;
+    }
+
+    .material-order-create-section,
+    .material-order-list-section {
+        padding: 15px;
+    }
+
+    .material-order-actions,
+    .material-order-actions > form,
+    .material-order-delete-confirmation,
+    .material-order-delete-confirmation form {
+        width: 100%;
+    }
+
+    .material-order-actions .btn,
+    .material-order-delete-confirmation summary {
+        width: 100%;
+        justify-content: center;
     }
 }
 

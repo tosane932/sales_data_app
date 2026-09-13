@@ -42,6 +42,7 @@ from models import (
 )
 from google import genai
 import config
+from material_orders import create_material_orders_blueprint
 from prompts import build_sales_prompt
 
 # 💡 2. ログの初期設定（デジタコのセットアップ）
@@ -440,6 +441,14 @@ def require_current_dataset():
         abort(403)
 
     return dataset
+
+
+app.register_blueprint(
+    create_material_orders_blueprint(
+        access_required=admin_or_guest_required,
+        resolve_dataset=require_current_dataset,
+    )
+)
 
 
 def _reserve_guest_ai_usage(current_dataset):
