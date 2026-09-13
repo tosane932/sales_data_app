@@ -170,7 +170,7 @@ def create_material_orders_blueprint(*, access_required, resolve_dataset):
             item = MaterialOrderItem.query.filter_by(
                 id=item_id,
                 dataset_id=current_dataset.id,
-            ).one_or_none()
+            ).populate_existing().with_for_update().one_or_none()
             if item is None:
                 abort(404)
 
@@ -199,7 +199,7 @@ def create_material_orders_blueprint(*, access_required, resolve_dataset):
             item = MaterialOrderItem.query.filter_by(
                 id=item_id,
                 dataset_id=current_dataset.id,
-            ).one_or_none()
+            ).populate_existing().with_for_update().one_or_none()
             if item is None:
                 abort(404)
 

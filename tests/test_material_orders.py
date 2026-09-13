@@ -617,13 +617,15 @@ def test_create_commit_failure_rolls_back_without_new_item(
     token = csrf_token(authenticated_client, "/material-orders")
     before = _item_snapshot()
     real_rollback = db.session.rollback
+    real_commit = db.session.commit
     rollback = Mock(wraps=real_rollback)
     monkeypatch.setattr(db.session, "rollback", rollback)
-    monkeypatch.setattr(
-        db.session,
-        "commit",
-        Mock(side_effect=SQLAlchemyError("test create failure")),
-    )
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test create failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
 
     response = authenticated_client.post(
         "/material-orders",
@@ -634,6 +636,11 @@ def test_create_commit_failure_rolls_back_without_new_item(
     assert rollback.call_count == 1
     assert _item_snapshot() == before
     assert "材料を追加できませんでした。" in response.get_data(as_text=True)
+
+    monkeypatch.setattr(db.session, "commit", real_commit)
+    db.session.add(MaterialOrderItem(dataset=admin_dataset, name="再利用確認"))
+    db.session.commit()
+    assert MaterialOrderItem.query.filter_by(name="再利用確認").count() == 1
 
 
 def test_completion_commit_failure_rolls_back_state_change(
@@ -646,13 +653,15 @@ def test_completion_commit_failure_rolls_back_state_change(
     token = csrf_token(authenticated_client, "/material-orders")
     before = _item_snapshot()
     real_rollback = db.session.rollback
+    real_commit = db.session.commit
     rollback = Mock(wraps=real_rollback)
     monkeypatch.setattr(db.session, "rollback", rollback)
-    monkeypatch.setattr(
-        db.session,
-        "commit",
-        Mock(side_effect=SQLAlchemyError("test completion failure")),
-    )
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test completion failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
 
     response = authenticated_client.post(
         f"/material-orders/{item.id}/completion",
@@ -666,6 +675,11 @@ def test_completion_commit_failure_rolls_back_state_change(
         response.get_data(as_text=True)
     )
 
+    monkeypatch.setattr(db.session, "commit", real_commit)
+    db.session.add(MaterialOrderItem(dataset=admin_dataset, name="再利用確認"))
+    db.session.commit()
+    assert MaterialOrderItem.query.filter_by(name="再利用確認").count() == 1
+
 
 def test_delete_commit_failure_rolls_back_deleted_item(
     authenticated_client,
@@ -677,13 +691,15 @@ def test_delete_commit_failure_rolls_back_deleted_item(
     token = csrf_token(authenticated_client, "/material-orders")
     before = _item_snapshot()
     real_rollback = db.session.rollback
+    real_commit = db.session.commit
     rollback = Mock(wraps=real_rollback)
     monkeypatch.setattr(db.session, "rollback", rollback)
-    monkeypatch.setattr(
-        db.session,
-        "commit",
-        Mock(side_effect=SQLAlchemyError("test delete failure")),
-    )
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test delete failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
 
     response = authenticated_client.post(
         f"/material-orders/{item.id}/delete",
@@ -694,6 +710,11 @@ def test_delete_commit_failure_rolls_back_deleted_item(
     assert rollback.call_count == 1
     assert _item_snapshot() == before
     assert "材料を削除できませんでした。" in response.get_data(as_text=True)
+
+    monkeypatch.setattr(db.session, "commit", real_commit)
+    db.session.add(MaterialOrderItem(dataset=admin_dataset, name="再利用確認"))
+    db.session.commit()
+    assert MaterialOrderItem.query.filter_by(name="再利用確認").count() == 1
 
 
 def test_anonymous_user_cannot_view_or_create_material_orders(
