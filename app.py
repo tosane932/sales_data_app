@@ -45,6 +45,7 @@ from models import (
 from google import genai
 from material_orders import create_material_orders_blueprint
 from prompts import build_sales_prompt
+from shop_memos import create_shop_memos_blueprint
 from shop_tools import create_shop_tools_blueprint
 
 
@@ -466,6 +467,12 @@ def require_current_dataset():
 
 app.register_blueprint(
     create_material_orders_blueprint(
+        access_required=admin_or_guest_required,
+        resolve_dataset=require_current_dataset,
+    )
+)
+app.register_blueprint(
+    create_shop_memos_blueprint(
         access_required=admin_or_guest_required,
         resolve_dataset=require_current_dataset,
     )

@@ -515,6 +515,12 @@ select {
 .shop-tools-nav-link:focus-visible,
 .shop-tools-fab:focus-visible,
 .shop-tools-placeholder-link:focus-visible,
+.shop-memo-search-clear:focus-visible,
+.shop-memo-search-button:focus-visible,
+.shop-memo-trash-link:focus-visible,
+.shop-memo-back-link:focus-visible,
+.shop-memo-actions button:focus-visible,
+.shop-memo-actions summary:focus-visible,
 .material-order-actions button:focus-visible,
 .material-order-delete-confirmation summary:focus-visible,
 .shop-tools-header .logout-button:focus-visible {
@@ -780,6 +786,259 @@ select {
     color: #6d746e;
 }
 
+/* ========================================
+   📝 店舗メモ
+======================================== */
+
+.shop-memos-error {
+    margin-bottom: 20px;
+    padding: 14px;
+    color: #872c2c;
+    background: #fff0f0;
+    border: 1px solid #efb8b8;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.shop-memo-search-form,
+.shop-memo-create-section,
+.shop-memo-list-section {
+    margin-bottom: 22px;
+    padding: 18px;
+    background: #fbfdfb;
+    border: 1px solid #dfe8df;
+    border-radius: 12px;
+}
+
+.shop-memo-list-section:last-child {
+    margin-bottom: 0;
+}
+
+.shop-memo-search-form label,
+.shop-memo-field label,
+.shop-memo-edit label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+.shop-memo-search-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.shop-memo-search-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.shop-memo-search-input-wrap input,
+.shop-memo-field textarea,
+.shop-memo-edit textarea {
+    width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    padding: 12px;
+    color: #4a3c31;
+    background: #ffffff;
+    border: 1px solid #aebfb1;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.shop-memo-search-input-wrap input {
+    padding-right: 48px;
+}
+
+.shop-memo-search-input-wrap input::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.shop-memo-field textarea,
+.shop-memo-edit textarea {
+    resize: vertical;
+}
+
+.shop-memo-search-input-wrap input:focus,
+.shop-memo-field textarea:focus,
+.shop-memo-edit textarea:focus {
+    border-color: #527f66;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(82, 127, 102, 0.16);
+}
+
+.shop-memo-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    transform: translateY(-50%);
+    color: #566159;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shop-memo-search-clear:hover {
+    background: #e9efea;
+}
+
+.shop-memo-search-button,
+.shop-memo-add-button,
+.shop-memo-save-button,
+.shop-memo-restore-button,
+.shop-memo-trash-button,
+.shop-memo-delete-button,
+.shop-memo-actions summary {
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+.shop-memo-search-button,
+.shop-memo-add-button,
+.shop-memo-save-button {
+    color: #ffffff;
+    background: #527f66;
+}
+
+.shop-memo-search-button {
+    min-width: 84px;
+}
+
+.shop-memo-add-button {
+    width: 100%;
+    font-size: 16px;
+}
+
+.shop-memo-search-result {
+    margin: -10px 0 22px;
+    color: #405b49;
+    font-weight: bold;
+}
+
+.shop-memo-list-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.shop-memo-list-heading-row h2 {
+    margin: 0;
+}
+
+.shop-memo-trash-link,
+.shop-memo-back-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    box-sizing: border-box;
+    color: #405b49;
+    font-weight: bold;
+}
+
+.shop-memo-back-link {
+    margin-bottom: 18px;
+}
+
+.shop-memo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.shop-memo-card {
+    padding: 16px;
+    background: #ffffff;
+    border: 2px solid #d7e3d9;
+    border-radius: 12px;
+}
+
+.shop-memo-card-trashed {
+    color: #5f665f;
+    background: #f2f4f2;
+    border-style: dashed;
+}
+
+.shop-memo-body {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.shop-memo-actions {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.shop-memo-actions form {
+    margin: 0;
+}
+
+.shop-memo-actions summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 11px 18px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.shop-memo-edit summary {
+    color: #355140;
+    background: #e6eee8;
+    border: 1px solid #9fb6a5;
+}
+
+.shop-memo-trash-confirmation summary,
+.shop-memo-delete-confirmation summary {
+    color: #8a3030;
+    background: #fff0f0;
+    border: 1px solid #e6adad;
+}
+
+.shop-memo-edit form,
+.shop-memo-trash-confirmation p,
+.shop-memo-delete-confirmation p {
+    margin-top: 12px;
+}
+
+.shop-memo-edit textarea {
+    margin-bottom: 10px;
+}
+
+.shop-memo-trash-button,
+.shop-memo-delete-button {
+    color: #ffffff;
+    background: #a33b3b;
+}
+
+.shop-memo-restore-button {
+    color: #ffffff;
+    background: #527f66;
+}
+
+.shop-memo-trash-help {
+    margin: -8px 0 16px;
+    color: #666d68;
+}
+
+.shop-memo-empty {
+    margin: 0;
+    color: #6d746e;
+}
+
 @media (max-width: 768px) {
     .shop-tools-page {
         padding: 0 0 calc(98px + env(safe-area-inset-bottom));
@@ -817,7 +1076,10 @@ select {
     }
 
     .material-order-create-section,
-    .material-order-list-section {
+    .material-order-list-section,
+    .shop-memo-search-form,
+    .shop-memo-create-section,
+    .shop-memo-list-section {
         padding: 16px;
     }
 
@@ -834,6 +1096,36 @@ select {
 
     .material-order-actions .btn,
     .material-order-delete-confirmation summary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .shop-memo-search-row {
+        align-items: stretch;
+    }
+
+    .shop-memo-search-button {
+        min-width: 76px;
+    }
+
+    .shop-memo-list-heading-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .shop-memo-card {
+        padding: 18px;
+    }
+
+    .shop-memo-actions,
+    .shop-memo-actions > form,
+    .shop-memo-actions details,
+    .shop-memo-actions details form {
+        width: 100%;
+    }
+
+    .shop-memo-actions .btn,
+    .shop-memo-actions summary {
         width: 100%;
         justify-content: center;
     }

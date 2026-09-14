@@ -31,7 +31,7 @@
         <span>発注</span>
     </a>
     <a
-        href="{{ url_for('shop_tools.memo_placeholder') }}"
+        href="{{ url_for('shop_memos.list_memos') }}"
         data-tool="memo"
         class="shop-tools-nav-link{% if active_tool == 'memo' %} shop-tools-nav-link-current{% endif %}"
         {% if active_tool == 'memo' %}aria-current="page"{% endif %}>

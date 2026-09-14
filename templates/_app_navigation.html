@@ -5,7 +5,11 @@
     {% set active_app_page = 'sales' %}
 {% elif current_endpoint == 'dashboard' %}
     {% set active_app_page = 'dashboard' %}
-{% elif current_endpoint.startswith('material_orders.') or current_endpoint.startswith('shop_tools.') %}
+{% elif
+    current_endpoint.startswith('material_orders.')
+    or current_endpoint.startswith('shop_memos.')
+    or current_endpoint.startswith('shop_tools.')
+%}
     {% set active_app_page = 'shop-tools' %}
 {% else %}
     {% set active_app_page = '' %}

@@ -1,0 +1,63 @@
+{% extends "shop_tools/base.html" %}
+
+{% block title %}メモのゴミ箱 | 店舗メモツール{% endblock %}
+
+{% block tool_heading %}
+<span aria-hidden="true">🗑️</span> メモのゴミ箱
+{% endblock %}
+
+{% block content %}
+    {% if error %}
+    <div class="shop-memos-error" role="alert">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <a href="{{ url_for('shop_memos.list_memos') }}" class="shop-memo-back-link">
+        ← メモ一覧へ戻る
+    </a>
+
+    {% with
+        search_action=url_for('shop_memos.list_trash'),
+        clear_url=url_for('shop_memos.list_trash')
+    %}
+        {% include "shop_tools/_memo_search.html" %}
+    {% endwith %}
+
+    <section class="shop-memo-list-section" aria-labelledby="trash-list-heading">
+        <h2 id="trash-list-heading">ゴミ箱 {{ trash_count }}件</h2>
+        <p class="shop-memo-trash-help">不要なメモは、ここから完全に削除できます。</p>
+
+        {% if memos %}
+        <div class="shop-memo-list">
+            {% for memo in memos %}
+            <article class="shop-memo-card shop-memo-card-trashed">
+                <p class="shop-memo-body">{{ memo.body }}</p>
+                <div class="shop-memo-actions">
+                    <form method="POST" action="{{ url_for('shop_memos.restore_memo', memo_id=memo.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn shop-memo-restore-button">復元する</button>
+                    </form>
+                    <details class="shop-memo-delete-confirmation">
+                        <summary>完全に削除</summary>
+                        <p>この操作は取り消せません。本当に削除しますか？</p>
+                        <form method="POST" action="{{ url_for('shop_memos.delete_memo', memo_id=memo.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn shop-memo-delete-button">
+                                完全に削除する
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% elif search_query %}
+        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        {% else %}
+        <p class="shop-memo-empty">ゴミ箱は空です。</p>
+        {% endif %}
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='shop_memos.js') }}" defer></script>
+{% endblock %}

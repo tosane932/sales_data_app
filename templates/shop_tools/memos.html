@@ -1,0 +1,105 @@
+{% extends "shop_tools/base.html" %}
+
+{% block title %}メモ | 店舗メモツール{% endblock %}
+
+{% block tool_heading %}
+<span aria-hidden="true">📝</span> メモ
+{% endblock %}
+
+{% block content %}
+    {% if error %}
+    <div class="shop-memos-error" role="alert">⚠️ {{ error }}</div>
+    {% endif %}
+
+    {% with
+        search_action=url_for('shop_memos.list_memos'),
+        clear_url=url_for('shop_memos.list_memos')
+    %}
+        {% include "shop_tools/_memo_search.html" %}
+    {% endwith %}
+
+    <section class="shop-memo-create-section" aria-labelledby="memo-create-heading">
+        <h2 id="memo-create-heading">新しいメモ</h2>
+        <form method="POST" action="{{ url_for('shop_memos.create_memo') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="shop-memo-field">
+                <label for="shop-memo-body">メモ <span aria-hidden="true">※</span></label>
+                <textarea
+                    id="shop-memo-body"
+                    name="body"
+                    maxlength="2000"
+                    rows="5"
+                    required>{{ form_value }}</textarea>
+            </div>
+            <button type="submit" class="btn shop-memo-add-button">
+                ＋ メモを追加
+            </button>
+        </form>
+    </section>
+
+    <section class="shop-memo-list-section" aria-labelledby="memo-list-heading">
+        <div class="shop-memo-list-heading-row">
+            <h2 id="memo-list-heading">メモ {{ active_count }}件</h2>
+            <a href="{{ url_for('shop_memos.list_trash') }}" class="shop-memo-trash-link">
+                <span aria-hidden="true">🗑️</span> ゴミ箱 {{ trash_count }}件
+            </a>
+        </div>
+
+        {% if memos %}
+        <div class="shop-memo-list">
+            {% for memo in memos %}
+            <article class="shop-memo-card">
+                <p class="shop-memo-body">{{ memo.body }}</p>
+                <div class="shop-memo-actions">
+                    <details class="shop-memo-edit"{% if edit_form and edit_form.id == memo.id %} open{% endif %}>
+                        <summary>編集</summary>
+                        <form method="POST" action="{{ url_for('shop_memos.edit_memo', memo_id=memo.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <label for="shop-memo-edit-{{ memo.id }}">メモを編集</label>
+                            <textarea
+                                id="shop-memo-edit-{{ memo.id }}"
+                                name="body"
+                                maxlength="2000"
+                                rows="5"
+                                required>{% if edit_form and edit_form.id == memo.id %}{{ edit_form.body }}{% else %}{{ memo.body }}{% endif %}</textarea>
+                            <button type="submit" class="btn shop-memo-save-button">変更を保存</button>
+                        </form>
+                    </details>
+                    <details class="shop-memo-trash-confirmation">
+                        <summary>ゴミ箱へ移動</summary>
+                        <p>このメモをゴミ箱へ移動しますか？</p>
+                        <form method="POST" action="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn shop-memo-trash-button">
+                                ゴミ箱へ移動する
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% elif search_query %}
+        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        {% else %}
+        <p class="shop-memo-empty">メモはありません。</p>
+        {% endif %}
+    </section>
+{% endblock %}
+
+{% block floating_action %}
+<div class="shop-tools-fab-group">
+    <span class="shop-tools-fab-label">メモを追加</span>
+    <button
+        type="button"
+        class="shop-tools-fab"
+        aria-label="メモを追加"
+        aria-controls="shop-memo-body">
+        <span aria-hidden="true">＋</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='shop_memos.js') }}" defer></script>
+{% endblock %}
