@@ -121,7 +121,11 @@ def _assert_auth_session_is_removed(test_client):
         )
 
 
-def _assert_logout_form(response, expected_principal_label):
+def _assert_logout_form(
+    response,
+    expected_principal_label,
+    expected_action_text="ログアウト",
+):
     assert response.status_code == 200
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
     form = document.select_one('form[action="/logout"]')
@@ -134,7 +138,7 @@ def _assert_logout_form(response, expected_principal_label):
 
     submit_button = form.select_one('button[type="submit"]')
     assert submit_button is not None
-    assert "ログアウト" in submit_button.get_text(strip=True)
+    assert expected_action_text in submit_button.get_text(strip=True)
     assert expected_principal_label in document.get_text(" ", strip=True)
 
 
@@ -370,4 +374,8 @@ def test_guest_major_page_identifies_guest_logout(flask_app):
 
     response = guest_client.get("/")
 
-    _assert_logout_form(response, "ゲストデモ")
+    _assert_logout_form(
+        response,
+        "ゲストデモ",
+        expected_action_text="ゲストを終了する",
+    )

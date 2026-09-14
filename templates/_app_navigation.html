@@ -1,0 +1,194 @@
+{% set current_endpoint = request.endpoint or '' %}
+{% if current_endpoint == 'index' %}
+    {% set active_app_page = 'products' %}
+{% elif current_endpoint == 'input_sales' %}
+    {% set active_app_page = 'sales' %}
+{% elif current_endpoint == 'dashboard' %}
+    {% set active_app_page = 'dashboard' %}
+{% elif current_endpoint.startswith('material_orders.') or current_endpoint.startswith('shop_tools.') %}
+    {% set active_app_page = 'shop-tools' %}
+{% else %}
+    {% set active_app_page = '' %}
+{% endif %}
+
+<button
+    type="button"
+    class="app-navigation-open-button"
+    aria-label="主要メニューを開く"
+    aria-controls="app-sidebar"
+    aria-expanded="false">
+    <span aria-hidden="true">☰</span>
+    <span>メニュー</span>
+</button>
+
+<button
+    type="button"
+    class="app-navigation-overlay"
+    aria-label="主要メニューを閉じる"
+    hidden>
+</button>
+
+<aside id="app-sidebar" class="app-sidebar" aria-label="アプリメニュー">
+    <div class="app-sidebar-header">
+        <a href="{{ url_for('index') }}" class="app-sidebar-brand">
+            <span aria-hidden="true">🍞</span>
+            <span>sales_data_app</span>
+        </a>
+        <button
+            type="button"
+            class="app-navigation-close-button"
+            aria-label="主要メニューを閉じる">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+
+    <nav class="app-sidebar-nav" aria-label="主要メニュー">
+        <a
+            href="{{ url_for('index') }}"
+            data-page="products"
+            class="app-sidebar-link app-sidebar-link-products{% if active_app_page == 'products' %} app-sidebar-link-current{% endif %}"
+            {% if active_app_page == 'products' %}aria-current="page"{% endif %}>
+            <span class="app-sidebar-icon" aria-hidden="true">🥐</span>
+            <span>商品・メニュー登録</span>
+        </a>
+        <a
+            href="{{ url_for('input_sales') }}"
+            data-page="sales"
+            class="app-sidebar-link app-sidebar-link-sales{% if active_app_page == 'sales' %} app-sidebar-link-current{% endif %}"
+            {% if active_app_page == 'sales' %}aria-current="page"{% endif %}>
+            <span class="app-sidebar-icon" aria-hidden="true">📝</span>
+            <span>日次売上入力</span>
+        </a>
+        <a
+            href="{{ url_for('dashboard') }}"
+            data-page="dashboard"
+            class="app-sidebar-link app-sidebar-link-dashboard{% if active_app_page == 'dashboard' %} app-sidebar-link-current{% endif %}"
+            {% if active_app_page == 'dashboard' %}aria-current="page"{% endif %}>
+            <span class="app-sidebar-icon" aria-hidden="true">📊</span>
+            <span>売上データ分析</span>
+        </a>
+        <a
+            href="{{ url_for('material_orders.list_items') }}"
+            data-page="shop-tools"
+            class="app-sidebar-link app-sidebar-link-shop-tools{% if active_app_page == 'shop-tools' %} app-sidebar-link-current{% endif %}"
+            {% if active_app_page == 'shop-tools' %}aria-current="page"{% endif %}>
+            <span class="app-sidebar-icon" aria-hidden="true">🧰</span>
+            <span>店舗メモツール</span>
+        </a>
+    </nav>
+
+    <div class="app-sidebar-session">
+        <span class="app-sidebar-user-label">
+            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
+        </span>
+        <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn app-sidebar-logout-button">
+                <span aria-hidden="true">🚪</span>
+                {% if current_user.is_guest %}ゲストを終了する{% else %}ログアウト{% endif %}
+            </button>
+        </form>
+        {% if current_user.is_guest %}
+        <a href="{{ url_for('login') }}" class="app-sidebar-login-link">
+            <span class="app-sidebar-login-title">
+                <span aria-hidden="true">🔐</span> 管理者ログイン画面を開く
+            </span>
+            <small class="app-sidebar-login-note">ゲスト利用は継続します</small>
+        </a>
+        {% endif %}
+    </div>
+</aside>
+
+<script>
+    (() => {
+        const openButton = document.querySelector(".app-navigation-open-button");
+        const closeButton = document.querySelector(".app-navigation-close-button");
+        const overlay = document.querySelector(".app-navigation-overlay");
+        const sidebar = document.getElementById("app-sidebar");
+        const mobileViewport = window.matchMedia("(max-width: 900px)");
+
+        if (!openButton || !closeButton || !overlay || !sidebar) {
+            return;
+        }
+
+        function navigationIsOpen() {
+            return document.body.classList.contains("app-navigation-open");
+        }
+
+        function closeNavigation(returnFocus) {
+            document.body.classList.remove("app-navigation-open");
+            openButton.setAttribute("aria-expanded", "false");
+            overlay.hidden = true;
+
+            if (mobileViewport.matches) {
+                sidebar.setAttribute("aria-hidden", "true");
+                sidebar.inert = true;
+            }
+
+            if (returnFocus) {
+                openButton.focus();
+            }
+        }
+
+        function openNavigation() {
+            document.body.classList.add("app-navigation-open");
+            openButton.setAttribute("aria-expanded", "true");
+            sidebar.setAttribute("aria-hidden", "false");
+            sidebar.inert = false;
+            overlay.hidden = false;
+            closeButton.focus();
+        }
+
+        function syncNavigationToViewport() {
+            if (mobileViewport.matches) {
+                closeNavigation(false);
+            } else {
+                document.body.classList.remove("app-navigation-open");
+                openButton.setAttribute("aria-expanded", "false");
+                sidebar.setAttribute("aria-hidden", "false");
+                sidebar.inert = false;
+                overlay.hidden = true;
+            }
+        }
+
+        openButton.addEventListener("click", openNavigation);
+        closeButton.addEventListener("click", () => closeNavigation(true));
+        overlay.addEventListener("click", () => closeNavigation(true));
+        mobileViewport.addEventListener("change", syncNavigationToViewport);
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape" && navigationIsOpen()) {
+                closeNavigation(true);
+                return;
+            }
+
+            if (
+                event.key !== "Tab"
+                || !mobileViewport.matches
+                || !navigationIsOpen()
+            ) {
+                return;
+            }
+
+            const focusableElements = sidebar.querySelectorAll(
+                'a[href], button:not([disabled]), '
+                + 'input:not([type="hidden"]):not([disabled])'
+            );
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            } else if (
+                !event.shiftKey
+                && document.activeElement === lastElement
+            ) {
+                event.preventDefault();
+                firstElement.focus();
+            }
+        });
+
+        syncNavigationToViewport();
+    })();
+</script>

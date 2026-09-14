@@ -1,0 +1,18 @@
+{% extends "shop_tools/base.html" %}
+
+{% block title %}{{ page_title }} | 店舗メモツール{% endblock %}
+
+{% block tool_heading %}
+<span aria-hidden="true">{{ page_icon }}</span> {{ page_title }}
+{% endblock %}
+
+{% block content %}
+<section class="shop-tools-placeholder" aria-labelledby="preparing-heading">
+    <div class="shop-tools-placeholder-icon" aria-hidden="true">{{ page_icon }}</div>
+    <h2 id="preparing-heading">{{ page_title }}は準備中です</h2>
+    <p>{{ description }}</p>
+    <a href="{{ url_for('material_orders.list_items') }}" class="shop-tools-placeholder-link">
+        <span aria-hidden="true">🛒</span> 発注リストを開く
+    </a>
+</section>
+{% endblock %}

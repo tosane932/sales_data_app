@@ -86,6 +86,7 @@ def create_material_orders_blueprint(*, access_required, resolve_dataset):
                 form_values=form_values
                 or {"name": "", "quantity_text": "", "memo": ""},
                 error=error,
+                active_tool="orders",
             ),
             status,
         )

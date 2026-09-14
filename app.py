@@ -44,6 +44,7 @@ from models import (
 from google import genai
 from material_orders import create_material_orders_blueprint
 from prompts import build_sales_prompt
+from shop_tools import create_shop_tools_blueprint
 
 
 def _load_direct_run_environment(dotenv_path=None):
@@ -463,6 +464,11 @@ app.register_blueprint(
     create_material_orders_blueprint(
         access_required=admin_or_guest_required,
         resolve_dataset=require_current_dataset,
+    )
+)
+app.register_blueprint(
+    create_shop_tools_blueprint(
+        access_required=admin_or_guest_required,
     )
 )
 

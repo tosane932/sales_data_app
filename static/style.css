@@ -402,24 +402,207 @@ select {
 
 
 /* ========================================
-   🛒 材料発注リスト
+   📝 店舗メモツール共通シェル
 ======================================== */
 
-.material-orders-page {
-    background-color: #f5f7f4;
+.shop-tools-page {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 24px 16px calc(112px + env(safe-area-inset-bottom));
+    background: #eef3ef;
 }
 
-.material-orders-container {
-    max-width: 650px;
+.shop-tools-shell {
+    max-width: 720px;
     margin: 0 auto;
-    padding: 30px;
+    overflow: hidden;
     background: #ffffff;
-    border: 1px solid #dfe8df;
-    border-radius: 16px;
+    border: 1px solid #d7e2d9;
+    border-radius: 18px;
     box-shadow: 0 8px 24px rgba(52, 82, 62, 0.08);
 }
 
-.material-orders-container h2 {
+.shop-tools-header {
+    padding: 20px 24px 18px;
+    background: #f8fbf8;
+    border-bottom: 1px solid #dfe8df;
+}
+
+.shop-tools-main-menu-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: #405b49;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.shop-tools-brand {
+    margin: 8px 0 4px;
+    color: #527f66;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.shop-tools-header h1 {
+    margin: 0;
+    padding: 0 0 12px;
+    color: #314a39;
+    border-bottom: 2px solid #dce9df;
+    font-size: 24px;
+}
+
+.shop-tools-session-actions {
+    justify-content: space-between;
+    margin: 14px 0 0;
+}
+
+.shop-tools-content {
+    padding: 24px;
+}
+
+.shop-tools-bottom-nav {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(680px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 6px;
+    box-sizing: border-box;
+    background: #e7efe9;
+    border: 1px solid #bdcfc1;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(28, 52, 36, 0.18);
+}
+
+.shop-tools-nav-link {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 58px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    color: #526158;
+    border-radius: 13px;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.shop-tools-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.shop-tools-nav-link-current {
+    color: #284f36;
+    background: #ffffff;
+    font-weight: bold;
+    box-shadow: inset 0 -3px 0 #527f66;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+}
+
+.shop-tools-main-menu-link:focus-visible,
+.shop-tools-nav-link:focus-visible,
+.shop-tools-fab:focus-visible,
+.shop-tools-placeholder-link:focus-visible,
+.material-order-actions button:focus-visible,
+.material-order-delete-confirmation summary:focus-visible,
+.shop-tools-header .logout-button:focus-visible {
+    outline: 3px solid #174b2a;
+    outline-offset: 3px;
+}
+
+.shop-tools-fab-group {
+    position: fixed;
+    z-index: 21;
+    right: max(18px, calc((100vw - 720px) / 2));
+    bottom: calc(98px + env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shop-tools-fab-label {
+    padding: 0;
+    color: #53645a;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.shop-tools-fab {
+    display: inline-flex;
+    width: 64px;
+    height: 64px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #ffffff;
+    background: #527f66;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 6px 16px rgba(32, 68, 45, 0.28);
+    font-size: 36px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shop-tools-placeholder {
+    padding: 42px 24px;
+    text-align: center;
+    background: #f8fbf8;
+    border: 1px solid #dfe8df;
+    border-radius: 14px;
+}
+
+.shop-tools-placeholder-icon {
+    margin-bottom: 10px;
+    font-size: 38px;
+}
+
+.shop-tools-placeholder h2 {
+    margin: 0 0 12px;
+    color: #405b49;
+}
+
+.shop-tools-placeholder p {
+    margin: 0 auto 24px;
+    color: #5f6b62;
+    line-height: 1.7;
+}
+
+.shop-tools-placeholder-link {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 18px;
+    box-sizing: border-box;
+    color: #ffffff;
+    background: #527f66;
+    border-radius: 9px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+/* ========================================
+   🛒 材料発注リスト
+======================================== */
+
+.shop-tools-content h2 {
     margin: 0 0 16px;
     color: #405b49;
     font-size: 19px;
@@ -437,15 +620,19 @@ select {
 
 .material-order-create-section,
 .material-order-list-section {
-    margin-bottom: 28px;
-    padding: 20px;
+    margin-bottom: 22px;
+    padding: 18px;
     background: #fbfdfb;
     border: 1px solid #dfe8df;
     border-radius: 12px;
 }
 
+.material-order-list-section:last-child {
+    margin-bottom: 0;
+}
+
 .material-order-field {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .material-order-field label {
@@ -457,11 +644,12 @@ select {
 .material-order-field input,
 .material-order-field textarea {
     width: 100%;
+    min-height: 48px;
     box-sizing: border-box;
-    padding: 13px;
+    padding: 12px;
     color: #4a3c31;
     background: #ffffff;
-    border: 1px solid #bdcdbf;
+    border: 1px solid #aebfb1;
     border-radius: 8px;
     font: inherit;
 }
@@ -488,29 +676,35 @@ select {
 .material-order-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
 .material-order-card {
-    padding: 18px;
+    padding: 14px 16px;
     background: #ffffff;
     border: 2px solid #d7e3d9;
     border-radius: 12px;
 }
 
 .material-order-card h3 {
-    margin: 7px 0 10px;
-    font-size: 20px;
+    margin: 5px 0 8px;
+    font-size: 19px;
     overflow-wrap: anywhere;
 }
 
 .material-order-card p {
-    margin: 7px 0;
+    margin: 5px 0;
     overflow-wrap: anywhere;
 }
 
+.material-order-memo {
+    white-space: pre-wrap;
+}
+
 .material-order-card-completed {
-    background: #f1f1f1;
+    color: #666d68;
+    background: #f1f3f1;
+    border-color: #cdd3ce;
     border-style: dashed;
 }
 
@@ -524,12 +718,16 @@ select {
     font-weight: bold;
 }
 
+.material-order-card-completed .material-order-state {
+    color: #656c67;
+}
+
 .material-order-actions {
     display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 13px;
 }
 
 .material-order-actions form {
@@ -540,7 +738,7 @@ select {
 .material-order-reopen-button,
 .material-order-delete-button,
 .material-order-delete-confirmation summary {
-    min-height: 46px;
+    min-height: 48px;
     box-sizing: border-box;
 }
 
@@ -550,8 +748,8 @@ select {
 }
 
 .material-order-reopen-button {
-    background: #e6eee8;
     color: #355140;
+    background: #e6eee8;
     border: 1px solid #9fb6a5;
 }
 
@@ -582,29 +780,49 @@ select {
     color: #6d746e;
 }
 
-.material-orders-back-link {
-    display: block;
-    min-height: 46px;
-    box-sizing: border-box;
-    padding: 12px 18px;
-    color: #405b49;
-    background: #edf3ee;
-    border: 1px solid #c9d8cc;
-    border-radius: 8px;
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-}
-
 @media (max-width: 768px) {
-    .material-orders-container {
-        padding: 18px;
-        border-radius: 12px;
+    .shop-tools-page {
+        padding: 0 0 calc(98px + env(safe-area-inset-bottom));
+    }
+
+    .shop-tools-shell {
+        border-width: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .shop-tools-header,
+    .shop-tools-content {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .shop-tools-header h1 {
+        font-size: 21px;
+    }
+
+    .shop-tools-bottom-nav {
+        bottom: 0;
+        width: 100%;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .shop-tools-fab-group {
+        right: 14px;
+        bottom: calc(94px + env(safe-area-inset-bottom));
     }
 
     .material-order-create-section,
     .material-order-list-section {
-        padding: 15px;
+        padding: 16px;
+    }
+
+    .material-order-card {
+        padding: 18px;
     }
 
     .material-order-actions,
@@ -618,6 +836,12 @@ select {
     .material-order-delete-confirmation summary {
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .shop-tools-fab-label {
+        display: none;
     }
 }
 
@@ -1552,5 +1776,298 @@ select {
     .success-page .btn {
         padding: 12px 16px;
         font-size: 14px;
+    }
+}
+
+
+/* ========================================
+   🍞 sales_data_app 共通ナビゲーション
+======================================== */
+
+body.app-shell-page {
+    padding-left: 300px;
+}
+
+.app-sidebar {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    width: 270px;
+    padding: 22px 18px;
+    box-sizing: border-box;
+    flex-direction: column;
+    color: #493d34;
+    background: #fffdf8;
+    border-right: 1px solid #e5dccb;
+    box-shadow: 4px 0 18px rgba(83, 66, 43, 0.08);
+}
+
+.app-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.app-sidebar-brand {
+    display: flex;
+    min-height: 48px;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+    color: #6f4d28;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.app-navigation-close-button {
+    display: none;
+}
+
+.app-sidebar-nav {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.app-sidebar-link {
+    --app-menu-color: #786b60;
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    color: #51473f;
+    background: #ffffff;
+    border: 1px solid #eee7dc;
+    border-left: 5px solid var(--app-menu-color);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-decoration: none;
+}
+
+.app-sidebar-link-products {
+    --app-menu-color: #c58a35;
+}
+
+.app-sidebar-link-sales {
+    --app-menu-color: #4d8a64;
+}
+
+.app-sidebar-link-dashboard {
+    --app-menu-color: #cf5656;
+}
+
+.app-sidebar-link-shop-tools {
+    --app-menu-color: #517da8;
+}
+
+.app-sidebar-icon {
+    flex: 0 0 auto;
+    font-size: 20px;
+}
+
+.app-sidebar-link-current {
+    color: #30271f;
+    background: #f7f1e6;
+    border-width: 2px 2px 2px 7px;
+    border-color: var(--app-menu-color);
+    font-weight: bold;
+    box-shadow: 0 3px 10px rgba(66, 52, 35, 0.09);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+}
+
+.app-sidebar-session {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid #e5dccb;
+}
+
+.app-sidebar-user-label {
+    color: #665c54;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.app-sidebar-session form {
+    margin: 0;
+}
+
+.app-sidebar-logout-button {
+    width: 100%;
+    min-height: 48px;
+    color: #ffffff;
+    background: #665c54;
+}
+
+.app-sidebar-login-link {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    box-sizing: border-box;
+    color: #604a35;
+    background: #f8f3ea;
+    border: 1px solid #dfd2bf;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+}
+
+.app-sidebar-login-title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.app-sidebar-login-note {
+    color: #71675f;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.app-navigation-open-button,
+.app-navigation-overlay {
+    display: none;
+}
+
+.app-sidebar-brand:focus-visible,
+.app-sidebar-link:focus-visible,
+.app-sidebar-login-link:focus-visible,
+.app-sidebar-logout-button:focus-visible,
+.app-navigation-open-button:focus-visible,
+.app-navigation-close-button:focus-visible {
+    outline: 3px solid #2c5d3b;
+    outline-offset: 3px;
+}
+
+.app-shell-page.dashboard-page .container {
+    max-width: 980px;
+}
+
+.app-shell-page.input-page .container {
+    max-width: 760px;
+}
+
+.app-shell-page.shop-tools-page {
+    padding-left: 300px;
+}
+
+.app-shell-page .shop-tools-bottom-nav {
+    left: 270px;
+    width: min(680px, calc(100% - 302px));
+}
+
+.app-shell-page .shop-tools-fab-group {
+    right: max(18px, calc((100vw - 270px - 720px) / 2 + 18px));
+}
+
+@media (max-width: 900px) {
+    body.app-shell-page {
+        padding: 72px 10px 24px;
+    }
+
+    body.app-shell-page.app-navigation-open {
+        overflow: hidden;
+    }
+
+    .app-navigation-open-button {
+        position: fixed;
+        z-index: 32;
+        top: 12px;
+        left: 12px;
+        display: inline-flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 9px 14px;
+        color: #ffffff;
+        background: #6f4d28;
+        border: 2px solid #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(57, 43, 28, 0.22);
+        font: inherit;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .app-sidebar {
+        width: min(330px, 88vw);
+        padding: 18px;
+        transform: translateX(-105%);
+        transition: transform 0.2s ease;
+    }
+
+    .app-navigation-open .app-sidebar {
+        transform: translateX(0);
+    }
+
+    .app-navigation-close-button {
+        display: inline-flex;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        color: #5f4630;
+        background: #f6ede0;
+        border: 1px solid #ddcdb7;
+        border-radius: 10px;
+        font-size: 28px;
+        cursor: pointer;
+    }
+
+    .app-navigation-overlay:not([hidden]) {
+        position: fixed;
+        z-index: 35;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        background: rgba(34, 29, 24, 0.52);
+        border: 0;
+        cursor: pointer;
+    }
+
+    .app-shell-page.shop-tools-page {
+        padding: 72px 0 calc(98px + env(safe-area-inset-bottom));
+    }
+
+    .app-shell-page .shop-tools-bottom-nav {
+        left: 0;
+        width: 100%;
+    }
+
+    .app-shell-page .shop-tools-fab-group {
+        right: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-sidebar {
+        transition: none;
     }
 }

@@ -7,21 +7,10 @@
     <title>日次売上入力</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="input-page">
+<body class="input-page app-shell-page">
+{% include "_app_navigation.html" %}
 <div class="container">
     <h1>📝 日次売上入力</h1>
-    <div class="session-actions">
-        <span class="session-user-label">
-            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
-        </span>
-        <form method="POST" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn logout-button">
-                🚪 ログアウト
-            </button>
-        </form>
-    </div>
-
     <p
         class="sales-input-guidance"
         style="margin: -12px 0 20px; color: #786b60; font-size: 14px; line-height: 1.6;"

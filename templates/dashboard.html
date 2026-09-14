@@ -7,21 +7,11 @@
     <title>お店の健康診断書（売上ランキング）</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="dashboard-page">
+<body class="dashboard-page app-shell-page">
+{% include "_app_navigation.html" %}
 
 <div class="container">
     <h1>📊 お店の健康診断書（売上データ分析）</h1>
-    <div class="session-actions">
-        <span class="session-user-label">
-            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
-        </span>
-        <form method="POST" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn logout-button">
-                🚪 ログアウト
-            </button>
-        </form>
-    </div>
     <p class="dashboard-filter-guidance">
         ※表示期間を変更した後は、【🔍 データを抽出】ボタンを押してください。
     </p>
