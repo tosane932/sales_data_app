@@ -20,6 +20,7 @@ from flask_login import (
 )
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
 from sqlalchemy import case, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -41,9 +42,23 @@ from models import (
     DailySales,
 )
 from google import genai
-import config
 from material_orders import create_material_orders_blueprint
 from prompts import build_sales_prompt
+
+
+def _load_direct_run_environment(dotenv_path=None):
+    """python app.py用の.envをconfig importより前に読み込む。"""
+    if dotenv_path is None:
+        dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+    return load_dotenv(dotenv_path=dotenv_path, override=False)
+
+
+if __name__ == "__main__":
+    _load_direct_run_environment()
+
+
+import config
+
 
 # 💡 2. ログの初期設定（デジタコのセットアップ）
 # フォーマットに「日時 [レベル] メッセージ」を指定し、コンテナの標準出力に出すよう設定
@@ -61,6 +76,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICAT
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["ADMIN_USERNAME"] = config.ADMIN_USERNAME
 app.config["ADMIN_PASSWORD_HASH"] = config.ADMIN_PASSWORD_HASH
+app.config["LOCAL_DEVELOPMENT"] = config.LOCAL_DEVELOPMENT
 
 app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
 app.config["SESSION_COOKIE_HTTPONLY"] = config.SESSION_COOKIE_HTTPONLY
@@ -687,6 +703,8 @@ def _get_rate_limit_client_key(
         raw_ip = request.remote_addr or app.config.get(
             test_client_ip_config_key
         )
+    elif app.config.get("LOCAL_DEVELOPMENT") is True:
+        raw_ip = request.remote_addr
     else:
         raw_ip = request.headers.get("CF-Connecting-IP")
 
