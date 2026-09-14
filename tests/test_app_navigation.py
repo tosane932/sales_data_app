@@ -168,3 +168,28 @@ def test_material_orders_has_distinct_app_and_shop_tools_navigation(
     assert document.select_one(
         'nav[aria-label="店舗メモツールのメニュー"]'
     ) is not None
+
+
+@pytest.mark.parametrize(
+    "route",
+    ["/shop-tools/memo", "/shop-tools/memo/trash"],
+)
+def test_memo_pages_keep_shop_tools_current_in_both_navigations(
+    authenticated_client,
+    admin_dataset,
+    route,
+):
+    response = authenticated_client.get(route)
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    assert response.status_code == 200
+    app_link = document.select_one(
+        'nav[aria-label="主要メニュー"] a[data-page="shop-tools"]'
+    )
+    memo_link = document.select_one(
+        'nav[aria-label="店舗メモツールのメニュー"] a[data-tool="memo"]'
+    )
+    assert app_link.get("aria-current") == "page"
+    assert "app-sidebar-link-current" in app_link.get("class", [])
+    assert memo_link.get("aria-current") == "page"
+    assert "shop-tools-nav-link-current" in memo_link.get("class", [])

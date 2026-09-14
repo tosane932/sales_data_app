@@ -119,24 +119,15 @@ def test_anonymous_user_cannot_open_shop_tools(client, route):
     assert response.headers["Location"].startswith("/login?")
 
 
-@pytest.mark.parametrize(
-    ("route", "heading"),
-    [
-        ("/shop-tools/memo", "メモ"),
-        ("/shop-tools/tasks", "タスク"),
-    ],
-)
 def test_future_tools_are_explicit_read_only_placeholders(
     authenticated_client,
     admin_dataset,
-    route,
-    heading,
 ):
-    response = authenticated_client.get(route)
+    response = authenticated_client.get("/shop-tools/tasks")
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
 
     assert response.status_code == 200
-    assert document.select_one("h1").get_text(strip=True).endswith(heading)
+    assert document.select_one("h1").get_text(strip=True).endswith("タスク")
     assert "準備中" in document.get_text()
     assert document.select_one("main form") is None
 
@@ -167,6 +158,9 @@ def test_shop_tools_templates_keep_autoescape_and_safe_dom_updates():
     template_paths = [
         template_root / "material_orders.html",
         template_root / "shop_tools" / "base.html",
+        template_root / "shop_tools" / "memos.html",
+        template_root / "shop_tools" / "memo_trash.html",
+        template_root / "shop_tools" / "_memo_search.html",
         template_root / "shop_tools" / "placeholder.html",
     ]
 
