@@ -10,7 +10,14 @@ import uuid
 import pytest
 from sqlalchemy import create_engine, text
 
-from models import DailySales, Dataset, MaterialOrderItem, Product, db
+from models import (
+    DailySales,
+    Dataset,
+    MaterialOrderItem,
+    Product,
+    ShopMemo,
+    db,
+)
 from postgresql_test_utils import get_isolated_postgresql_test_url
 
 
@@ -316,6 +323,37 @@ def _seed_cleanup_scenario(engine, cleanup_time):
                 )
             ],
         )
+        connection.execute(
+            ShopMemo.__table__.insert(),
+            [
+                {
+                    "dataset_id": dataset_id,
+                    "body": f"{label}通常メモ",
+                    "created_at": cleanup_time,
+                    "updated_at": cleanup_time,
+                    "deleted_at": None,
+                }
+                for dataset_id, label in (
+                    (expired_guest_id, "削除候補"),
+                    (active_guest_id, "別Guest保護"),
+                    (admin_id, "Admin保護"),
+                )
+            ]
+            + [
+                {
+                    "dataset_id": dataset_id,
+                    "body": f"{label}ゴミ箱メモ",
+                    "created_at": cleanup_time,
+                    "updated_at": cleanup_time,
+                    "deleted_at": cleanup_time,
+                }
+                for dataset_id, label in (
+                    (expired_guest_id, "削除候補"),
+                    (active_guest_id, "別Guest保護"),
+                    (admin_id, "Admin保護"),
+                )
+            ],
+        )
 
     return expired_guest_id, active_guest_id, admin_id
 
@@ -346,6 +384,13 @@ def _assert_preserved_dataset_counts(engine, expected):
                 connection.execute(
                     text(
                         "SELECT COUNT(*) FROM material_order_items "
+                        "WHERE dataset_id = :id"
+                    ),
+                    {"id": dataset_id},
+                ).scalar_one(),
+                connection.execute(
+                    text(
+                        "SELECT COUNT(*) FROM shop_memos "
                         "WHERE dataset_id = :id"
                     ),
                     {"id": dataset_id},
@@ -420,9 +465,9 @@ def test_activity_committed_before_cleanup_lock_preserves_guest_data(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (1, 1, 1, 1),
-                active_guest_id: (1, 1, 1, 1),
-                admin_id: (1, 1, 1, 1),
+                expired_guest_id: (1, 1, 1, 1, 2),
+                active_guest_id: (1, 1, 1, 1, 2),
+                admin_id: (1, 1, 1, 1, 2),
             },
         )
     finally:
@@ -502,9 +547,9 @@ def test_cleanup_lock_prevents_late_activity_from_resurrecting_guest(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (0, 0, 0, 0),
-                active_guest_id: (1, 1, 1, 1),
-                admin_id: (1, 1, 1, 1),
+                expired_guest_id: (0, 0, 0, 0, 0),
+                active_guest_id: (1, 1, 1, 1, 2),
+                admin_id: (1, 1, 1, 1, 2),
             },
         )
     finally:
@@ -554,9 +599,9 @@ def test_cleanup_failure_rolls_back_all_guest_data_on_postgresql(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (1, 1, 1, 1),
-                active_guest_id: (1, 1, 1, 1),
-                admin_id: (1, 1, 1, 1),
+                expired_guest_id: (1, 1, 1, 1, 2),
+                active_guest_id: (1, 1, 1, 1, 2),
+                admin_id: (1, 1, 1, 1, 2),
             },
         )
     finally:

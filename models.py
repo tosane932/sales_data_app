@@ -84,6 +84,11 @@ class Dataset(db.Model):
         back_populates="dataset",
         passive_deletes="all",
     )
+    shop_memos = db.relationship(
+        "ShopMemo",
+        back_populates="dataset",
+        passive_deletes="all",
+    )
 
 
 class GuestCreationRateLimit(db.Model):
@@ -158,6 +163,72 @@ class MaterialOrderItem(db.Model):
     dataset = db.relationship(
         "Dataset",
         back_populates="material_order_items",
+    )
+
+
+class ShopMemo(db.Model):
+    """Datasetごとの店舗メモを表す。"""
+    __tablename__ = "shop_memos"
+    __table_args__ = (
+        db.CheckConstraint(
+            "length(trim(body)) >= 1",
+            name="ck_shop_memos_body_nonblank",
+        ),
+        db.CheckConstraint(
+            "length(body) <= 2000",
+            name="ck_shop_memos_body_max_length",
+        ),
+        db.CheckConstraint(
+            "updated_at >= created_at",
+            name="ck_shop_memos_updated_not_before_creation",
+        ),
+        db.CheckConstraint(
+            "deleted_at IS NULL OR deleted_at >= created_at",
+            name="ck_shop_memos_deleted_not_before_creation",
+        ),
+        db.CheckConstraint(
+            "deleted_at IS NULL OR updated_at >= deleted_at",
+            name="ck_shop_memos_updated_not_before_deletion",
+        ),
+        db.Index(
+            "ix_shop_memos_dataset_deleted_updated_id",
+            "dataset_id",
+            "deleted_at",
+            "updated_at",
+            "id",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(
+        db.Uuid(as_uuid=True),
+        db.ForeignKey(
+            "datasets.id",
+            name="fk_shop_memos_dataset_id_datasets",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=db.func.now(),
+    )
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=db.func.now(),
+    )
+    deleted_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )
+    dataset = db.relationship(
+        "Dataset",
+        back_populates="shop_memos",
     )
 
 

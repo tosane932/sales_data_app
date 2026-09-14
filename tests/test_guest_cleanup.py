@@ -8,7 +8,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import ServiceUnavailable
 
 import app as app_module
-from models import DailySales, Dataset, MaterialOrderItem, Product, db
+from models import (
+    DailySales,
+    Dataset,
+    MaterialOrderItem,
+    Product,
+    ShopMemo,
+    db,
+)
 
 
 NOW = datetime.datetime(2026, 9, 3, 12, 0, tzinfo=datetime.timezone.utc)
@@ -90,6 +97,21 @@ def _create_material_order_item(dataset, *, name):
     db.session.add(item)
     db.session.flush()
     return item
+
+
+def _create_shop_memo(dataset, *, body, deleted=False):
+    created_at = NOW - datetime.timedelta(minutes=20)
+    deleted_at = NOW - datetime.timedelta(minutes=10) if deleted else None
+    memo = ShopMemo(
+        dataset=dataset,
+        body=body,
+        created_at=created_at,
+        updated_at=deleted_at or created_at,
+        deleted_at=deleted_at,
+    )
+    db.session.add(memo)
+    db.session.flush()
+    return memo
 
 
 def _run_cleanup():
@@ -281,6 +303,70 @@ def test_cleanup_deletes_only_expired_guest_material_order_items(
     assert db.session.get(MaterialOrderItem, admin_item_id) is not None
 
 
+def test_cleanup_deletes_all_expired_guest_shop_memos_only(
+    flask_app,
+    admin_dataset,
+):
+    expired_guest = _create_absolute_expired_guest_dataset()
+    active_guest = _create_active_guest_dataset()
+    expired_normal_memo = _create_shop_memo(
+        expired_guest,
+        body="期限切れGuest通常メモ",
+    )
+    expired_deleted_memo = _create_shop_memo(
+        expired_guest,
+        body="期限切れGuestゴミ箱メモ",
+        deleted=True,
+    )
+    active_normal_memo = _create_shop_memo(
+        active_guest,
+        body="有効Guest通常メモ",
+    )
+    active_deleted_memo = _create_shop_memo(
+        active_guest,
+        body="有効Guestゴミ箱メモ",
+        deleted=True,
+    )
+    admin_normal_memo = _create_shop_memo(
+        admin_dataset,
+        body="Admin通常メモ",
+    )
+    admin_deleted_memo = _create_shop_memo(
+        admin_dataset,
+        body="Adminゴミ箱メモ",
+        deleted=True,
+    )
+    expired_guest_id = expired_guest.id
+    active_guest_id = active_guest.id
+    admin_dataset_id = admin_dataset.id
+    expired_memo_ids = [
+        expired_normal_memo.id,
+        expired_deleted_memo.id,
+    ]
+    protected_memo_ids = [
+        active_normal_memo.id,
+        active_deleted_memo.id,
+        admin_normal_memo.id,
+        admin_deleted_memo.id,
+    ]
+    db.session.commit()
+
+    deleted_count = _run_cleanup()
+
+    assert deleted_count == 1
+    assert db.session.get(Dataset, expired_guest_id) is None
+    assert all(
+        db.session.get(ShopMemo, memo_id) is None
+        for memo_id in expired_memo_ids
+    )
+    assert db.session.get(Dataset, active_guest_id) is not None
+    assert db.session.get(Dataset, admin_dataset_id) is not None
+    assert all(
+        db.session.get(ShopMemo, memo_id) is not None
+        for memo_id in protected_memo_ids
+    )
+
+
 def test_cleanup_removes_expired_guest_ai_usage_with_dataset(flask_app):
     expired_guest = _create_guest_dataset(
         created_at=NOW - datetime.timedelta(hours=3),
@@ -401,7 +487,20 @@ def test_cleanup_is_idempotent(flask_app):
         name="冪等削除対象商品",
         quantity=71,
     )
+    expired_normal_memo = _create_shop_memo(
+        expired_guest,
+        body="冪等削除対象通常メモ",
+    )
+    expired_deleted_memo = _create_shop_memo(
+        expired_guest,
+        body="冪等削除対象ゴミ箱メモ",
+        deleted=True,
+    )
     active_guest_id = active_guest.id
+    expired_memo_ids = [
+        expired_normal_memo.id,
+        expired_deleted_memo.id,
+    ]
     db.session.commit()
 
     first_deleted_count = _run_cleanup()
@@ -410,6 +509,10 @@ def test_cleanup_is_idempotent(flask_app):
     assert first_deleted_count == 1
     assert second_deleted_count == 0
     assert db.session.get(Dataset, active_guest_id) is not None
+    assert all(
+        db.session.get(ShopMemo, memo_id) is None
+        for memo_id in expired_memo_ids
+    )
     assert Dataset.query.filter_by(kind="guest").count() == 1
 
 
@@ -427,13 +530,27 @@ def test_cleanup_database_failure_rolls_back_without_guest_login(
         expired_guest,
         name="rollback確認材料",
     )
+    normal_memo = _create_shop_memo(
+        expired_guest,
+        body="rollback確認通常メモ",
+    )
+    deleted_memo = _create_shop_memo(
+        expired_guest,
+        body="rollback確認ゴミ箱メモ",
+        deleted=True,
+    )
     expired_guest_id = expired_guest.id
     product_id = product.id
     sale_id = sale.id
     material_item_id = material_item.id
+    normal_memo_id = normal_memo.id
+    deleted_memo_id = deleted_memo.id
     db.session.commit()
 
     def failing_cleanup(*, now):
+        ShopMemo.query.filter(
+            ShopMemo.id.in_([normal_memo_id, deleted_memo_id])
+        ).delete(synchronize_session=False)
         MaterialOrderItem.query.filter_by(id=material_item_id).delete(
             synchronize_session=False
         )
@@ -466,6 +583,8 @@ def test_cleanup_database_failure_rolls_back_without_guest_login(
     assert rollback.call_count == 1
     login.assert_not_called()
     assert db.session.get(Dataset, expired_guest_id) is not None
+    assert db.session.get(ShopMemo, normal_memo_id) is not None
+    assert db.session.get(ShopMemo, deleted_memo_id) is not None
     assert db.session.get(MaterialOrderItem, material_item_id) is not None
     assert db.session.get(Product, product_id) is not None
     assert db.session.get(DailySales, sale_id) is not None
