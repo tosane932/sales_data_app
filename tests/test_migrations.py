@@ -4,6 +4,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from flask import Flask
 from flask_migrate import Migrate, upgrade
+import sqlalchemy as sa
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import make_url
 
@@ -13,6 +14,7 @@ from models import db
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
+PRE_SHOP_MEMO_REVISION = "d4f7a9c2e6b1"
 
 
 def test_empty_database_upgrades_from_base_to_head(tmp_path):
@@ -60,6 +62,7 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
             "daily_sales",
             "guest_creation_rate_limits",
             "material_order_items",
+            "shop_memos",
             "alembic_version",
         }.issubset(table_names)
 
@@ -150,6 +153,73 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
             for index in material_order_indexes
         )
 
+        shop_memo_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("shop_memos")
+        }
+        assert set(shop_memo_columns) == {
+            "id",
+            "dataset_id",
+            "body",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        }
+        assert isinstance(shop_memo_columns["id"]["type"], sa.Integer)
+        assert isinstance(shop_memo_columns["body"]["type"], sa.Text)
+        assert isinstance(
+            shop_memo_columns["created_at"]["type"],
+            sa.DateTime,
+        )
+        assert isinstance(
+            shop_memo_columns["updated_at"]["type"],
+            sa.DateTime,
+        )
+        assert isinstance(
+            shop_memo_columns["deleted_at"]["type"],
+            sa.DateTime,
+        )
+        assert shop_memo_columns["dataset_id"]["nullable"] is False
+        assert shop_memo_columns["body"]["nullable"] is False
+        assert shop_memo_columns["created_at"]["nullable"] is False
+        assert shop_memo_columns["updated_at"]["nullable"] is False
+        assert shop_memo_columns["deleted_at"]["nullable"] is True
+        assert shop_memo_columns["created_at"]["default"] is not None
+        assert shop_memo_columns["updated_at"]["default"] is not None
+        assert shop_memo_columns["deleted_at"]["default"] is None
+
+        shop_memo_foreign_keys = inspector.get_foreign_keys("shop_memos")
+        assert len(shop_memo_foreign_keys) == 1
+        shop_memo_foreign_key = shop_memo_foreign_keys[0]
+        assert shop_memo_foreign_key["name"] == (
+            "fk_shop_memos_dataset_id_datasets"
+        )
+        assert shop_memo_foreign_key["constrained_columns"] == ["dataset_id"]
+        assert shop_memo_foreign_key["referred_table"] == "datasets"
+        assert shop_memo_foreign_key["referred_columns"] == ["id"]
+        assert shop_memo_foreign_key["options"].get(
+            "ondelete",
+            "",
+        ).upper() == "CASCADE"
+
+        shop_memo_checks = inspector.get_check_constraints("shop_memos")
+        assert {constraint["name"] for constraint in shop_memo_checks} == {
+            "ck_shop_memos_body_max_length",
+            "ck_shop_memos_body_nonblank",
+            "ck_shop_memos_deleted_not_before_creation",
+            "ck_shop_memos_updated_not_before_creation",
+            "ck_shop_memos_updated_not_before_deletion",
+        }
+
+        shop_memo_indexes = inspector.get_indexes("shop_memos")
+        assert any(
+            index["name"] == "ix_shop_memos_dataset_deleted_updated_id"
+            and index["column_names"]
+            == ["dataset_id", "deleted_at", "updated_at", "id"]
+            and not index["unique"]
+            for index in shop_memo_indexes
+        )
+
         current_revision = db.session.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
@@ -222,6 +292,23 @@ def test_material_order_migration_preserves_existing_sqlite_data(tmp_path):
         )
         db.session.commit()
 
+        upgrade(
+            directory=str(MIGRATIONS_DIR),
+            revision=PRE_SHOP_MEMO_REVISION,
+        )
+        db.session.execute(
+            text(
+                "INSERT INTO material_order_items "
+                "(id, dataset_id, name, is_completed, created_at) "
+                "VALUES (903, :dataset_id, '既存材料', 0, :created_at)"
+            ),
+            {
+                "dataset_id": guest_dataset_id,
+                "created_at": "2026-09-13 03:00:00",
+            },
+        )
+        db.session.commit()
+
         upgrade(directory=str(MIGRATIONS_DIR), revision="head")
 
         assert db.session.execute(
@@ -249,4 +336,12 @@ def test_material_order_migration_preserves_existing_sqlite_data(tmp_path):
         ).scalar_one() == 2
         assert db.session.execute(
             text("SELECT COUNT(*) FROM material_order_items")
+        ).scalar_one() == 1
+        assert db.session.execute(
+            text(
+                "SELECT name FROM material_order_items WHERE id = 903"
+            )
+        ).scalar_one() == "既存材料"
+        assert db.session.execute(
+            text("SELECT COUNT(*) FROM shop_memos")
         ).scalar_one() == 0

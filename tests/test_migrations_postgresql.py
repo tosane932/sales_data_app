@@ -7,7 +7,9 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from flask import Flask
 from flask_migrate import Migrate, upgrade
+import sqlalchemy as sa
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import IntegrityError
 
 from models import db
 from postgresql_test_utils import get_isolated_postgresql_test_url
@@ -24,6 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PRE_DATASET_REVISION = "9d3c1b7e5a42"
 PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
+PRE_SHOP_MEMO_REVISION = "d4f7a9c2e6b1"
 
 
 def _reset_public_schema(engine):
@@ -124,6 +127,21 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
             )
             db.session.commit()
 
+            upgrade(
+                directory=str(MIGRATIONS_DIR),
+                revision=PRE_SHOP_MEMO_REVISION,
+            )
+            material_order_item_id = db.session.execute(
+                text(
+                    "INSERT INTO material_order_items "
+                    "(dataset_id, name, is_completed, created_at) "
+                    "VALUES (:dataset_id, '既存材料', false, :now) "
+                    "RETURNING id"
+                ),
+                {"dataset_id": guest_dataset_id, "now": now},
+            ).scalar_one()
+            db.session.commit()
+
             upgrade(directory=str(MIGRATIONS_DIR), revision="head")
 
             inspector = inspect(db.engine)
@@ -133,6 +151,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 "daily_sales",
                 "guest_creation_rate_limits",
                 "material_order_items",
+                "shop_memos",
                 "alembic_version",
             }.issubset(inspector.get_table_names())
             assert db.session.execute(
@@ -236,16 +255,164 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 for index in inspector.get_indexes("material_order_items")
             )
 
-            material_order_item_id = db.session.execute(
+            assert db.session.execute(
                 text(
-                    "INSERT INTO material_order_items "
-                    "(dataset_id, name, is_completed, created_at) "
-                    "VALUES (:dataset_id, 'cascade確認材料', false, :now) "
-                    "RETURNING id"
+                    "SELECT name FROM material_order_items WHERE id = :id"
                 ),
-                {"dataset_id": guest_dataset_id, "now": now},
-            ).scalar_one()
+                {"id": material_order_item_id},
+            ).scalar_one() == "既存材料"
+
+            shop_memo_columns = {
+                column["name"]: column
+                for column in inspector.get_columns("shop_memos")
+            }
+            assert set(shop_memo_columns) == {
+                "id",
+                "dataset_id",
+                "body",
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            }
+            assert isinstance(shop_memo_columns["id"]["type"], sa.Integer)
+            assert isinstance(shop_memo_columns["dataset_id"]["type"], sa.Uuid)
+            assert isinstance(shop_memo_columns["body"]["type"], sa.Text)
+            for timestamp_column in (
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            ):
+                column_type = shop_memo_columns[timestamp_column]["type"]
+                assert isinstance(column_type, sa.DateTime)
+                assert column_type.timezone is True
+            assert shop_memo_columns["dataset_id"]["nullable"] is False
+            assert shop_memo_columns["body"]["nullable"] is False
+            assert shop_memo_columns["created_at"]["nullable"] is False
+            assert shop_memo_columns["updated_at"]["nullable"] is False
+            assert shop_memo_columns["deleted_at"]["nullable"] is True
+            assert shop_memo_columns["created_at"]["default"] is not None
+            assert shop_memo_columns["updated_at"]["default"] is not None
+            assert shop_memo_columns["deleted_at"]["default"] is None
+
+            shop_memo_foreign_keys = inspector.get_foreign_keys("shop_memos")
+            assert len(shop_memo_foreign_keys) == 1
+            assert shop_memo_foreign_keys[0]["name"] == (
+                "fk_shop_memos_dataset_id_datasets"
+            )
+            assert shop_memo_foreign_keys[0]["constrained_columns"] == [
+                "dataset_id"
+            ]
+            assert shop_memo_foreign_keys[0]["referred_table"] == "datasets"
+            assert (
+                shop_memo_foreign_keys[0]["options"]["ondelete"].upper()
+                == "CASCADE"
+            )
+            assert {
+                constraint["name"]
+                for constraint in inspector.get_check_constraints(
+                    "shop_memos"
+                )
+            } == {
+                "ck_shop_memos_body_max_length",
+                "ck_shop_memos_body_nonblank",
+                "ck_shop_memos_deleted_not_before_creation",
+                "ck_shop_memos_updated_not_before_creation",
+                "ck_shop_memos_updated_not_before_deletion",
+            }
+            assert any(
+                index["name"]
+                == "ix_shop_memos_dataset_deleted_updated_id"
+                and index["column_names"]
+                == ["dataset_id", "deleted_at", "updated_at", "id"]
+                and not index["unique"]
+                for index in inspector.get_indexes("shop_memos")
+            )
+
+            insert_shop_memo = text(
+                "INSERT INTO shop_memos "
+                "(dataset_id, body, created_at, updated_at, deleted_at) "
+                "VALUES (:dataset_id, :body, :created_at, :updated_at, "
+                ":deleted_at) RETURNING id"
+            )
+            valid_memo_rows = [
+                {
+                    "dataset_id": guest_dataset_id,
+                    "body": "通常メモ",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+                {
+                    "dataset_id": guest_dataset_id,
+                    "body": "ゴミ箱メモ",
+                    "created_at": now,
+                    "updated_at": now + datetime.timedelta(minutes=1),
+                    "deleted_at": now + datetime.timedelta(minutes=1),
+                },
+                {
+                    "dataset_id": guest_dataset_id,
+                    "body": "メ" * 2000,
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+            ]
+            memo_ids = [
+                db.session.execute(insert_shop_memo, row).scalar_one()
+                for row in valid_memo_rows
+            ]
             db.session.commit()
+            assert len(memo_ids) == 3
+
+            invalid_memo_rows = [
+                {
+                    "body": "",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+                {
+                    "body": "   ",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+                {
+                    "body": "メ" * 2001,
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+                {
+                    "body": "更新日時違反",
+                    "created_at": now,
+                    "updated_at": now - datetime.timedelta(seconds=1),
+                    "deleted_at": None,
+                },
+                {
+                    "body": "削除日時違反",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": now - datetime.timedelta(seconds=1),
+                },
+                {
+                    "body": "更新削除日時違反",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": now + datetime.timedelta(seconds=1),
+                },
+            ]
+            for invalid_row in invalid_memo_rows:
+                with pytest.raises(IntegrityError):
+                    db.session.execute(
+                        insert_shop_memo,
+                        {
+                            "dataset_id": guest_dataset_id,
+                            **invalid_row,
+                        },
+                    )
+                    db.session.commit()
+                db.session.rollback()
 
             db.session.execute(
                 text("DELETE FROM datasets WHERE id = :dataset_id"),
@@ -259,6 +426,13 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                     "WHERE id = :item_id"
                 ),
                 {"item_id": material_order_item_id},
+            ).scalar_one() == 0
+            assert db.session.execute(
+                text(
+                    "SELECT COUNT(*) FROM shop_memos "
+                    "WHERE dataset_id = :dataset_id"
+                ),
+                {"dataset_id": guest_dataset_id},
             ).scalar_one() == 0
             assert db.session.execute(
                 text("SELECT COUNT(*) FROM products")
