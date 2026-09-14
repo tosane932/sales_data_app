@@ -1675,36 +1675,51 @@ cp .env.example .env
 主な環境変数は次のとおりです。
 
 ```env
-GEMINI_API_KEY=your_api_key_here
-SECRET_KEY=your_secret_key_here
-ADMIN_USERNAME=your_admin_username_here
-ADMIN_PASSWORD_HASH=your_password_hash_here
+LOCAL_DEVELOPMENT=true
+GEMINI_API_KEY=
+SECRET_KEY=
+ADMIN_USERNAME=local-admin
+ADMIN_PASSWORD_HASH=
+GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS=5
+GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS=60
+```
+
+`LOCAL_DEVELOPMENT=true`は、手元のPCで直接Flaskへ接続するときだけ設定します。
+このmodeではrate limit用IPに接続元の`remote_addr`を使い、HTTP開発用に
+Session cookieの`Secure`属性を無効化します。
+
+未設定や`true`以外の値ではLocal Development Modeになりません。
+通常環境では従来どおり`CF-Connecting-IP`が必須で、`remote_addr`や
+`X-Forwarded-For`へfallbackしません。
+
+`SECRET_KEY`は値を画面へ表示せず、次のコマンドで`.env`へ保存できます。
+
+```bash
+python -c 'import secrets; from dotenv import set_key; set_key(".env", "SECRET_KEY", secrets.token_hex(32)); print("SECRET_KEYを.envへ保存しました。")'
 ```
 
 `ADMIN_PASSWORD_HASH`には、平文passwordではなくWerkzeug互換hashを設定します。
+次のコマンドはpasswordを非表示で2回入力し、hashを表示せず`.env`へ保存します。
 
 ```bash
-python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your-password'))"
+python -c 'import getpass; from dotenv import set_key; from werkzeug.security import generate_password_hash; password = getpass.getpass("Local Admin password: "); confirmation = getpass.getpass("Confirm password: "); assert password and password == confirmation, "passwordが空、または一致しません。"; set_key(".env", "ADMIN_PASSWORD_HASH", generate_password_hash(password)); print("ADMIN_PASSWORD_HASHを.envへ保存しました。")'
 ```
 
-Guest Session作成rate limitを利用する場合は、本番環境に合わせて次の値も設定します。
+`ADMIN_USERNAME`は`.env`内で任意のローカル用ユーザー名へ変更してください。
+平文password、生成したhash、`SECRET_KEY`をGitへ追加しないでください。
+
+Guest Session作成rate limitには、`.env.example`にある次のローカル用設定を
+使用できます。
 
 ```text
 GUEST_CREATION_RATE_LIMIT_MAX_ATTEMPTS
 GUEST_CREATION_RATE_LIMIT_WINDOW_SECONDS
 ```
 
-ローカルHTTP環境では必要に応じて、
-
-```env
-SESSION_COOKIE_SECURE=false
-```
-
-を設定します。
-
 > [**⚠️ 注意**]
 > `.env`にはAPIキー・SECRET_KEY・認証情報などの機密情報が含まれます。  
 > GitHubなどの公開リポジトリへpushしないでください。
+> `.env`は`.gitignore`と`.dockerignore`の対象です。
 
 ### 3. Docker Composeで起動
 
@@ -1732,13 +1747,17 @@ migrationを適用します。
 flask db upgrade
 ```
 
-Flaskを起動します。
+Flaskを直接起動します。`python app.py`では、`config.py`を読み込む前に
+repository直下の`.env`が読み込まれます。すでにOS側へ設定された環境変数は
+`.env`で上書きされません。
 
 ```bash
-flask run
+python app.py
 ```
 
 `DATABASE_URL`が設定されていない場合はSQLiteを使用します。
+開発serverは`0.0.0.0:5000`で待ち受けるため、信頼できる同一LAN内では
+`http://192.168.x.x:5000`のようにスマートフォンから確認できます。
 
 </details>
 

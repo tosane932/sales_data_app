@@ -1,26 +1,12 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>材料発注リスト</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="material-orders-page">
-<main class="material-orders-container">
-    <h1>🛒 材料発注リスト</h1>
+{% extends "shop_tools/base.html" %}
 
-    <div class="session-actions">
-        <span class="session-user-label">
-            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
-        </span>
-        <form method="POST" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn logout-button">
-                🚪 ログアウト
-            </button>
-        </form>
-    </div>
+{% block title %}材料発注リスト | 店舗メモツール{% endblock %}
+
+{% block tool_heading %}
+<span aria-hidden="true">🛒</span> 材料発注リスト
+{% endblock %}
+
+{% block content %}
 
     {% if error %}
     <div class="material-orders-error" role="alert">
@@ -153,9 +139,30 @@
         {% endif %}
     </section>
 
-    <a href="{{ url_for('index') }}" class="material-orders-back-link">
-        ← メニューへ戻る
-    </a>
-</main>
-</body>
-</html>
+{% endblock %}
+
+{% block floating_action %}
+<div class="shop-tools-fab-group">
+    <span class="shop-tools-fab-label">材料を追加</span>
+    <button
+        type="button"
+        class="shop-tools-fab"
+        aria-label="材料を追加"
+        aria-controls="material-name">
+        <span aria-hidden="true">＋</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const addMaterialButton = document.querySelector(".shop-tools-fab");
+    const materialNameInput = document.getElementById("material-name");
+
+    if (addMaterialButton && materialNameInput) {
+        addMaterialButton.addEventListener("click", () => {
+            materialNameInput.focus();
+        });
+    }
+</script>
+{% endblock %}

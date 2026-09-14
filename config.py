@@ -1,8 +1,21 @@
 import os
 
+
+def _environment_flag_is_true(raw_value):
+    """明示的なtrueだけを有効として扱う。"""
+    return (
+        isinstance(raw_value, str)
+        and raw_value.strip().lower() == "true"
+    )
+
+
 # ==========================================
 # システム全体の設定管理ファイル値
 # ==========================================
+
+LOCAL_DEVELOPMENT = _environment_flag_is_true(
+    os.environ.get("LOCAL_DEVELOPMENT")
+)
 
 # AIアドバイス生成で使用するGeminiの最新モデル名
 GEMINI_MODEL = "gemini-3.8-flash"
@@ -14,10 +27,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
 
-SESSION_COOKIE_SECURE = (
-    os.environ.get("SESSION_COOKIE_SECURE", "true").strip().lower()
-    != "false"
-)
+# HTTPを使うLocal Development ModeだけSecure属性を無効化する。
+# 未設定・誤値を含む通常環境では必ずTrueへ倒す。
+SESSION_COOKIE_SECURE = not LOCAL_DEVELOPMENT
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 MAX_CONTENT_LENGTH = 256 * 1024

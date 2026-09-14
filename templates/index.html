@@ -18,21 +18,11 @@
      }
      </script>
 </head>
-<body>
+<body class="app-shell-page">
+{% include "_app_navigation.html" %}
 
 <div class="container">
     <h1>🍞 ベーカリー売上管理システム</h1>
-    <div class="session-actions">
-        <span class="session-user-label">
-            利用中：{% if current_user.is_guest %}ゲストデモ{% else %}管理者{% endif %}
-        </span>
-        <form method="POST" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn logout-button">
-                🚪 ログアウト
-            </button>
-        </form>
-    </div>
     {% if error %}
     <div style="background-color: #fff0f0; color: #c0392b; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
         ⚠️ {{ error }}
@@ -173,41 +163,6 @@
         <button type="submit" class="btn btn-submit btn-menu-register">🚀 この内容で今月のメニューを登録する</button>
     </form>
 </div>
-
-<div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-    <a
-        href="{{ url_for('input_sales') }}"
-        class="menu-link menu-link-input"
-    >
-        📝 日次売上を入力する
-    </a>
-</div>
-
-<div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-    <a
-        href="{{ url_for('material_orders.list_items') }}"
-        class="menu-link menu-link-material-orders"
-    >
-        🛒 材料発注リスト
-    </a>
-</div>
-
-<div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-    <a
-    href="{{ url_for('dashboard') }}"
-    class="menu-link menu-link-dashboard"
-    >
-        📊 お店の健康診断書（売上分析・ランキング）を見る
-    </a>
-</div>
-
-{% if current_user.is_guest %}
-<div class="login-back-link">
-    <a href="{{ url_for('login') }}">
-        ← ログイン画面に戻る
-    </a>
-</div>
-{% endif %}
 
 <script>
     // 🌟 パパっと追加・消去するための軽快なJavaScript
