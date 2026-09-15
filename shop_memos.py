@@ -1,8 +1,11 @@
 import datetime
 import logging
+import re
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from markupsafe import Markup, escape
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import Dataset, ShopMemo, db, utc_now
@@ -14,6 +17,24 @@ SHOP_MEMO_LIMIT = 100
 SHOP_MEMO_BODY_MAX_LENGTH = 2000
 SHOP_MEMO_SEARCH_MAX_LENGTH = 100
 SHOP_MEMO_DISPLAY_TIMEZONE = ZoneInfo("Asia/Tokyo")
+SHOP_MEMO_HTTP_URL_PATTERN = re.compile(
+    r"https?://[^\s<>\"']+",
+    re.IGNORECASE,
+)
+SHOP_MEMO_URL_TRAILING_PUNCTUATION = ".,!?;:、。！？；："
+SHOP_MEMO_URL_CLOSING_DELIMITERS = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    "）": "（",
+    "］": "［",
+    "｝": "｛",
+    "〉": "〈",
+    "》": "《",
+    "」": "「",
+    "』": "『",
+    "】": "【",
+}
 
 
 def _validate_body(form):
@@ -41,6 +62,79 @@ def _format_deleted_at(value):
     return value.astimezone(SHOP_MEMO_DISPLAY_TIMEZONE).strftime(
         "%Y/%m/%d %H:%M"
     )
+
+
+def _split_url_suffix(candidate):
+    url = candidate
+    suffix = ""
+
+    while url:
+        last_character = url[-1]
+        if last_character in SHOP_MEMO_URL_TRAILING_PUNCTUATION:
+            url = url[:-1]
+            suffix = last_character + suffix
+            continue
+
+        opening_delimiter = SHOP_MEMO_URL_CLOSING_DELIMITERS.get(
+            last_character
+        )
+        if (
+            opening_delimiter is not None
+            and url.count(last_character) > url.count(opening_delimiter)
+        ):
+            url = url[:-1]
+            suffix = last_character + suffix
+            continue
+
+        break
+
+    return url, suffix
+
+
+def _is_linkable_http_url(candidate):
+    try:
+        parsed_url = urlsplit(candidate)
+        hostname = parsed_url.hostname
+    except ValueError:
+        return False
+
+    return (
+        parsed_url.scheme.lower() in {"http", "https"}
+        and bool(parsed_url.netloc)
+        and bool(hostname)
+    )
+
+
+def _linkify_memo_body(value):
+    """Escape memo text and promote only valid HTTP(S) URLs to anchors."""
+    body = "" if value is None else str(value)
+    fragments = []
+    previous_end = 0
+
+    for match in SHOP_MEMO_HTTP_URL_PATTERN.finditer(body):
+        fragments.append(escape(body[previous_end:match.start()]))
+        candidate, suffix = _split_url_suffix(match.group(0))
+
+        if _is_linkable_http_url(candidate):
+            escaped_url = escape(candidate)
+            fragments.append(
+                Markup('<a href="')
+                + escaped_url
+                + Markup(
+                    '" target="_blank" '
+                    'rel="noopener noreferrer">'
+                )
+                + escaped_url
+                + Markup("</a>")
+            )
+            fragments.append(escape(suffix))
+        else:
+            fragments.append(escape(match.group(0)))
+
+        previous_end = match.end()
+
+    fragments.append(escape(body[previous_end:]))
+    return Markup("").join(fragments)
 
 
 def create_shop_memos_blueprint(*, access_required, resolve_dataset):
@@ -119,6 +213,7 @@ def create_shop_memos_blueprint(*, access_required, resolve_dataset):
                 error=error,
                 active_tool="memo",
                 format_deleted_at=_format_deleted_at,
+                linkify_memo_body=_linkify_memo_body,
             ),
             status,
         )

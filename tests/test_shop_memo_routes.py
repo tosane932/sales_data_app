@@ -779,6 +779,171 @@ def test_shop_memo_input_is_html_escaped_and_sources_avoid_inner_html(
         assert "innerHTML" not in source
 
 
+def test_shop_memo_linkifies_http_urls_and_preserves_text_and_line_breaks(
+    authenticated_client,
+    admin_dataset,
+):
+    body = (
+        "発注先はこちら https://example.com/order です\n"
+        "予備 http://example.net/backup"
+    )
+    _create_memo(admin_dataset, body=body)
+
+    response = authenticated_client.get("/shop-tools/memo?q=order")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    body_element = document.select_one(".shop-memo-body")
+    links = body_element.select("a")
+
+    assert response.status_code == 200
+    assert body_element.get_text() == body
+    assert [link.get("href") for link in links] == [
+        "https://example.com/order",
+        "http://example.net/backup",
+    ]
+    assert all(link.get("target") == "_blank" for link in links)
+    assert all(
+        set(link.get("rel", [])) == {"noopener", "noreferrer"}
+        for link in links
+    )
+
+
+def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    body = "確認 https://example.com/shared"
+    active_memo = _create_memo(admin_dataset, body=body)
+    deleted_memo = _create_memo(admin_dataset, body=body, deleted=True)
+
+    active_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+    trash_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo/trash").get_data(
+            as_text=True
+        ),
+        "html.parser",
+    )
+
+    active_link = active_document.select_one(
+        f'article:has(form[action$="/{active_memo.id}/edit"]) '
+        ".shop-memo-body a"
+    )
+    trash_link = trash_document.select_one(
+        f'article:has(form[action$="/{deleted_memo.id}/restore"]) '
+        ".shop-memo-body a"
+    )
+    assert active_link is not None
+    assert trash_link is not None
+    assert active_link.attrs == trash_link.attrs
+    assert active_link.get_text() == trash_link.get_text()
+
+    restore_response = _post_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{deleted_memo.id}/restore",
+    )
+    restored_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+
+    assert restore_response.status_code == 303
+    restored_links = restored_document.select(
+        '.shop-memo-body a[href="https://example.com/shared"]'
+    )
+    assert len(restored_links) == 2
+
+
+def test_shop_memo_linkify_escapes_html_and_rejects_unsafe_schemes(
+    authenticated_client,
+    admin_dataset,
+):
+    body = (
+        "<script>alert(1)</script>\n"
+        "<img src=x onerror=alert(2)>\n"
+        "<b>危険</b> https://example.com/safe\n"
+        "javascript:alert(3) data:text/html,<svg/onload=alert(4)>\n"
+        "file:///tmp/memo mailto:test@example.com www.example.com https://"
+    )
+    _create_memo(admin_dataset, body=body)
+
+    response = authenticated_client.get("/shop-tools/memo")
+    html = response.get_data(as_text=True)
+    document = BeautifulSoup(html, "html.parser")
+    body_element = document.select_one(".shop-memo-body")
+    links = body_element.select("a")
+
+    assert body_element.get_text() == body
+    assert body_element.select("script, img, b, svg") == []
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "&lt;img src=x onerror=alert(2)&gt;" in html
+    assert "&lt;b&gt;危険&lt;/b&gt;" in html
+    assert [link.get("href") for link in links] == [
+        "https://example.com/safe"
+    ]
+    assert "javascript:" not in [link.get("href") for link in links]
+    assert "data:" not in [link.get("href") for link in links]
+
+
+def test_shop_memo_linkify_handles_punctuation_and_attribute_injection(
+    authenticated_client,
+    admin_dataset,
+):
+    body = (
+        '(https://example.com/inside), '
+        "https://example.com/japanese。 "
+        'https://example.com/\" onclick=\"alert(1)'
+    )
+    _create_memo(admin_dataset, body=body)
+
+    response = authenticated_client.get("/shop-tools/memo")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    body_element = document.select_one(".shop-memo-body")
+    links = body_element.select("a")
+
+    assert body_element.get_text() == body
+    assert [link.get("href") for link in links] == [
+        "https://example.com/inside",
+        "https://example.com/japanese",
+        "https://example.com/",
+    ]
+    assert all(set(link.attrs) == {"href", "target", "rel"} for link in links)
+    assert document.select("[onclick]") == []
+
+
+def test_shop_memo_edit_keeps_raw_url_text_in_textarea_and_database(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    original_body = "編集前 https://example.com/original"
+    memo = _create_memo(admin_dataset, body=original_body)
+
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+    textarea = document.select_one(f"#shop-memo-edit-{memo.id}")
+
+    assert textarea.get_text() == original_body
+    assert textarea.select("a") == []
+
+    edited_body = "編集後 http://example.net/raw"
+    response = _post_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo.id}/edit",
+        {"body": edited_body},
+    )
+
+    assert response.status_code == 303
+    db.session.expire_all()
+    assert db.session.get(ShopMemo, memo.id).body == edited_body
+
+
 def test_memo_ui_has_explicit_confirmations_and_accessible_controls(
     authenticated_client,
     admin_dataset,
