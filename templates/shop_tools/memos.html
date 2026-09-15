@@ -49,7 +49,7 @@
         <div class="shop-memo-list">
             {% for memo in memos %}
             <article class="shop-memo-card">
-                <p class="shop-memo-body">{{ memo.body }}</p>
+                <p class="shop-memo-body">{{ linkify_memo_body(memo.body) }}</p>
                 <div class="shop-memo-actions">
                     <details class="shop-memo-edit"{% if edit_form and edit_form.id == memo.id %} open{% endif %}>
                         <summary>編集</summary>

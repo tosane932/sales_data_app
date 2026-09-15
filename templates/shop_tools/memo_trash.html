@@ -30,7 +30,7 @@
         <div class="shop-memo-list">
             {% for memo in memos %}
             <article class="shop-memo-card shop-memo-card-trashed">
-                <p class="shop-memo-body">{{ memo.body }}</p>
+                <p class="shop-memo-body">{{ linkify_memo_body(memo.body) }}</p>
                 <p class="shop-memo-deleted-at">
                     削除日時：{{ format_deleted_at(memo.deleted_at) }}
                 </p>
