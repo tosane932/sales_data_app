@@ -290,6 +290,64 @@ def test_search_ui_shows_clear_button_only_for_nonempty_query(
     assert "「納品」の検索結果：0件" in search_document.get_text()
 
 
+def test_memo_empty_states_distinguish_context_and_show_next_action(
+    authenticated_client,
+    admin_dataset,
+):
+    expected_by_path = {
+        "/shop-tools/memo": (
+            "まだメモはありません。"
+            "上の入力欄から最初のメモを追加できます。"
+        ),
+        "/shop-tools/memo?q=none": (
+            "検索条件に一致するメモはありません。"
+            "検索文字を変えるか、×ボタンで検索を解除してください。"
+        ),
+        "/shop-tools/memo/trash": (
+            "ゴミ箱は空です。削除済みメモはここに表示されます。"
+        ),
+        "/shop-tools/memo/trash?q=none": (
+            "検索条件に一致する削除済みメモはありません。"
+            "検索文字を変えるか、×ボタンで検索を解除してください。"
+        ),
+    }
+
+    for path, expected in expected_by_path.items():
+        response = authenticated_client.get(path)
+        document = BeautifulSoup(
+            response.get_data(as_text=True), "html.parser"
+        )
+        assert response.status_code == 200
+        assert expected in document.get_text()
+
+
+def test_active_memo_list_reserves_space_below_fixed_fab(
+    authenticated_client,
+    admin_dataset,
+):
+    active_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+    trash_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo/trash").get_data(
+            as_text=True
+        ),
+        "html.parser",
+    )
+    css_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+
+    assert active_document.select_one(
+        ".shop-memo-list-section.shop-memo-list-section-has-fab"
+    ) is not None
+    assert trash_document.select_one(
+        ".shop-memo-list-section-has-fab"
+    ) is None
+    assert ".shop-memo-list-section-has-fab" in css_source
+
+
 def test_admin_and_guests_only_search_their_own_memos(
     flask_app,
     authenticated_client,

@@ -519,6 +519,7 @@ select {
 .shop-memo-search-button:focus-visible,
 .shop-memo-trash-link:focus-visible,
 .shop-memo-back-link:focus-visible,
+.shop-memo-body a:focus-visible,
 .shop-memo-actions button:focus-visible,
 .shop-memo-actions summary:focus-visible,
 .material-order-actions button:focus-visible,
@@ -812,6 +813,10 @@ select {
 
 .shop-memo-list-section:last-child {
     margin-bottom: 0;
+}
+
+.shop-memo-list-section.shop-memo-list-section-has-fab {
+    margin-bottom: 72px;
 }
 
 .shop-memo-search-form label,

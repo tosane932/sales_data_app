@@ -54,9 +54,9 @@
             {% endfor %}
         </div>
         {% elif search_query %}
-        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        <p class="shop-memo-empty">検索条件に一致する削除済みメモはありません。検索文字を変えるか、×ボタンで検索を解除してください。</p>
         {% else %}
-        <p class="shop-memo-empty">ゴミ箱は空です。</p>
+        <p class="shop-memo-empty">ゴミ箱は空です。削除済みメモはここに表示されます。</p>
         {% endif %}
     </section>
 {% endblock %}
