@@ -656,8 +656,16 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
             ]
             existing_memos.extend(
                 [
-                    {"dataset_id": guest_b_id, "body": "Guest B保護メモ"},
-                    {"dataset_id": admin_id, "body": "Admin保護メモ"},
+                    {
+                        "dataset_id": guest_b_id,
+                        "body": "Guest B保護メモ",
+                        "deleted_at": None,
+                    },
+                    {
+                        "dataset_id": admin_id,
+                        "body": "Admin保護メモ",
+                        "deleted_at": None,
+                    },
                 ]
             )
             connection.execute(ShopMemo.__table__.insert(), existing_memos)
