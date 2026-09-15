@@ -974,6 +974,12 @@ select {
     white-space: pre-wrap;
 }
 
+.shop-memo-deleted-at {
+    margin: 10px 0 0;
+    color: #666d68;
+    font-size: 0.9rem;
+}
+
 .shop-memo-actions {
     display: flex;
     align-items: flex-start;

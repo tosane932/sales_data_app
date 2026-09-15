@@ -121,6 +121,190 @@ except Exception as error:
 """
 
 
+LIFECYCLE_WORKER_CODE = r"""
+import json
+import os
+import uuid
+from pathlib import Path
+
+import app as app_module
+from models import ShopMemo
+
+
+app_module.app.config.update(
+    TESTING=True,
+    SESSION_COOKIE_SECURE=False,
+    WTF_CSRF_ENABLED=False,
+)
+
+guest_a_id = os.environ["TEST_GUEST_DATASET_ID"]
+guest_a_uuid = uuid.UUID(guest_a_id)
+own_active_id = int(os.environ["TEST_OWN_ACTIVE_MEMO_ID"])
+own_deleted_id = int(os.environ["TEST_OWN_DELETED_MEMO_ID"])
+other_guest_deleted_id = int(os.environ["TEST_OTHER_GUEST_MEMO_ID"])
+admin_deleted_id = int(os.environ["TEST_ADMIN_MEMO_ID"])
+result_path = Path(os.environ["TEST_RESULT_PATH"])
+
+client = app_module.app.test_client()
+with client.session_transaction() as session_data:
+    session_data["_user_id"] = f"guest:{guest_a_id}"
+    session_data["_fresh"] = True
+
+
+def post(path, data=None):
+    return client.post(path, data=data or {}, follow_redirects=False)
+
+
+try:
+    active_before = client.get("/shop-tools/memo").get_data(as_text=True)
+    trash_before = client.get("/shop-tools/memo/trash").get_data(as_text=True)
+
+    rejected_create = post(
+        "/shop-tools/memo",
+        {"body": "上限中は作成不可"},
+    )
+    move_to_trash = post(f"/shop-tools/memo/{own_active_id}/trash")
+    restore = post(f"/shop-tools/memo/{own_deleted_id}/restore")
+    cross_guest_restore = post(
+        f"/shop-tools/memo/{other_guest_deleted_id}/restore"
+    )
+    cross_admin_delete = post(
+        f"/shop-tools/memo/{admin_deleted_id}/delete"
+    )
+    active_delete = post(f"/shop-tools/memo/{own_deleted_id}/delete")
+    permanent_delete = post(f"/shop-tools/memo/{own_active_id}/delete")
+    accepted_create = post(
+        "/shop-tools/memo",
+        {"body": "完全削除後の100件目"},
+    )
+
+    with app_module.app.app_context():
+        app_module.db.session.expire_all()
+        restored_memo = app_module.db.session.get(ShopMemo, own_deleted_id)
+        result = {
+            "visibility": {
+                "active_has_own_active": "Guest A通常メモ" in active_before,
+                "active_has_own_deleted": "Guest Aゴミ箱メモ" in active_before,
+                "trash_has_own_active": "Guest A通常メモ" in trash_before,
+                "trash_has_own_deleted": "Guest Aゴミ箱メモ" in trash_before,
+                "trash_has_other_guest": "Guest Bゴミ箱メモ" in trash_before,
+                "trash_has_admin": "Adminゴミ箱メモ" in trash_before,
+            },
+            "statuses": {
+                "rejected_create": rejected_create.status_code,
+                "move_to_trash": move_to_trash.status_code,
+                "restore": restore.status_code,
+                "cross_guest_restore": cross_guest_restore.status_code,
+                "cross_admin_delete": cross_admin_delete.status_code,
+                "active_delete": active_delete.status_code,
+                "permanent_delete": permanent_delete.status_code,
+                "accepted_create": accepted_create.status_code,
+            },
+            "restore_location": restore.headers.get("Location"),
+            "restored_is_active": (
+                restored_memo is not None
+                and restored_memo.deleted_at is None
+            ),
+            "permanently_deleted": (
+                app_module.db.session.get(ShopMemo, own_active_id) is None
+            ),
+            "guest_a_count": ShopMemo.query.filter_by(
+                dataset_id=guest_a_uuid
+            ).count(),
+            "new_memo_count": ShopMemo.query.filter_by(
+                dataset_id=guest_a_uuid,
+                body="完全削除後の100件目",
+            ).count(),
+        }
+    result_path.write_text(json.dumps(result))
+except Exception as error:
+    result_path.write_text(json.dumps({"error_type": type(error).__name__}))
+    raise
+"""
+
+
+ROLLBACK_WORKER_CODE = r"""
+import json
+import os
+from pathlib import Path
+from unittest.mock import patch
+
+from sqlalchemy.exc import SQLAlchemyError
+
+import app as app_module
+from models import ShopMemo
+
+
+app_module.app.config.update(
+    TESTING=True,
+    SESSION_COOKIE_SECURE=False,
+    WTF_CSRF_ENABLED=False,
+)
+
+restore_id = int(os.environ["TEST_RESTORE_MEMO_ID"])
+delete_id = int(os.environ["TEST_DELETE_MEMO_ID"])
+result_path = Path(os.environ["TEST_RESULT_PATH"])
+
+client = app_module.app.test_client()
+with client.session_transaction() as session_data:
+    session_data["_user_id"] = "admin"
+    session_data["_fresh"] = True
+    session_data[app_module.ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = (
+        app_module._get_admin_auth_fingerprint(
+            app_module.app.config["ADMIN_PASSWORD_HASH"]
+        )
+    )
+
+
+def fail_after_flush():
+    app_module.db.session.flush()
+    raise SQLAlchemyError("forced PostgreSQL memo failure after flush")
+
+
+try:
+    with patch.object(
+        app_module.db.session,
+        "commit",
+        side_effect=fail_after_flush,
+    ):
+        restore_response = client.post(
+            f"/shop-tools/memo/{restore_id}/restore",
+            follow_redirects=False,
+        )
+
+    with patch.object(
+        app_module.db.session,
+        "commit",
+        side_effect=fail_after_flush,
+    ):
+        delete_response = client.post(
+            f"/shop-tools/memo/{delete_id}/delete",
+            follow_redirects=False,
+        )
+
+    with app_module.app.app_context():
+        app_module.db.session.expire_all()
+        restore_memo = app_module.db.session.get(ShopMemo, restore_id)
+        delete_memo = app_module.db.session.get(ShopMemo, delete_id)
+        result = {
+            "restore_status": restore_response.status_code,
+            "delete_status": delete_response.status_code,
+            "restore_rolled_back": (
+                restore_memo is not None
+                and restore_memo.deleted_at is not None
+            ),
+            "delete_rolled_back": (
+                delete_memo is not None
+                and delete_memo.deleted_at is not None
+            ),
+        }
+    result_path.write_text(json.dumps(result))
+except Exception as error:
+    result_path.write_text(json.dumps({"error_type": type(error).__name__}))
+    raise
+"""
+
+
 def _dataset_values(dataset_id, *, kind, system_key, now):
     return {
         "id": dataset_id,
@@ -164,6 +348,261 @@ def _wait_for_dataset_lock_waiter(engine, application_name, timeout_seconds=20):
             return
         time.sleep(0.05)
     pytest.fail("The second memo request did not wait on the Dataset lock.")
+
+
+def _postgresql_worker_environment(result_path, **values):
+    environment = os.environ.copy()
+    environment.update(
+        DATABASE_URL=POSTGRESQL_TEST_DATABASE_URL,
+        SECRET_KEY="isolated-integration-test-only",
+        ADMIN_USERNAME="integration-admin",
+        ADMIN_PASSWORD_HASH="integration-test-hash",
+        TEST_RESULT_PATH=str(result_path),
+        **{key: str(value) for key, value in values.items()},
+    )
+    return environment
+
+
+def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
+    engine = create_engine(POSTGRESQL_TEST_DATABASE_URL, pool_pre_ping=True)
+    repository_root = Path(__file__).resolve().parent.parent
+    guest_a_id = uuid.uuid4()
+    guest_b_id = uuid.uuid4()
+    admin_id = uuid.uuid4()
+    result_path = tmp_path / "memo-lifecycle-result.json"
+
+    try:
+        with engine.begin() as connection:
+            db.metadata.drop_all(connection)
+            db.metadata.create_all(connection)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            connection.execute(
+                Dataset.__table__.insert(),
+                [
+                    _dataset_values(
+                        guest_a_id,
+                        kind="guest",
+                        system_key=None,
+                        now=now,
+                    ),
+                    _dataset_values(
+                        guest_b_id,
+                        kind="guest",
+                        system_key=None,
+                        now=now,
+                    ),
+                    _dataset_values(
+                        admin_id,
+                        kind="admin",
+                        system_key="admin",
+                        now=now,
+                    ),
+                ],
+            )
+            connection.execute(
+                ShopMemo.__table__.insert(),
+                [
+                    {
+                        "dataset_id": guest_a_id,
+                        "body": f"上限用メモ{index}",
+                        "created_at": now,
+                        "updated_at": now,
+                        "deleted_at": None,
+                    }
+                    for index in range(98)
+                ],
+            )
+            own_active_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=guest_a_id,
+                    body="Guest A通常メモ",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=None,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+            own_deleted_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=guest_a_id,
+                    body="Guest Aゴミ箱メモ",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+            other_guest_deleted_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=guest_b_id,
+                    body="Guest Bゴミ箱メモ",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+            admin_deleted_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=admin_id,
+                    body="Adminゴミ箱メモ",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+
+        process = subprocess.run(
+            [sys.executable, "-c", LIFECYCLE_WORKER_CODE],
+            cwd=repository_root,
+            env=_postgresql_worker_environment(
+                result_path,
+                TEST_GUEST_DATASET_ID=guest_a_id,
+                TEST_OWN_ACTIVE_MEMO_ID=own_active_id,
+                TEST_OWN_DELETED_MEMO_ID=own_deleted_id,
+                TEST_OTHER_GUEST_MEMO_ID=other_guest_deleted_id,
+                TEST_ADMIN_MEMO_ID=admin_deleted_id,
+            ),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+            check=False,
+        )
+
+        assert process.returncode == 0
+        result = json.loads(result_path.read_text())
+        assert "error_type" not in result
+        assert result["visibility"] == {
+            "active_has_own_active": True,
+            "active_has_own_deleted": False,
+            "trash_has_own_active": False,
+            "trash_has_own_deleted": True,
+            "trash_has_other_guest": False,
+            "trash_has_admin": False,
+        }
+        assert result["statuses"] == {
+            "rejected_create": 400,
+            "move_to_trash": 303,
+            "restore": 303,
+            "cross_guest_restore": 404,
+            "cross_admin_delete": 404,
+            "active_delete": 404,
+            "permanent_delete": 303,
+            "accepted_create": 303,
+        }
+        assert result["restore_location"].endswith("/shop-tools/memo")
+        assert result["restored_is_active"] is True
+        assert result["permanently_deleted"] is True
+        assert result["guest_a_count"] == 100
+        assert result["new_memo_count"] == 1
+
+        with engine.connect() as connection:
+            protected_states = connection.execute(
+                text(
+                    "SELECT id, deleted_at IS NOT NULL AS is_deleted "
+                    "FROM shop_memos WHERE id IN (:guest_id, :admin_id)"
+                ),
+                {
+                    "guest_id": other_guest_deleted_id,
+                    "admin_id": admin_deleted_id,
+                },
+            ).all()
+        assert {row.id: row.is_deleted for row in protected_states} == {
+            other_guest_deleted_id: True,
+            admin_deleted_id: True,
+        }
+    finally:
+        with engine.begin() as connection:
+            db.metadata.drop_all(connection)
+        engine.dispose()
+
+
+def test_restore_and_permanent_delete_roll_back_on_postgresql(tmp_path):
+    engine = create_engine(POSTGRESQL_TEST_DATABASE_URL, pool_pre_ping=True)
+    repository_root = Path(__file__).resolve().parent.parent
+    admin_id = uuid.uuid4()
+    result_path = tmp_path / "memo-rollback-result.json"
+
+    try:
+        with engine.begin() as connection:
+            db.metadata.drop_all(connection)
+            db.metadata.create_all(connection)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            connection.execute(
+                Dataset.__table__.insert(),
+                _dataset_values(
+                    admin_id,
+                    kind="admin",
+                    system_key="admin",
+                    now=now,
+                ),
+            )
+            restore_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=admin_id,
+                    body="復元rollback対象",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+            delete_id = connection.execute(
+                ShopMemo.__table__.insert()
+                .values(
+                    dataset_id=admin_id,
+                    body="完全削除rollback対象",
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                )
+                .returning(ShopMemo.id)
+            ).scalar_one()
+
+        process = subprocess.run(
+            [sys.executable, "-c", ROLLBACK_WORKER_CODE],
+            cwd=repository_root,
+            env=_postgresql_worker_environment(
+                result_path,
+                TEST_RESTORE_MEMO_ID=restore_id,
+                TEST_DELETE_MEMO_ID=delete_id,
+            ),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+            check=False,
+        )
+
+        assert process.returncode == 0
+        assert json.loads(result_path.read_text()) == {
+            "restore_status": 500,
+            "delete_status": 500,
+            "restore_rolled_back": True,
+            "delete_rolled_back": True,
+        }
+
+        with engine.connect() as connection:
+            persisted = connection.execute(
+                text(
+                    "SELECT id, deleted_at IS NOT NULL AS is_deleted "
+                    "FROM shop_memos WHERE id IN (:restore_id, :delete_id)"
+                ),
+                {"restore_id": restore_id, "delete_id": delete_id},
+            ).all()
+        assert {row.id: row.is_deleted for row in persisted} == {
+            restore_id: True,
+            delete_id: True,
+        }
+    finally:
+        with engine.begin() as connection:
+            db.metadata.drop_all(connection)
+        engine.dispose()
 
 
 def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
@@ -211,14 +650,28 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
                 {
                     "dataset_id": guest_a_id,
                     "body": f"Guest A既存メモ{index}",
+                    "created_at": now,
+                    "updated_at": now,
                     "deleted_at": now if index == 0 else None,
                 }
                 for index in range(99)
             ]
             existing_memos.extend(
                 [
-                    {"dataset_id": guest_b_id, "body": "Guest B保護メモ"},
-                    {"dataset_id": admin_id, "body": "Admin保護メモ"},
+                    {
+                        "dataset_id": guest_b_id,
+                        "body": "Guest B保護メモ",
+                        "created_at": now,
+                        "updated_at": now,
+                        "deleted_at": None,
+                    },
+                    {
+                        "dataset_id": admin_id,
+                        "body": "Admin保護メモ",
+                        "created_at": now,
+                        "updated_at": now,
+                        "deleted_at": None,
+                    },
                 ]
             )
             connection.execute(ShopMemo.__table__.insert(), existing_memos)

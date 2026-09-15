@@ -1,4 +1,6 @@
+import datetime
 import logging
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,6 +13,7 @@ logger = logging.getLogger(__name__)
 SHOP_MEMO_LIMIT = 100
 SHOP_MEMO_BODY_MAX_LENGTH = 2000
 SHOP_MEMO_SEARCH_MAX_LENGTH = 100
+SHOP_MEMO_DISPLAY_TIMEZONE = ZoneInfo("Asia/Tokyo")
 
 
 def _validate_body(form):
@@ -30,6 +33,14 @@ def _literal_search_pattern(value):
         value.replace("/", "//").replace("%", "/%").replace("_", "/_")
     )
     return f"%{escaped_value}%"
+
+
+def _format_deleted_at(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=datetime.timezone.utc)
+    return value.astimezone(SHOP_MEMO_DISPLAY_TIMEZONE).strftime(
+        "%Y/%m/%d %H:%M"
+    )
 
 
 def create_shop_memos_blueprint(*, access_required, resolve_dataset):
@@ -107,6 +118,7 @@ def create_shop_memos_blueprint(*, access_required, resolve_dataset):
                 edit_form=edit_form,
                 error=error,
                 active_tool="memo",
+                format_deleted_at=_format_deleted_at,
             ),
             status,
         )
@@ -291,7 +303,7 @@ def create_shop_memos_blueprint(*, access_required, resolve_dataset):
             logger.exception("Failed to restore a shop memo.")
             return "メモを復元できませんでした。", 500
 
-        return redirect(url_for("shop_memos.list_trash"), code=303)
+        return redirect(url_for("shop_memos.list_memos"), code=303)
 
     @blueprint.post("/shop-tools/memo/<int:memo_id>/delete")
     @access_required
