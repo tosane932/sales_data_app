@@ -37,7 +37,7 @@
         </form>
     </section>
 
-    <section class="shop-memo-list-section" aria-labelledby="memo-list-heading">
+    <section class="shop-memo-list-section shop-memo-list-section-has-fab" aria-labelledby="memo-list-heading">
         <div class="shop-memo-list-heading-row">
             <h2 id="memo-list-heading">メモ {{ active_count }}件</h2>
             <a href="{{ url_for('shop_memos.list_trash') }}" class="shop-memo-trash-link">
@@ -80,9 +80,9 @@
             {% endfor %}
         </div>
         {% elif search_query %}
-        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        <p class="shop-memo-empty">検索条件に一致するメモはありません。検索文字を変えるか、×ボタンで検索を解除してください。</p>
         {% else %}
-        <p class="shop-memo-empty">メモはありません。</p>
+        <p class="shop-memo-empty">まだメモはありません。上の入力欄から最初のメモを追加できます。</p>
         {% endif %}
     </section>
 {% endblock %}
