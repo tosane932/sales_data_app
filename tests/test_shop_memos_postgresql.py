@@ -650,6 +650,8 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
                 {
                     "dataset_id": guest_a_id,
                     "body": f"Guest A既存メモ{index}",
+                    "created_at": now,
+                    "updated_at": now,
                     "deleted_at": now if index == 0 else None,
                 }
                 for index in range(99)
@@ -659,11 +661,15 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
                     {
                         "dataset_id": guest_b_id,
                         "body": "Guest B保護メモ",
+                        "created_at": now,
+                        "updated_at": now,
                         "deleted_at": None,
                     },
                     {
                         "dataset_id": admin_id,
                         "body": "Admin保護メモ",
+                        "created_at": now,
+                        "updated_at": now,
                         "deleted_at": None,
                     },
                 ]
