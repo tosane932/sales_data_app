@@ -185,8 +185,15 @@ def test_memo_full_lifecycle_updates_active_and_trash_views(
         f"/shop-tools/memo/{memo_id}/restore",
     )
     assert restore_response.status_code == 303
+    assert restore_response.headers["Location"].endswith("/shop-tools/memo")
     db.session.expire_all()
     assert db.session.get(ShopMemo, memo_id).deleted_at is None
+    assert "編集後" in authenticated_client.get(
+        "/shop-tools/memo"
+    ).get_data(as_text=True)
+    assert "編集後" not in authenticated_client.get(
+        "/shop-tools/memo/trash"
+    ).get_data(as_text=True)
 
     _post_with_csrf(
         authenticated_client,
@@ -200,6 +207,26 @@ def test_memo_full_lifecycle_updates_active_and_trash_views(
     )
     assert delete_response.status_code == 303
     assert db.session.get(ShopMemo, memo_id) is None
+
+
+def test_trash_lists_only_current_dataset_deleted_memos_with_deleted_time(
+    flask_app,
+    authenticated_client,
+    admin_dataset,
+):
+    other_guest = _create_guest_dataset(minute_offset=1)
+    _create_memo(admin_dataset, body="通常一覧だけのメモ")
+    _create_memo(admin_dataset, body="Adminゴミ箱メモ", deleted=True)
+    _create_memo(other_guest, body="別Datasetゴミ箱メモ", deleted=True)
+
+    response = authenticated_client.get("/shop-tools/memo/trash")
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    assert response.status_code == 200
+    assert "Adminゴミ箱メモ" in document.get_text()
+    assert "削除日時：2026/09/15 00:00" in document.get_text()
+    assert "通常一覧だけのメモ" not in document.get_text()
+    assert "別Datasetゴミ箱メモ" not in document.get_text()
 
 
 @pytest.mark.parametrize(
@@ -354,6 +381,50 @@ def test_hundredth_memo_succeeds_and_limit_counts_trashed_memos(
     assert ShopMemo.query.count() == 100
 
 
+def test_permanent_delete_frees_one_memo_slot(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    memos = [
+        ShopMemo(
+            dataset=admin_dataset,
+            body=f"上限確認メモ{index}",
+            deleted_at=NOW if index == 0 else None,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+        for index in range(100)
+    ]
+    db.session.add_all(memos)
+    db.session.commit()
+
+    rejected_response = _post_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo",
+        {"body": "上限で拒否"},
+    )
+    assert rejected_response.status_code == 400
+
+    delete_response = _post_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memos[0].id}/delete",
+    )
+    assert delete_response.status_code == 303
+    assert ShopMemo.query.count() == 99
+
+    accepted_response = _post_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo",
+        {"body": "完全削除後の100件目"},
+    )
+    assert accepted_response.status_code == 303
+    assert ShopMemo.query.count() == 100
+
+
 def test_search_rejects_more_than_one_hundred_characters_without_db_changes(
     authenticated_client,
     admin_dataset,
@@ -387,36 +458,46 @@ def test_blank_search_displays_all_active_memos(
 
 
 @pytest.mark.parametrize("operation", ["edit", "trash", "restore", "delete"])
-def test_guest_cannot_mutate_another_dataset_memo_and_gets_same_404_as_missing(
+def test_guest_cannot_mutate_admin_or_other_guest_memo_and_gets_same_404(
     flask_app,
     admin_dataset,
     csrf_token,
     operation,
 ):
-    guest = _create_guest_dataset(minute_offset=1)
-    target = _create_memo(
-        admin_dataset,
-        body="Admin保護メモ",
-        deleted=operation in {"restore", "delete"},
-    )
-    guest_client = _guest_client(flask_app, guest)
+    guest_a = _create_guest_dataset(minute_offset=1)
+    guest_b = _create_guest_dataset(minute_offset=2)
+    targets = [
+        _create_memo(
+            admin_dataset,
+            body="Admin保護メモ",
+            deleted=operation in {"restore", "delete"},
+        ),
+        _create_memo(
+            guest_b,
+            body="Guest B保護メモ",
+            deleted=operation in {"restore", "delete"},
+        ),
+    ]
+    guest_client = _guest_client(flask_app, guest_a)
     before = _memo_snapshot()
     payload = {"body": "越境編集"} if operation == "edit" else {}
 
-    target_response = _post_with_csrf(
-        guest_client,
-        csrf_token,
-        f"/shop-tools/memo/{target.id}/{operation}",
-        payload,
-    )
+    for target in targets:
+        target_response = _post_with_csrf(
+            guest_client,
+            csrf_token,
+            f"/shop-tools/memo/{target.id}/{operation}",
+            payload,
+        )
+        assert target_response.status_code == 404
+
     missing_response = _post_with_csrf(
         guest_client,
         csrf_token,
-        f"/shop-tools/memo/{target.id + 9999}/{operation}",
+        f"/shop-tools/memo/{targets[-1].id + 9999}/{operation}",
         payload,
     )
 
-    assert target_response.status_code == 404
     assert missing_response.status_code == 404
     assert _memo_snapshot() == before
 

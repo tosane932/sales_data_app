@@ -31,6 +31,9 @@
             {% for memo in memos %}
             <article class="shop-memo-card shop-memo-card-trashed">
                 <p class="shop-memo-body">{{ memo.body }}</p>
+                <p class="shop-memo-deleted-at">
+                    削除日時：{{ format_deleted_at(memo.deleted_at) }}
+                </p>
                 <div class="shop-memo-actions">
                     <form method="POST" action="{{ url_for('shop_memos.restore_memo', memo_id=memo.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

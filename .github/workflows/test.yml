@@ -76,4 +76,5 @@ jobs:
             tests/test_guest_cleanup_postgresql.py \
             tests/test_material_orders_postgresql.py \
             tests/test_sales_postgresql.py \
+            tests/test_shop_memos_postgresql.py \
             -v
