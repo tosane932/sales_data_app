@@ -9,7 +9,7 @@ from flask import Flask
 from flask_migrate import Migrate, upgrade
 import sqlalchemy as sa
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError
 
 from models import db
 from postgresql_test_utils import get_isolated_postgresql_test_url
@@ -437,13 +437,6 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                     "deleted_at": None,
                 },
                 {
-                    "title": "タ" * 101,
-                    "body": "タイトル101文字",
-                    "created_at": now,
-                    "updated_at": now,
-                    "deleted_at": None,
-                },
-                {
                     "body": "",
                     "created_at": now,
                     "updated_at": now,
@@ -492,6 +485,21 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                     )
                     db.session.commit()
                 db.session.rollback()
+
+            with pytest.raises(DataError):
+                db.session.execute(
+                    insert_shop_memo,
+                    {
+                        "dataset_id": guest_dataset_id,
+                        "title": "タ" * 101,
+                        "body": "タイトル101文字",
+                        "created_at": now,
+                        "updated_at": now,
+                        "deleted_at": None,
+                    },
+                )
+                db.session.commit()
+            db.session.rollback()
 
             db.session.execute(
                 text("DELETE FROM datasets WHERE id = :dataset_id"),

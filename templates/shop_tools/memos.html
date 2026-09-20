@@ -39,7 +39,7 @@
     {% endwith %}
 
 
-    <section class="shop-memo-list-section" aria-labelledby="memo-list-heading">
+    <section class="shop-memo-list-section shop-memo-list-section-has-fab" aria-labelledby="memo-list-heading">
         <div class="shop-memo-list-heading-row">
             <div class="shop-memo-list-heading-main">
                 <h2 id="memo-list-heading" aria-live="polite">
@@ -225,9 +225,9 @@
             </div>
         </div>
         {% elif search_query %}
-        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        <p class="shop-memo-empty">検索条件に一致するメモはありません。検索文字を変えるか、×ボタンで検索を解除してください。</p>
         {% else %}
-        <p class="shop-memo-empty">メモはありません。</p>
+        <p class="shop-memo-empty">まだメモはありません。＋ボタンから最初のメモを追加できます。</p>
         {% endif %}
     </section>
 
