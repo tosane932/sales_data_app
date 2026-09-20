@@ -142,7 +142,7 @@
                         <h2 id="shop-memo-edit-heading-{{ memo.id }}">メモを編集</h2>
                         <button
                             type="button"
-                            class="shop-memo-dialog-close"
+                            class="shop-memo-dialog-close shop-memo-desktop-only"
                             aria-label="閉じる">×</button>
                     </div>
 
@@ -182,16 +182,8 @@
 
                     <div
                         class="shop-memo-mobile-editor-toolbar"
-                        data-scroll-state="end">
-                        <span>各種オプション</span>
-                        <button
-                            type="button"
-                            class="shop-memo-mobile-editor-menu"
-                            aria-label="メモの操作"
-                            aria-haspopup="dialog"
-                            aria-controls="shop-memo-mobile-actions">
-                            <span aria-hidden="true">⋮</span>
-                        </button>
+                        data-scroll-state="end"
+                        aria-hidden="true">
                     </div>
                 </section>
             </dialog>
@@ -251,7 +243,7 @@
                 <button
                     type="button"
                     id="shop-memo-create-close"
-                    class="shop-memo-create-close"
+                    class="shop-memo-create-close shop-memo-desktop-only"
                     aria-label="閉じる">×</button>
             </div>
 
@@ -296,16 +288,7 @@
             <div
                 class="shop-memo-mobile-editor-toolbar"
                 data-scroll-state="end"
-                hidden>
-                <span>各種オプション</span>
-                <button
-                    type="button"
-                    class="shop-memo-mobile-editor-menu"
-                    aria-label="メモの操作"
-                    aria-haspopup="dialog"
-                    aria-controls="shop-memo-mobile-actions">
-                    <span aria-hidden="true">⋮</span>
-                </button>
+                aria-hidden="true">
             </div>
         </section>
     </dialog>

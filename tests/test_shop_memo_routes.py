@@ -1802,12 +1802,19 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     assert edit_back is not None
     assert edit_back.get("aria-label") == "メモ一覧に戻る"
     assert edit_back.get_text(strip=True) == "←"
+    edit_close = edit_dialog.select_one(
+        ".shop-memo-dialog-close.shop-memo-desktop-only"
+    )
+    assert edit_close is not None
+    assert edit_close.get_text(strip=True) == "×"
     edit_toolbar = edit_dialog.select_one(
         ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
     )
     assert edit_toolbar is not None
     assert edit_toolbar.get("data-scroll-state") == "end"
-    assert edit_toolbar.select_one(".shop-memo-mobile-editor-menu") is not None
+    assert edit_toolbar.get("aria-hidden") == "true"
+    assert edit_toolbar.get_text(strip=True) == ""
+    assert edit_toolbar.select_one("button") is None
     assert edit_dialog.select_one('textarea[name="body"]') is not None
     assert edit_dialog.get("data-duplicate-url") is None
 
@@ -1819,11 +1826,19 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     assert create_back is not None
     assert create_back.get("aria-label") == "メモ一覧に戻る"
     assert create_back.get_text(strip=True) == "←"
+    create_close = create_dialog.select_one(
+        ".shop-memo-create-close.shop-memo-desktop-only"
+    )
+    assert create_close is not None
+    assert create_close.get_text(strip=True) == "×"
     create_toolbar = create_dialog.select_one(
         ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
     )
     assert create_toolbar is not None
-    assert create_toolbar.has_attr("hidden")
+    assert not create_toolbar.has_attr("hidden")
+    assert create_toolbar.get("aria-hidden") == "true"
+    assert create_toolbar.get_text(strip=True) == ""
+    assert create_toolbar.select_one("button") is None
 
     action_sheet = document.select_one("#shop-memo-mobile-actions")
     assert action_sheet is not None
@@ -1853,6 +1868,7 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     assert "scrollHeight" in script_source
     assert "clientHeight" in script_source
     assert "scrollTop" in script_source
+    assert "resizeMobileEditorTextarea" in script_source
     assert "navigator.clipboard.writeText" in script_source
     assert 'document.execCommand("copy")' in script_source
     assert '"コピーしました"' in script_source
