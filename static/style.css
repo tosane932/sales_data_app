@@ -2526,122 +2526,6 @@ body.app-shell-page {
         font-weight: 600;
     }
 
-    .shop-memo-create-dialog-content,
-    .shop-memo-edit-dialog-content {
-        overflow: hidden;
-    }
-
-    .shop-memo-create-dialog-header {
-        min-height: 52px;
-    }
-
-    .shop-memo-mobile-editor-back {
-        width: 50px;
-        min-width: 50px;
-        height: 50px;
-        min-height: 50px;
-        justify-content: center;
-        gap: 0;
-        padding: 0;
-        border-radius: 50%;
-    }
-
-    .shop-memo-mobile-editor-back:hover,
-    .shop-memo-mobile-editor-back:active {
-        background: #edf1ee;
-    }
-
-    .shop-memo-mobile-editor-back:focus-visible {
-        background: #edf1ee;
-        outline: 3px solid #174b2a;
-        outline-offset: 2px;
-    }
-
-    .shop-memo-create-close,
-    .shop-memo-dialog-close {
-        display: none;
-    }
-
-    .shop-memo-create-dialog form,
-    .shop-memo-edit-dialog form,
-    .shop-memo-field {
-        min-width: 0;
-        overflow: hidden;
-    }
-
-    .shop-memo-field textarea,
-    .shop-memo-create-dialog textarea,
-    .shop-memo-edit-dialog textarea {
-        max-width: 100%;
-        min-height: 0;
-        padding: 10px 8px;
-        overflow-x: hidden;
-        overflow-y: auto;
-        color: #2f3d34;
-        background: #ffffff;
-        border: 0;
-        border-radius: 0;
-        outline: 0;
-        box-shadow: none;
-        line-height: 1.65;
-        overflow-wrap: anywhere;
-        white-space: pre-wrap;
-        resize: none;
-        overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .shop-memo-field textarea:focus,
-    .shop-memo-field textarea:focus-visible {
-        border: 0;
-        outline: 2px solid rgba(82, 127, 102, 0.48);
-        outline-offset: -2px;
-        box-shadow: none;
-    }
-
-    .shop-memo-mobile-editor-toolbar:not([hidden]) {
-        display: flex;
-        min-height: 64px;
-        flex: 0 0 64px;
-        align-items: center;
-        gap: 12px;
-        margin:
-            0
-            -12px
-            calc(0px - max(12px, env(safe-area-inset-bottom)));
-        padding:
-            0
-            14px
-            max(12px, env(safe-area-inset-bottom));
-        box-sizing: content-box;
-        color: #68736c;
-        background: #ffffff;
-        border-top: 1px solid transparent;
-        font-size: 0.82rem;
-        transition:
-            background-color 0.16s ease,
-            border-color 0.16s ease;
-    }
-
-    .shop-memo-mobile-editor-toolbar[data-scroll-state="more"] {
-        background: #f0f2f0;
-        border-top-color: #e0e4e1;
-    }
-
-    .shop-memo-mobile-editor-toolbar[data-scroll-state="end"] {
-        background: #ffffff;
-        border-top-color: transparent;
-    }
-
-    .shop-memo-mobile-editor-menu:not([hidden]) {
-        position: static;
-        z-index: auto;
-        width: 52px;
-        height: 52px;
-        margin-left: auto;
-        flex: 0 0 52px;
-        box-shadow: 0 3px 9px rgba(39, 72, 51, 0.2);
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2673,7 +2557,6 @@ body.app-shell-page {
 
 .shop-memo-swipe-action,
 .shop-memo-mobile-editor-back,
-.shop-memo-mobile-editor-menu,
 .shop-memo-pin-indicator,
 .shop-memo-autosave-error,
 .shop-memo-mobile-actions,
@@ -2749,137 +2632,6 @@ body.app-shell-page {
         display: inline-block;
         margin-right: 5px;
         font-size: 0.9rem;
-    }
-
-    .shop-memo-create-dialog,
-    .shop-memo-edit-dialog {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        max-width: none;
-        height: 100%;
-        max-height: none;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: #ffffff;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
-    .shop-memo-create-dialog::backdrop,
-    .shop-memo-edit-dialog::backdrop {
-        background: #ffffff;
-    }
-
-    .shop-memo-create-dialog-content,
-    .shop-memo-edit-dialog-content {
-        display: flex;
-        height: 100dvh;
-        min-height: 100%;
-        flex-direction: column;
-        box-sizing: border-box;
-        margin: 0;
-        padding:
-            max(8px, env(safe-area-inset-top))
-            12px
-            max(12px, env(safe-area-inset-bottom));
-        background: #ffffff;
-        border-radius: 0;
-    }
-
-    .shop-memo-create-dialog-header {
-        min-height: 52px;
-        flex: 0 0 auto;
-        justify-content: flex-start;
-        margin: 0;
-    }
-
-    .shop-memo-create-dialog-header h2,
-    .shop-memo-create-close,
-    .shop-memo-dialog-close {
-        display: none;
-    }
-
-    .shop-memo-mobile-editor-back {
-        display: inline-flex;
-        min-width: 52px;
-        min-height: 48px;
-        align-items: center;
-        gap: 7px;
-        padding: 0 10px;
-        color: #284f36;
-        background: transparent;
-        border: 0;
-        border-radius: 10px;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .shop-memo-mobile-editor-back span[aria-hidden="true"] {
-        font-size: 26px;
-        line-height: 1;
-    }
-
-    .shop-memo-create-dialog form,
-    .shop-memo-edit-dialog form,
-    .shop-memo-field {
-        display: flex;
-        min-height: 0;
-        flex: 1 1 auto;
-        flex-direction: column;
-        margin: 0;
-    }
-
-    .shop-memo-field label,
-    .shop-memo-field input[name="title"],
-    .shop-memo-add-button,
-    .shop-memo-save-button {
-        display: none;
-    }
-
-    .shop-memo-field textarea,
-    .shop-memo-create-dialog textarea {
-        width: 100%;
-        min-height: 0;
-        flex: 1 1 auto;
-        box-sizing: border-box;
-        padding: 12px 8px 84px;
-        color: #2f3d34;
-        background: #ffffff;
-        border: 0;
-        border-radius: 0;
-        outline: none;
-        font-size: 1.05rem;
-        line-height: 1.65;
-        resize: none;
-    }
-
-    .shop-memo-field textarea:focus-visible {
-        outline: 2px solid #527f66;
-        outline-offset: -2px;
-    }
-
-    .shop-memo-mobile-editor-menu:not([hidden]) {
-        position: fixed;
-        z-index: 210;
-        right: 18px;
-        bottom: max(18px, env(safe-area-inset-bottom));
-        display: inline-flex;
-        width: 56px;
-        height: 56px;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        color: #ffffff;
-        background: #527f66;
-        border: 0;
-        border-radius: 50%;
-        box-shadow: 0 4px 12px rgba(39, 72, 51, 0.24);
-        font-size: 28px;
-        line-height: 1;
-        cursor: pointer;
     }
 
     .shop-memo-autosave-error:not([hidden]) {
@@ -3183,22 +2935,6 @@ body.app-shell-page {
 .shop-memo-create-dialog textarea {
     min-height: 220px;
     resize: vertical;
-}
-
-@media (max-width: 700px) {
-    .shop-memo-create-dialog {
-        width: calc(100% - 24px);
-        max-height: calc(100vh - 24px);
-        border-radius: 16px;
-    }
-
-    .shop-memo-create-dialog-content {
-        padding: 18px;
-    }
-
-    .shop-memo-create-dialog textarea {
-        min-height: 180px;
-    }
 }
 
 /* ========================================
@@ -3630,99 +3366,224 @@ body.app-shell-page {
         width: 100%;
     }
 
-    /* 後方にある既存PCダイアログ規則よりスマホ全画面表示を優先する。 */
+    /* PC用ダイアログ規則よりスマホ全画面エディターを優先する。 */
     .shop-memo-create-dialog,
     .shop-memo-edit-dialog {
+        position: fixed;
         inset: 0;
         width: 100%;
         max-width: none;
         height: 100%;
         max-height: none;
         margin: 0;
+        padding: 0;
         overflow: hidden;
+        background: #ffffff;
+        border: 0;
         border-radius: 0;
         box-shadow: none;
     }
 
+    .shop-memo-create-dialog::backdrop,
+    .shop-memo-edit-dialog::backdrop {
+        background: #ffffff;
+    }
+
     .shop-memo-create-dialog-content,
     .shop-memo-edit-dialog-content {
-        height: 100dvh;
-        min-height: 100%;
-        box-sizing: border-box;
-        padding:
-            max(8px, env(safe-area-inset-top))
-            12px
-            max(12px, env(safe-area-inset-bottom));
-        border-radius: 0;
-    }
-
-    .shop-memo-create-dialog textarea,
-    .shop-memo-edit-dialog textarea {
+        --shop-memo-mobile-header-height: 52px;
+        --shop-memo-mobile-toolbar-height:
+            calc(52px + max(12px, env(safe-area-inset-bottom)));
+        --shop-memo-mobile-top-padding:
+            max(8px, env(safe-area-inset-top));
+        display: flex;
+        height: var(--shop-memo-mobile-viewport-height, 100dvh);
         min-height: 0;
-        resize: none;
+        flex-direction: column;
+        box-sizing: border-box;
+        margin: 0;
+        padding:
+            var(--shop-memo-mobile-top-padding)
+            12px
+            var(--shop-memo-mobile-toolbar-height);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        background: #ffffff;
+        border: 0;
+        border-radius: 0;
+        -webkit-overflow-scrolling: touch;
     }
-}
 
-/* 後段の既存PC規則よりスマホ専用の入力面を優先する。 */
-@media (max-width: 700px) {
-    .shop-memo-list-heading-main {
-        align-items: center;
-        flex-direction: row;
+    .shop-memo-create-dialog-header {
+        min-height: var(--shop-memo-mobile-header-height);
+        flex: 0 0 var(--shop-memo-mobile-header-height);
+        justify-content: flex-start;
+        margin: 0;
+    }
+
+    .shop-memo-create-dialog-header h2,
+    .shop-memo-desktop-only {
+        display: none;
     }
 
     .shop-memo-mobile-editor-back {
-        width: 50px;
-        min-width: 50px;
-        height: 50px;
-        min-height: 50px;
+        display: inline-flex;
+        width: 52px;
+        min-width: 52px;
+        height: 52px;
+        min-height: 52px;
+        flex: 0 0 52px;
+        align-items: center;
         justify-content: center;
         gap: 0;
         padding: 0;
+        color: #284f36;
+        background: transparent;
+        border: 0;
         border-radius: 50%;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .shop-memo-mobile-editor-back span[aria-hidden="true"] {
+        font-size: 26px;
+        line-height: 1;
+    }
+
+    .shop-memo-mobile-editor-back:hover,
+    .shop-memo-mobile-editor-back:active {
+        background: #e7ece8;
+    }
+
+    .shop-memo-mobile-editor-back:focus-visible {
+        background: #e7ece8;
+        outline: 3px solid #174b2a;
+        outline-offset: 2px;
     }
 
     .shop-memo-create-dialog form,
     .shop-memo-edit-dialog form,
     .shop-memo-field {
+        display: flex;
         min-width: 0;
-        overflow: hidden;
+        min-height: 0;
+        flex: 0 0 auto;
+        flex-direction: column;
+        margin: 0;
+        overflow: visible;
+    }
+
+    .shop-memo-field label,
+    .shop-memo-field input[name="title"],
+    .shop-memo-add-button,
+    .shop-memo-save-button {
+        display: none;
     }
 
     .shop-memo-field textarea,
     .shop-memo-create-dialog textarea,
     .shop-memo-edit-dialog textarea {
+        width: 100%;
         max-width: 100%;
-        min-height: 0;
-        padding: 10px 8px;
+        height: auto;
+        min-height: max(
+            8rem,
+            calc(
+                var(--shop-memo-mobile-viewport-height, 100dvh)
+                - var(--shop-memo-mobile-top-padding)
+                - var(--shop-memo-mobile-header-height)
+                - var(--shop-memo-mobile-toolbar-height)
+            )
+        );
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        padding: 12px 8px;
         overflow-x: hidden;
-        overflow-y: auto;
+        overflow-y: hidden;
+        color: #2f3d34;
         background: #ffffff;
         border: 0;
         border-radius: 0;
         outline: 0;
         box-shadow: none;
+        font-size: 1.05rem;
+        line-height: 1.65;
         overflow-wrap: anywhere;
         white-space: pre-wrap;
         resize: none;
-        overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
     }
 
     .shop-memo-field textarea:focus,
     .shop-memo-field textarea:focus-visible {
         border: 0;
-        outline: 2px solid rgba(82, 127, 102, 0.48);
-        outline-offset: -2px;
+        outline: 0;
         box-shadow: none;
+        caret-color: #174b2a;
     }
 
-    .shop-memo-mobile-editor-menu:not([hidden]) {
-        position: static;
-        z-index: auto;
-        width: 52px;
-        height: 52px;
-        margin-left: auto;
-        flex: 0 0 52px;
-        box-shadow: 0 3px 9px rgba(39, 72, 51, 0.2);
+    .shop-memo-field textarea:focus-visible {
+        background: #fbfdfb;
+    }
+
+    .shop-memo-mobile-editor-toolbar:not([hidden]) {
+        position: fixed;
+        z-index: 205;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: block;
+        min-height: var(--shop-memo-mobile-toolbar-height);
+        box-sizing: border-box;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        pointer-events: none;
+        background: #ffffff;
+        border-top: 1px solid transparent;
+        transition:
+            background-color 0.16s ease,
+            border-color 0.16s ease;
+    }
+
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="more"] {
+        background: #e3e7e4;
+        border-top-color: #cfd6d1;
+    }
+
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="end"] {
+        background: #ffffff;
+        border-top-color: transparent;
+    }
+
+    .shop-memo-search-form {
+        margin-bottom: 14px;
+    }
+
+    .shop-memo-search-input-wrap input {
+        height: 42px;
+        min-height: 42px;
+        padding: 8px 44px;
+        background: #fbfcfb;
+        border-color: #e0e6e1;
+        border-radius: 21px;
+        font-size: 0.92rem;
+    }
+
+    .shop-memo-search-input-wrap input::placeholder {
+        font-size: 0.92rem;
+    }
+
+    .shop-memo-search-icon-button {
+        left: 1px;
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
+    }
+
+    .shop-memo-search-clear {
+        right: 1px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
     }
 }

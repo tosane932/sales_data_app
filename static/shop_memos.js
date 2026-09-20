@@ -190,19 +190,62 @@ const closeMemoActionMenu = () => {
 
 const editorStates = new WeakMap();
 
-const updateEditorScrollIndicator = (dialog) => {
+const syncMobileEditorViewportHeight = (dialog) => {
+    const scrollContainer = dialog.querySelector(
+        ".shop-memo-create-dialog-content, .shop-memo-edit-dialog-content"
+    );
+    if (!scrollContainer) {
+        return;
+    }
+
+    if (!MOBILE_MEMO_MEDIA.matches) {
+        scrollContainer.style.removeProperty(
+            "--shop-memo-mobile-viewport-height"
+        );
+        return;
+    }
+
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    scrollContainer.style.setProperty(
+        "--shop-memo-mobile-viewport-height",
+        `${viewportHeight}px`
+    );
+};
+
+const resizeMobileEditorTextarea = (dialog) => {
     const textarea = dialog.querySelector('textarea[name="body"]');
+    if (!textarea) {
+        return;
+    }
+
+    if (!MOBILE_MEMO_MEDIA.matches) {
+        textarea.style.height = "";
+        return;
+    }
+
+    textarea.style.height = "auto";
+    const minimumHeight = textarea.clientHeight;
+    textarea.style.height = `${Math.max(
+        minimumHeight,
+        textarea.scrollHeight
+    )}px`;
+};
+
+const updateEditorScrollIndicator = (dialog) => {
+    const scrollContainer = dialog.querySelector(
+        ".shop-memo-create-dialog-content, .shop-memo-edit-dialog-content"
+    );
     const toolbar = dialog.querySelector(
         ".shop-memo-mobile-editor-toolbar"
     );
-    if (!textarea || !toolbar) {
+    if (!scrollContainer || !toolbar) {
         return;
     }
 
     const remainingScroll = (
-        textarea.scrollHeight
-        - textarea.clientHeight
-        - textarea.scrollTop
+        scrollContainer.scrollHeight
+        - scrollContainer.clientHeight
+        - scrollContainer.scrollTop
     );
     toolbar.dataset.scrollState = (
         remainingScroll > MOBILE_MEMO_SETTINGS.SCROLL_END_TOLERANCE_PX
@@ -213,6 +256,12 @@ const updateEditorScrollIndicator = (dialog) => {
 
 const scheduleScrollIndicatorUpdate = (dialog) => {
     window.requestAnimationFrame(() => updateEditorScrollIndicator(dialog));
+};
+
+const refreshMobileEditorLayout = (dialog) => {
+    syncMobileEditorViewportHeight(dialog);
+    resizeMobileEditorTextarea(dialog);
+    scheduleScrollIndicatorUpdate(dialog);
 };
 
 const showAutosaveError = (dialog, message) => {
@@ -351,15 +400,18 @@ const returnFromMobileEditor = async (dialog) => {
 
 document.querySelectorAll("dialog[data-memo-editor]").forEach((dialog) => {
     const textarea = dialog.querySelector('textarea[name="body"]');
+    const scrollContainer = dialog.querySelector(
+        ".shop-memo-create-dialog-content, .shop-memo-edit-dialog-content"
+    );
     const retryButton = dialog.querySelector(".shop-memo-autosave-retry");
     const backButton = dialog.querySelector(".shop-memo-mobile-editor-back");
     editorStates.set(dialog, {dirty: false, timer: null, saving: null});
 
     textarea?.addEventListener("input", () => {
         scheduleMobileAutosave(dialog);
-        scheduleScrollIndicatorUpdate(dialog);
+        refreshMobileEditorLayout(dialog);
     });
-    textarea?.addEventListener(
+    scrollContainer?.addEventListener(
         "scroll",
         () => updateEditorScrollIndicator(dialog),
         {passive: true}
@@ -394,8 +446,8 @@ const openMemoDialog = (dialog) => {
     }
 
     if (MOBILE_MEMO_MEDIA.matches) {
+        refreshMobileEditorLayout(dialog);
         dialog.querySelector('textarea[name="body"]')?.focus();
-        scheduleScrollIndicatorUpdate(dialog);
     } else {
         dialog.querySelector('input[name="title"]')?.focus();
     }
@@ -691,10 +743,6 @@ mobileActionSheet?.addEventListener("click", (event) => {
     }
 });
 
-document.querySelectorAll(".shop-memo-mobile-editor-menu").forEach((button) => {
-    button.addEventListener("click", () => openMobileActionSheet(button));
-});
-
 const resetSwipePosition = (card) => {
     card.style.transition = "transform 0.18s ease";
     card.style.transform = "translateX(0)";
@@ -881,12 +929,17 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("scroll", closeMemoActionMenu, true);
 window.addEventListener("resize", () => {
     closeMemoActionMenu();
-    document.querySelectorAll("dialog[data-memo-editor][open]").forEach(
-        scheduleScrollIndicatorUpdate
+    document.querySelectorAll("dialog[data-memo-editor]").forEach(
+        refreshMobileEditorLayout
     );
 });
 window.visualViewport?.addEventListener("resize", () => {
     document.querySelectorAll("dialog[data-memo-editor][open]").forEach(
-        scheduleScrollIndicatorUpdate
+        refreshMobileEditorLayout
+    );
+});
+MOBILE_MEMO_MEDIA.addEventListener("change", () => {
+    document.querySelectorAll("dialog[data-memo-editor]").forEach(
+        refreshMobileEditorLayout
     );
 });
