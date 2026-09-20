@@ -3,10 +3,12 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from flask import Flask
-from flask_migrate import Migrate, upgrade
+from flask_migrate import Migrate, downgrade, upgrade
+import pytest
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
 
 from models import db
 
@@ -15,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
 PRE_SHOP_MEMO_REVISION = "d4f7a9c2e6b1"
+SHOP_MEMO_REVISION = "f8c2a6d4e1b3"
 
 
 def test_empty_database_upgrades_from_base_to_head(tmp_path):
@@ -160,12 +163,16 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
         assert set(shop_memo_columns) == {
             "id",
             "dataset_id",
+            "title",
             "body",
             "created_at",
             "updated_at",
             "deleted_at",
+            "pinned_at",
         }
         assert isinstance(shop_memo_columns["id"]["type"], sa.Integer)
+        assert isinstance(shop_memo_columns["title"]["type"], sa.String)
+        assert shop_memo_columns["title"]["type"].length == 100
         assert isinstance(shop_memo_columns["body"]["type"], sa.Text)
         assert isinstance(
             shop_memo_columns["created_at"]["type"],
@@ -179,14 +186,21 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
             shop_memo_columns["deleted_at"]["type"],
             sa.DateTime,
         )
+        assert isinstance(
+            shop_memo_columns["pinned_at"]["type"],
+            sa.DateTime,
+        )
         assert shop_memo_columns["dataset_id"]["nullable"] is False
+        assert shop_memo_columns["title"]["nullable"] is False
         assert shop_memo_columns["body"]["nullable"] is False
         assert shop_memo_columns["created_at"]["nullable"] is False
         assert shop_memo_columns["updated_at"]["nullable"] is False
         assert shop_memo_columns["deleted_at"]["nullable"] is True
+        assert shop_memo_columns["pinned_at"]["nullable"] is True
         assert shop_memo_columns["created_at"]["default"] is not None
         assert shop_memo_columns["updated_at"]["default"] is not None
         assert shop_memo_columns["deleted_at"]["default"] is None
+        assert shop_memo_columns["pinned_at"]["default"] is None
 
         shop_memo_foreign_keys = inspector.get_foreign_keys("shop_memos")
         assert len(shop_memo_foreign_keys) == 1
@@ -207,15 +221,24 @@ def test_empty_database_upgrades_from_base_to_head(tmp_path):
             "ck_shop_memos_body_max_length",
             "ck_shop_memos_body_nonblank",
             "ck_shop_memos_deleted_not_before_creation",
+            "ck_shop_memos_title_max_length",
+            "ck_shop_memos_title_nonblank",
             "ck_shop_memos_updated_not_before_creation",
             "ck_shop_memos_updated_not_before_deletion",
+            "ck_shop_memos_pinned_not_before_creation",
         }
 
         shop_memo_indexes = inspector.get_indexes("shop_memos")
         assert any(
-            index["name"] == "ix_shop_memos_dataset_deleted_updated_id"
-            and index["column_names"]
-            == ["dataset_id", "deleted_at", "updated_at", "id"]
+            index["name"]
+            == "ix_shop_memos_dataset_deleted_pinned_updated_id"
+            and index["column_names"] == [
+                "dataset_id",
+                "deleted_at",
+                "pinned_at",
+                "updated_at",
+                "id",
+            ]
             and not index["unique"]
             for index in shop_memo_indexes
         )
@@ -345,3 +368,120 @@ def test_material_order_migration_preserves_existing_sqlite_data(tmp_path):
         assert db.session.execute(
             text("SELECT COUNT(*) FROM shop_memos")
         ).scalar_one() == 0
+
+
+def test_shop_memo_title_migration_backfills_existing_sqlite_data(tmp_path):
+    database_path = tmp_path / "shop_memo_title_upgrade_test.sqlite"
+    migration_app = Flask("shop_memo_title_upgrade_test")
+    migration_app.config.update(
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{database_path}",
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
+    db.init_app(migration_app)
+    Migrate(migration_app, db, directory=str(MIGRATIONS_DIR))
+
+    with migration_app.app_context():
+        upgrade(
+            directory=str(MIGRATIONS_DIR),
+            revision=SHOP_MEMO_REVISION,
+        )
+        admin_dataset_id = db.session.execute(
+            text("SELECT id FROM datasets WHERE system_key = 'admin'")
+        ).scalar_one()
+        db.session.execute(
+            text(
+                "INSERT INTO shop_memos "
+                "(id, dataset_id, body, created_at, updated_at) "
+                "VALUES (904, :dataset_id, :body, :created_at, :updated_at)"
+            ),
+            {
+                "dataset_id": admin_dataset_id,
+                "body": "  \n  移行後のタイトル  \n本文の続き",
+                "created_at": "2026-09-18 03:00:00",
+                "updated_at": "2026-09-18 03:00:00",
+            },
+        )
+        db.session.commit()
+
+        upgrade(directory=str(MIGRATIONS_DIR), revision="head")
+
+        assert db.session.execute(
+            text(
+                "SELECT title, body, pinned_at "
+                "FROM shop_memos WHERE id = 904"
+            )
+        ).one() == (
+            "移行後のタイトル",
+            "  \n  移行後のタイトル  \n本文の続き",
+            None,
+        )
+
+        columns = {
+            column["name"]: column
+            for column in inspect(db.engine).get_columns("shop_memos")
+        }
+        assert columns["title"]["nullable"] is False
+
+
+def test_shop_memo_pin_migration_round_trip_preserves_existing_sqlite_data(
+    tmp_path,
+):
+    database_path = tmp_path / "shop_memo_pin_round_trip.sqlite"
+    migration_app = Flask("shop_memo_pin_round_trip")
+    migration_app.config.update(
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{database_path}",
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
+    db.init_app(migration_app)
+    Migrate(migration_app, db, directory=str(MIGRATIONS_DIR))
+
+    with migration_app.app_context():
+        upgrade(directory=str(MIGRATIONS_DIR), revision="c92128da7c36")
+        admin_dataset_id = db.session.execute(
+            text("SELECT id FROM datasets WHERE system_key = 'admin'")
+        ).scalar_one()
+        db.session.execute(
+            text(
+                "INSERT INTO shop_memos "
+                "(id, dataset_id, title, body, created_at, updated_at) "
+                "VALUES (905, :dataset_id, '既存タイトル', '既存本文', "
+                "'2026-09-19 03:00:00', '2026-09-19 03:00:00')"
+            ),
+            {"dataset_id": admin_dataset_id},
+        )
+        db.session.commit()
+
+        upgrade(directory=str(MIGRATIONS_DIR), revision="head")
+
+        assert db.session.execute(
+            text(
+                "SELECT title, body, pinned_at "
+                "FROM shop_memos WHERE id = 905"
+            )
+        ).one() == ("既存タイトル", "既存本文", None)
+        with pytest.raises(IntegrityError):
+            db.session.execute(
+                text(
+                    "UPDATE shop_memos "
+                    "SET pinned_at = '2026-09-19 02:59:59' "
+                    "WHERE id = 905"
+                )
+            )
+            db.session.commit()
+        db.session.rollback()
+
+        downgrade(directory=str(MIGRATIONS_DIR), revision="c92128da7c36")
+
+        inspector = inspect(db.engine)
+        assert "pinned_at" not in {
+            column["name"] for column in inspector.get_columns("shop_memos")
+        }
+        assert db.session.execute(
+            text("SELECT title, body FROM shop_memos WHERE id = 905")
+        ).one() == ("既存タイトル", "既存本文")
+        assert any(
+            index["name"] == "ix_shop_memos_dataset_deleted_updated_id"
+            and index["column_names"]
+            == ["dataset_id", "deleted_at", "updated_at", "id"]
+            for index in inspector.get_indexes("shop_memos")
+        )

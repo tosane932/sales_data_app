@@ -1,25 +1,35 @@
 <form method="GET" action="{{ search_action }}" class="shop-memo-search-form" role="search">
-    <label for="memo-search">キーワードを入力</label>
-    <div class="shop-memo-search-row">
-        <div class="shop-memo-search-input-wrap">
-            <input
-                id="memo-search"
-                name="q"
-                type="search"
-                value="{{ search_query }}"
-                maxlength="100"
-                autocomplete="off">
-            <button
-                id="memo-search-clear"
-                type="button"
-                class="shop-memo-search-clear"
-                aria-label="検索文字をすべて消す"
-                data-clear-url="{{ clear_url }}"
-                {% if not search_query %}hidden{% endif %}>
-                <span aria-hidden="true">×</span>
-            </button>
-        </div>
-        <button type="submit" class="btn shop-memo-search-button">検索</button>
+    <input type="hidden" name="sort" value="{{ sort_by }}">
+    <label for="memo-search" class="shop-memo-search-label">
+        メモを検索
+    </label>
+
+    <div class="shop-memo-search-input-wrap">
+        <button
+            type="submit"
+            class="shop-memo-search-icon-button"
+            aria-label="検索">
+            <span aria-hidden="true">🔍</span>
+        </button>
+
+        <input
+            id="memo-search"
+            name="q"
+            type="search"
+            value="{{ search_query }}"
+            placeholder="メモを検索"
+            maxlength="100"
+            autocomplete="off">
+
+        <button
+            id="memo-search-clear"
+            type="button"
+            class="shop-memo-search-clear"
+            aria-label="検索文字をすべて消す"
+            data-clear-url="{{ clear_url }}"
+            {% if not search_query %}hidden{% endif %}>
+            <span aria-hidden="true">×</span>
+        </button>
     </div>
 </form>
 

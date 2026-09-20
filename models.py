@@ -171,6 +171,14 @@ class ShopMemo(db.Model):
     __tablename__ = "shop_memos"
     __table_args__ = (
         db.CheckConstraint(
+            "length(trim(title)) >= 1",
+            name="ck_shop_memos_title_nonblank",
+        ),
+        db.CheckConstraint(
+            "length(title) <= 100",
+            name="ck_shop_memos_title_max_length",
+        ),
+        db.CheckConstraint(
             "length(trim(body)) >= 1",
             name="ck_shop_memos_body_nonblank",
         ),
@@ -190,10 +198,15 @@ class ShopMemo(db.Model):
             "deleted_at IS NULL OR updated_at >= deleted_at",
             name="ck_shop_memos_updated_not_before_deletion",
         ),
+        db.CheckConstraint(
+            "pinned_at IS NULL OR pinned_at >= created_at",
+            name="ck_shop_memos_pinned_not_before_creation",
+        ),
         db.Index(
-            "ix_shop_memos_dataset_deleted_updated_id",
+            "ix_shop_memos_dataset_deleted_pinned_updated_id",
             "dataset_id",
             "deleted_at",
+            "pinned_at",
             "updated_at",
             "id",
         ),
@@ -209,6 +222,7 @@ class ShopMemo(db.Model):
         ),
         nullable=False,
     )
+    title = db.Column(db.String(100), nullable=False)
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(
         db.DateTime(timezone=True),
@@ -223,6 +237,10 @@ class ShopMemo(db.Model):
         server_default=db.func.now(),
     )
     deleted_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )
+    pinned_at = db.Column(
         db.DateTime(timezone=True),
         nullable=True,
     )

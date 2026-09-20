@@ -6,10 +6,30 @@
 <span aria-hidden="true">📝</span> メモ
 {% endblock %}
 
+{% block tool_header_actions %}
+<a
+    href="{{ url_for('shop_memos.list_trash') }}"
+    class="shop-memo-mobile-trash-link"
+    aria-label="ゴミ箱を開く（{{ trash_count }}件）">
+    <span aria-hidden="true">🗑️</span>
+    <span
+        class="shop-memo-mobile-trash-count"
+        aria-hidden="true">{{ trash_count }}</span>
+</a>
+{% endblock %}
+
 {% block content %}
     {% if error %}
     <div class="shop-memos-error" role="alert">⚠️ {{ error }}</div>
     {% endif %}
+
+    <div
+        id="shop-memo-mobile-config"
+        data-csrf-token="{{ csrf_token() }}"
+        data-create-url="{{ url_for('shop_memos.autosave_new_memo') }}"
+        data-list-url="{{ url_for('shop_memos.list_memos') }}"
+        hidden>
+    </div>
 
     {% with
         search_action=url_for('shop_memos.list_memos'),
@@ -18,66 +38,191 @@
         {% include "shop_tools/_memo_search.html" %}
     {% endwith %}
 
-    <section class="shop-memo-create-section" aria-labelledby="memo-create-heading">
-        <h2 id="memo-create-heading">新しいメモ</h2>
-        <form method="POST" action="{{ url_for('shop_memos.create_memo') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="shop-memo-field">
-                <label for="shop-memo-body">メモ <span aria-hidden="true">※</span></label>
-                <textarea
-                    id="shop-memo-body"
-                    name="body"
-                    maxlength="2000"
-                    rows="5"
-                    required>{{ form_value }}</textarea>
-            </div>
-            <button type="submit" class="btn shop-memo-add-button">
-                ＋ メモを追加
-            </button>
-        </form>
-    </section>
 
     <section class="shop-memo-list-section" aria-labelledby="memo-list-heading">
         <div class="shop-memo-list-heading-row">
-            <h2 id="memo-list-heading">メモ {{ active_count }}件</h2>
-            <a href="{{ url_for('shop_memos.list_trash') }}" class="shop-memo-trash-link">
-                <span aria-hidden="true">🗑️</span> ゴミ箱 {{ trash_count }}件
+            <div class="shop-memo-list-heading-main">
+                <h2 id="memo-list-heading" aria-live="polite">
+                    <span class="shop-memo-count-desktop">{{ active_count }}件のメモ</span>
+                    <span class="shop-memo-count-mobile">({{ active_count }}件)</span>
+                </h2>
+                <a href="{{ url_for('shop_memos.list_trash') }}" class="shop-memo-trash-link">
+                    <span aria-hidden="true">🗑️</span> ゴミ箱 {{ trash_count }}件
+                </a>
+            </div>
+
+            {% set next_sort = 'created' if sort_by == 'updated' else 'updated' %}
+            <a
+                class="shop-memo-sort-link"
+                href="{{ url_for('shop_memos.list_memos', sort=next_sort, q=search_query) if search_query else url_for('shop_memos.list_memos', sort=next_sort) }}">
+                {{ '更新日' if sort_by == 'updated' else '作成日' }}
+                <span aria-hidden="true">↓</span>
             </a>
         </div>
 
         {% if memos %}
         <div class="shop-memo-list">
             {% for memo in memos %}
-            <article class="shop-memo-card">
-                <p class="shop-memo-body">{{ linkify_memo_body(memo.body) }}</p>
-                <div class="shop-memo-actions">
-                    <details class="shop-memo-edit"{% if edit_form and edit_form.id == memo.id %} open{% endif %}>
-                        <summary>編集</summary>
-                        <form method="POST" action="{{ url_for('shop_memos.edit_memo', memo_id=memo.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label for="shop-memo-edit-{{ memo.id }}">メモを編集</label>
+            <div class="shop-memo-swipe-row" data-memo-row="{{ memo.id }}">
+                <div class="shop-memo-swipe-action shop-memo-swipe-pin" aria-hidden="true">
+                    <span>📌</span>
+                </div>
+                <div class="shop-memo-swipe-action shop-memo-swipe-trash" aria-hidden="true">
+                    <span>🗑️</span>
+                </div>
+
+                <article
+                    class="shop-memo-card"
+                    data-memo-id="{{ memo.id }}"
+                    data-autosave-url="{{ url_for('shop_memos.autosave_memo', memo_id=memo.id) }}"
+                    data-pin-url="{{ url_for('shop_memos.set_pin', memo_id=memo.id) }}"
+                    data-trash-url="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}"
+                    data-restore-url="{{ url_for('shop_memos.restore_memo', memo_id=memo.id) }}"
+                    data-pinned="{{ 'true' if memo.pinned_at else 'false' }}">
+                    <button
+                        type="button"
+                        class="shop-memo-card-open"
+                        data-dialog-id="shop-memo-edit-dialog-{{ memo.id }}"
+                        aria-label="「{{ memo.title }}」を編集"
+                        aria-haspopup="dialog"
+                        aria-controls="shop-memo-edit-dialog-{{ memo.id }}">
+                    </button>
+
+                    <div class="shop-memo-card-main">
+                        <div class="shop-memo-card-copy">
+                            <span
+                                class="shop-memo-pin-indicator"
+                                aria-label="ピン留め済み"
+                                {% if not memo.pinned_at %}hidden{% endif %}>📌</span>
+                            <span class="shop-memo-title">{{ memo.title }}</span>
+                            <p class="shop-memo-body">{{ linkify_memo_body(memo.body) }}</p>
+                        </div>
+
+                        <div class="shop-memo-card-meta">
+                            <time class="shop-memo-date">
+                                {{ format_memo_date(memo.created_at if sort_by == 'created' else memo.updated_at) }}
+                            </time>
+
+                            <button
+                                type="button"
+                                class="shop-memo-menu-button"
+                                aria-label="「{{ memo.title }}」の操作"
+                                aria-haspopup="menu"
+                                aria-controls="shop-memo-action-menu"
+                                aria-expanded="false"
+                                data-dialog-id="shop-memo-edit-dialog-{{ memo.id }}"
+                                data-trash-url="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}">
+                                <span aria-hidden="true">⋮</span>
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <dialog
+                id="shop-memo-edit-dialog-{{ memo.id }}"
+                class="shop-memo-edit-dialog"
+                data-memo-editor
+                data-memo-id="{{ memo.id }}"
+                data-autosave-url="{{ url_for('shop_memos.autosave_memo', memo_id=memo.id) }}"
+                data-pin-url="{{ url_for('shop_memos.set_pin', memo_id=memo.id) }}"
+                data-trash-url="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}"
+                data-restore-url="{{ url_for('shop_memos.restore_memo', memo_id=memo.id) }}"
+                data-pinned="{{ 'true' if memo.pinned_at else 'false' }}"
+                data-open-on-load="{{ 'true' if edit_form and edit_form.id == memo.id else 'false' }}"
+                aria-labelledby="shop-memo-edit-heading-{{ memo.id }}">
+                <section class="shop-memo-create-section shop-memo-edit-dialog-content">
+                    <div class="shop-memo-create-dialog-header">
+                        <button
+                            type="button"
+                            class="shop-memo-mobile-editor-back"
+                            aria-label="メモ一覧に戻る">
+                            <span aria-hidden="true">←</span>
+                        </button>
+                        <h2 id="shop-memo-edit-heading-{{ memo.id }}">メモを編集</h2>
+                        <button
+                            type="button"
+                            class="shop-memo-dialog-close"
+                            aria-label="閉じる">×</button>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('shop_memos.edit_memo', memo_id=memo.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="shop-memo-field">
+                            <label for="shop-memo-edit-title-{{ memo.id }}">タイトル</label>
+                            <input
+                                id="shop-memo-edit-title-{{ memo.id }}"
+                                name="title"
+                                type="text"
+                                maxlength="100"
+                                required
+                                value="{% if edit_form and edit_form.id == memo.id %}{{ edit_form.title }}{% else %}{{ memo.title }}{% endif %}">
+
+                            <label for="shop-memo-edit-{{ memo.id }}">本文</label>
                             <textarea
                                 id="shop-memo-edit-{{ memo.id }}"
                                 name="body"
                                 maxlength="2000"
-                                rows="5"
+                                rows="8"
                                 required>{% if edit_form and edit_form.id == memo.id %}{{ edit_form.body }}{% else %}{{ memo.body }}{% endif %}</textarea>
-                            <button type="submit" class="btn shop-memo-save-button">変更を保存</button>
-                        </form>
-                    </details>
-                    <details class="shop-memo-trash-confirmation">
-                        <summary>ゴミ箱へ移動</summary>
-                        <p>このメモをゴミ箱へ移動しますか？</p>
-                        <form method="POST" action="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn shop-memo-trash-button">
-                                ゴミ箱へ移動する
-                            </button>
-                        </form>
-                    </details>
-                </div>
-            </article>
+                        </div>
+
+                        <button type="submit" class="btn shop-memo-save-button">
+                            変更を保存
+                        </button>
+                    </form>
+
+                    <div class="shop-memo-autosave-error" role="alert" hidden>
+                        <span data-autosave-error-message>保存できませんでした。</span>
+                        <button type="button" class="shop-memo-autosave-retry">
+                            再試行
+                        </button>
+                    </div>
+
+                    <div
+                        class="shop-memo-mobile-editor-toolbar"
+                        data-scroll-state="end">
+                        <span>各種オプション</span>
+                        <button
+                            type="button"
+                            class="shop-memo-mobile-editor-menu"
+                            aria-label="メモの操作"
+                            aria-haspopup="dialog"
+                            aria-controls="shop-memo-mobile-actions">
+                            <span aria-hidden="true">⋮</span>
+                        </button>
+                    </div>
+                </section>
+            </dialog>
             {% endfor %}
+
+            <div
+                id="shop-memo-action-menu"
+                class="shop-memo-action-menu"
+                role="menu"
+                hidden>
+                <button
+                    type="button"
+                    id="shop-memo-menu-edit"
+                    class="shop-memo-action-menu-button"
+                    role="menuitem">
+                    ✏️ 編集
+                </button>
+
+                <form
+                    method="POST"
+                    id="shop-memo-menu-trash-form"
+                    action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button
+                        type="submit"
+                        class="shop-memo-action-menu-button shop-memo-action-menu-trash"
+                        role="menuitem">
+                        🗑️ ゴミ箱へ移動
+                    </button>
+                </form>
+            </div>
         </div>
         {% elif search_query %}
         <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
@@ -85,16 +230,137 @@
         <p class="shop-memo-empty">メモはありません。</p>
         {% endif %}
     </section>
+
+    <dialog
+        id="shop-memo-create-dialog"
+        class="shop-memo-create-dialog"
+        data-memo-editor
+        data-autosave-url="{{ url_for('shop_memos.autosave_new_memo') }}"
+        data-pinned="false"
+        data-open-on-load="{{ 'true' if create_form_open else 'false' }}"
+        aria-labelledby="memo-create-heading">
+        <section class="shop-memo-create-section shop-memo-create-dialog-content">
+            <div class="shop-memo-create-dialog-header">
+                <button
+                    type="button"
+                    class="shop-memo-mobile-editor-back"
+                    aria-label="メモ一覧に戻る">
+                    <span aria-hidden="true">←</span>
+                </button>
+                <h2 id="memo-create-heading">新しいメモ</h2>
+                <button
+                    type="button"
+                    id="shop-memo-create-close"
+                    class="shop-memo-create-close"
+                    aria-label="閉じる">×</button>
+            </div>
+
+            <form method="POST" action="{{ url_for('shop_memos.create_memo') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="shop-memo-field">
+                    <label for="shop-memo-title">
+                        タイトル <span aria-hidden="true">※</span>
+                    </label>
+                    <input
+                        id="shop-memo-title"
+                        name="title"
+                        type="text"
+                        maxlength="100"
+                        required
+                        value="{{ title_form_value }}">
+
+                    <label for="shop-memo-body">
+                        本文 <span aria-hidden="true">※</span>
+                    </label>
+                    <textarea
+                        id="shop-memo-body"
+                        name="body"
+                        maxlength="2000"
+                        rows="8"
+                        required>{{ form_value }}</textarea>
+                </div>
+
+                <button type="submit" class="btn shop-memo-add-button">
+                    メモを追加
+                </button>
+            </form>
+
+            <div class="shop-memo-autosave-error" role="alert" hidden>
+                <span data-autosave-error-message>保存できませんでした。</span>
+                <button type="button" class="shop-memo-autosave-retry">
+                    再試行
+                </button>
+            </div>
+
+            <div
+                class="shop-memo-mobile-editor-toolbar"
+                data-scroll-state="end"
+                hidden>
+                <span>各種オプション</span>
+                <button
+                    type="button"
+                    class="shop-memo-mobile-editor-menu"
+                    aria-label="メモの操作"
+                    aria-haspopup="dialog"
+                    aria-controls="shop-memo-mobile-actions">
+                    <span aria-hidden="true">⋮</span>
+                </button>
+            </div>
+        </section>
+    </dialog>
+
+    <dialog
+        id="shop-memo-mobile-actions"
+        class="shop-memo-mobile-actions"
+        aria-labelledby="shop-memo-mobile-actions-heading">
+        <section class="shop-memo-mobile-actions-content">
+            <h2 id="shop-memo-mobile-actions-heading" class="visually-hidden">
+                メモの操作
+            </h2>
+            <div class="shop-memo-mobile-actions-preview">
+                <strong data-mobile-preview-title></strong>
+                <p data-mobile-preview-body></p>
+            </div>
+            <div class="shop-memo-mobile-actions-list">
+                <button type="button" data-mobile-action="pin">
+                    📌 ピン留め
+                </button>
+                <button type="button" data-mobile-action="copy">
+                    📋 コピー
+                </button>
+                <button
+                    type="button"
+                    class="shop-memo-mobile-action-trash"
+                    data-mobile-action="trash">
+                    🗑️ 削除
+                </button>
+            </div>
+            <button
+                type="button"
+                class="shop-memo-mobile-actions-close"
+                aria-label="操作メニューを閉じる">
+                キャンセル
+            </button>
+        </section>
+    </dialog>
+
+    <div id="shop-memo-snackbar" class="shop-memo-snackbar" role="status" hidden>
+        <span id="shop-memo-snackbar-message"></span>
+        <button type="button" id="shop-memo-snackbar-undo">
+            元に戻す
+        </button>
+    </div>
 {% endblock %}
 
 {% block floating_action %}
 <div class="shop-tools-fab-group">
-    <span class="shop-tools-fab-label">メモを追加</span>
     <button
         type="button"
         class="shop-tools-fab"
         aria-label="メモを追加"
-        aria-controls="shop-memo-body">
+        aria-haspopup="dialog"
+        aria-controls="shop-memo-create-dialog">
         <span aria-hidden="true">＋</span>
     </button>
 </div>

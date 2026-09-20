@@ -800,6 +800,16 @@ select {
     font-weight: bold;
 }
 
+.shop-memos-success {
+    margin-bottom: 20px;
+    padding: 14px;
+    color: #245735;
+    background: #edf8f0;
+    border: 1px solid #add2b7;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
 .shop-memo-search-form,
 .shop-memo-create-section,
 .shop-memo-list-section {
@@ -815,8 +825,7 @@ select {
 }
 
 .shop-memo-search-form label,
-.shop-memo-field label,
-.shop-memo-edit label {
+.shop-memo-field label {
     display: block;
     margin-bottom: 7px;
     font-weight: bold;
@@ -835,8 +844,7 @@ select {
 }
 
 .shop-memo-search-input-wrap input,
-.shop-memo-field textarea,
-.shop-memo-edit textarea {
+.shop-memo-field textarea {
     width: 100%;
     min-height: 48px;
     box-sizing: border-box;
@@ -856,14 +864,12 @@ select {
     appearance: none;
 }
 
-.shop-memo-field textarea,
-.shop-memo-edit textarea {
+.shop-memo-field textarea {
     resize: vertical;
 }
 
 .shop-memo-search-input-wrap input:focus,
-.shop-memo-field textarea:focus,
-.shop-memo-edit textarea:focus {
+.shop-memo-field textarea:focus {
     border-color: #527f66;
     outline: none;
     box-shadow: 0 0 0 3px rgba(82, 127, 102, 0.16);
@@ -1001,12 +1007,6 @@ select {
     cursor: pointer;
 }
 
-.shop-memo-edit summary {
-    color: #355140;
-    background: #e6eee8;
-    border: 1px solid #9fb6a5;
-}
-
 .shop-memo-trash-confirmation summary,
 .shop-memo-delete-confirmation summary {
     color: #8a3030;
@@ -1014,14 +1014,9 @@ select {
     border: 1px solid #e6adad;
 }
 
-.shop-memo-edit form,
 .shop-memo-trash-confirmation p,
 .shop-memo-delete-confirmation p {
     margin-top: 12px;
-}
-
-.shop-memo-edit textarea {
-    margin-bottom: 10px;
 }
 
 .shop-memo-trash-button,
@@ -1038,6 +1033,34 @@ select {
 .shop-memo-trash-help {
     margin: -8px 0 16px;
     color: #666d68;
+}
+
+.shop-memo-trash-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.shop-memo-trash-heading-row h2 {
+    margin: 0;
+}
+
+.shop-memo-empty-trash-open {
+    min-height: 44px;
+    padding: 8px 12px;
+    color: #8a3030;
+    background: #fff7f7;
+    border: 1px solid #d9a5a5;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.shop-memo-empty-trash-open:hover {
+    background: #ffecec;
 }
 
 .shop-memo-empty {
@@ -2295,18 +2318,21 @@ body.app-shell-page {
         top: 12px;
         left: 12px;
         display: inline-flex;
-        min-height: 48px;
+        width: 52px;
+        height: 52px;
+        min-height: 52px;
         align-items: center;
         justify-content: center;
-        gap: 7px;
-        padding: 9px 14px;
+        padding: 0;
         color: #ffffff;
         background: #6f4d28;
-        border: 2px solid #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(57, 43, 28, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        box-shadow: 0 3px 9px rgba(57, 43, 28, 0.2);
         font: inherit;
+        font-size: 24px;
         font-weight: bold;
+        line-height: 1;
         cursor: pointer;
     }
 
@@ -2367,5 +2393,1331 @@ body.app-shell-page {
 @media (prefers-reduced-motion: reduce) {
     .app-sidebar {
         transition: none;
+    }
+}
+
+/* ========================================
+   📝 店舗メモ：コンパクト一覧UI
+   ======================================== */
+
+.shop-memo-list {
+    gap: 0;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) {
+    padding: 12px 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid #dfe8df;
+    border-radius: 0;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed):first-child {
+    border-top: 1px solid #dfe8df;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-body {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions {
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions details {
+    width: auto;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions summary {
+    width: auto;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-card:not(.shop-memo-card-trashed) {
+        padding: 11px 0;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions > form,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions details,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions details form {
+        width: auto;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions .btn,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-actions summary {
+        width: auto;
+    }
+}
+
+/* ========================================
+   📱 店舗メモ：スマホ版UI微調整
+   ======================================== */
+
+.shop-memo-mobile-trash-link,
+.shop-memo-count-mobile,
+.shop-memo-mobile-editor-toolbar {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .shop-tools-header {
+        position: relative;
+    }
+
+    .shop-tools-header h1 {
+        padding-right: 58px;
+    }
+
+    .shop-memo-mobile-trash-link {
+        position: absolute;
+        right: 14px;
+        bottom: 10px;
+        display: inline-flex;
+        min-width: 48px;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        box-sizing: border-box;
+        padding: 0 7px;
+        color: #405b49;
+        background: transparent;
+        border: 0;
+        border-radius: 50%;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .shop-memo-mobile-trash-link:hover,
+    .shop-memo-mobile-trash-link:active {
+        background: #e8eee9;
+    }
+
+    .shop-memo-mobile-trash-link:focus-visible {
+        outline: 3px solid #174b2a;
+        outline-offset: 2px;
+    }
+
+    .shop-memo-list-heading-main {
+        align-items: center;
+        flex-direction: row;
+    }
+
+    .shop-memo-list-heading-main .shop-memo-trash-link,
+    .shop-memo-count-desktop {
+        display: none;
+    }
+
+    .shop-memo-count-mobile {
+        display: inline;
+        color: #66736a;
+        font-size: 0.88rem;
+        font-weight: 600;
+    }
+
+    .shop-memo-create-dialog-content,
+    .shop-memo-edit-dialog-content {
+        overflow: hidden;
+    }
+
+    .shop-memo-create-dialog-header {
+        min-height: 52px;
+    }
+
+    .shop-memo-mobile-editor-back {
+        width: 50px;
+        min-width: 50px;
+        height: 50px;
+        min-height: 50px;
+        justify-content: center;
+        gap: 0;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .shop-memo-mobile-editor-back:hover,
+    .shop-memo-mobile-editor-back:active {
+        background: #edf1ee;
+    }
+
+    .shop-memo-mobile-editor-back:focus-visible {
+        background: #edf1ee;
+        outline: 3px solid #174b2a;
+        outline-offset: 2px;
+    }
+
+    .shop-memo-create-close,
+    .shop-memo-dialog-close {
+        display: none;
+    }
+
+    .shop-memo-create-dialog form,
+    .shop-memo-edit-dialog form,
+    .shop-memo-field {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .shop-memo-field textarea,
+    .shop-memo-create-dialog textarea,
+    .shop-memo-edit-dialog textarea {
+        max-width: 100%;
+        min-height: 0;
+        padding: 10px 8px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        color: #2f3d34;
+        background: #ffffff;
+        border: 0;
+        border-radius: 0;
+        outline: 0;
+        box-shadow: none;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        resize: none;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .shop-memo-field textarea:focus,
+    .shop-memo-field textarea:focus-visible {
+        border: 0;
+        outline: 2px solid rgba(82, 127, 102, 0.48);
+        outline-offset: -2px;
+        box-shadow: none;
+    }
+
+    .shop-memo-mobile-editor-toolbar:not([hidden]) {
+        display: flex;
+        min-height: 64px;
+        flex: 0 0 64px;
+        align-items: center;
+        gap: 12px;
+        margin:
+            0
+            -12px
+            calc(0px - max(12px, env(safe-area-inset-bottom)));
+        padding:
+            0
+            14px
+            max(12px, env(safe-area-inset-bottom));
+        box-sizing: content-box;
+        color: #68736c;
+        background: #ffffff;
+        border-top: 1px solid transparent;
+        font-size: 0.82rem;
+        transition:
+            background-color 0.16s ease,
+            border-color 0.16s ease;
+    }
+
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="more"] {
+        background: #f0f2f0;
+        border-top-color: #e0e4e1;
+    }
+
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="end"] {
+        background: #ffffff;
+        border-top-color: transparent;
+    }
+
+    .shop-memo-mobile-editor-menu:not([hidden]) {
+        position: static;
+        z-index: auto;
+        width: 52px;
+        height: 52px;
+        margin-left: auto;
+        flex: 0 0 52px;
+        box-shadow: 0 3px 9px rgba(39, 72, 51, 0.2);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-memo-mobile-editor-toolbar {
+        transition: none;
+    }
+}
+
+/* ========================================
+   📱 店舗メモ：スマホ操作と全画面エディター
+   ======================================== */
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.shop-memo-swipe-row {
+    position: relative;
+    overflow: hidden;
+}
+
+.shop-memo-swipe-action,
+.shop-memo-mobile-editor-back,
+.shop-memo-mobile-editor-menu,
+.shop-memo-pin-indicator,
+.shop-memo-autosave-error,
+.shop-memo-mobile-actions,
+.shop-memo-snackbar {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-swipe-row {
+        background: linear-gradient(
+            90deg,
+            #527f66 0 50%,
+            #b64b48 50% 100%
+        );
+    }
+
+    .shop-memo-swipe-action {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        width: 50%;
+        align-items: center;
+        padding: 0 22px;
+        box-sizing: border-box;
+        color: #ffffff;
+        font-size: 24px;
+    }
+
+    .shop-memo-swipe-pin {
+        left: 0;
+        justify-content: flex-start;
+    }
+
+    .shop-memo-swipe-trash {
+        right: 0;
+        justify-content: flex-end;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) {
+        z-index: 2;
+        padding: 14px 4px;
+        background: #ffffff;
+        touch-action: pan-y;
+        will-change: transform;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-card-main {
+        display: block;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-title,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-date,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-menu-button {
+        display: none;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-body {
+        display: -webkit-box;
+        min-height: 2.9em;
+        overflow: hidden;
+        color: #3d4b42;
+        font-size: 1rem;
+        line-height: 1.45;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .shop-memo-pin-indicator:not([hidden]) {
+        display: inline-block;
+        margin-right: 5px;
+        font-size: 0.9rem;
+    }
+
+    .shop-memo-create-dialog,
+    .shop-memo-edit-dialog {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #ffffff;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .shop-memo-create-dialog::backdrop,
+    .shop-memo-edit-dialog::backdrop {
+        background: #ffffff;
+    }
+
+    .shop-memo-create-dialog-content,
+    .shop-memo-edit-dialog-content {
+        display: flex;
+        height: 100dvh;
+        min-height: 100%;
+        flex-direction: column;
+        box-sizing: border-box;
+        margin: 0;
+        padding:
+            max(8px, env(safe-area-inset-top))
+            12px
+            max(12px, env(safe-area-inset-bottom));
+        background: #ffffff;
+        border-radius: 0;
+    }
+
+    .shop-memo-create-dialog-header {
+        min-height: 52px;
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        margin: 0;
+    }
+
+    .shop-memo-create-dialog-header h2,
+    .shop-memo-create-close,
+    .shop-memo-dialog-close {
+        display: none;
+    }
+
+    .shop-memo-mobile-editor-back {
+        display: inline-flex;
+        min-width: 52px;
+        min-height: 48px;
+        align-items: center;
+        gap: 7px;
+        padding: 0 10px;
+        color: #284f36;
+        background: transparent;
+        border: 0;
+        border-radius: 10px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .shop-memo-mobile-editor-back span[aria-hidden="true"] {
+        font-size: 26px;
+        line-height: 1;
+    }
+
+    .shop-memo-create-dialog form,
+    .shop-memo-edit-dialog form,
+    .shop-memo-field {
+        display: flex;
+        min-height: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        margin: 0;
+    }
+
+    .shop-memo-field label,
+    .shop-memo-field input[name="title"],
+    .shop-memo-add-button,
+    .shop-memo-save-button {
+        display: none;
+    }
+
+    .shop-memo-field textarea,
+    .shop-memo-create-dialog textarea {
+        width: 100%;
+        min-height: 0;
+        flex: 1 1 auto;
+        box-sizing: border-box;
+        padding: 12px 8px 84px;
+        color: #2f3d34;
+        background: #ffffff;
+        border: 0;
+        border-radius: 0;
+        outline: none;
+        font-size: 1.05rem;
+        line-height: 1.65;
+        resize: none;
+    }
+
+    .shop-memo-field textarea:focus-visible {
+        outline: 2px solid #527f66;
+        outline-offset: -2px;
+    }
+
+    .shop-memo-mobile-editor-menu:not([hidden]) {
+        position: fixed;
+        z-index: 210;
+        right: 18px;
+        bottom: max(18px, env(safe-area-inset-bottom));
+        display: inline-flex;
+        width: 56px;
+        height: 56px;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        color: #ffffff;
+        background: #527f66;
+        border: 0;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(39, 72, 51, 0.24);
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .shop-memo-autosave-error:not([hidden]) {
+        position: fixed;
+        z-index: 220;
+        right: 12px;
+        bottom: max(86px, calc(70px + env(safe-area-inset-bottom)));
+        left: 12px;
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        color: #7e2525;
+        background: #fff0f0;
+        border: 1px solid #e2aaaa;
+        border-radius: 10px;
+    }
+
+    .shop-memo-autosave-retry {
+        min-height: 44px;
+        flex: 0 0 auto;
+        padding: 6px 12px;
+        color: #7e2525;
+        background: #ffffff;
+        border: 1px solid #c98686;
+        border-radius: 8px;
+        font: inherit;
+        font-weight: 700;
+    }
+
+    .shop-memo-mobile-actions {
+        width: 100%;
+        max-width: none;
+        margin: auto 0 0;
+        padding: 0;
+        background: transparent;
+        border: 0;
+    }
+
+    .shop-memo-mobile-actions[open] {
+        display: block;
+    }
+
+    .shop-memo-mobile-actions::backdrop {
+        background: rgba(24, 28, 25, 0.58);
+    }
+
+    .shop-memo-mobile-actions-content {
+        padding: 18px 14px max(14px, env(safe-area-inset-bottom));
+        background: #ffffff;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -8px 26px rgba(24, 35, 28, 0.2);
+    }
+
+    .shop-memo-mobile-actions-preview {
+        max-height: 130px;
+        margin-bottom: 12px;
+        padding: 12px;
+        overflow: hidden;
+        color: #405047;
+        background: #f3f7f4;
+        border-radius: 10px;
+    }
+
+    .shop-memo-mobile-actions-preview strong,
+    .shop-memo-mobile-actions-preview p {
+        display: block;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .shop-memo-mobile-actions-preview p {
+        margin-top: 5px;
+        color: #66736a;
+    }
+
+    .shop-memo-mobile-actions-list {
+        display: grid;
+        gap: 6px;
+    }
+
+    .shop-memo-mobile-actions-list button,
+    .shop-memo-mobile-actions-close {
+        width: 100%;
+        min-height: 52px;
+        padding: 10px 14px;
+        color: #314a39;
+        background: #ffffff;
+        border: 1px solid #d7e2d9;
+        border-radius: 10px;
+        font: inherit;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .shop-memo-mobile-actions-list .shop-memo-mobile-action-trash {
+        color: #9b3434;
+        border-color: #e8c3c3;
+    }
+
+    .shop-memo-mobile-actions-close {
+        margin-top: 12px;
+        color: #526158;
+        background: #edf1ee;
+        text-align: center;
+    }
+
+    .shop-memo-snackbar:not([hidden]) {
+        position: fixed;
+        z-index: 240;
+        right: 12px;
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        left: 12px;
+        display: flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 10px 8px 16px;
+        color: #ffffff;
+        background: #303833;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(20, 28, 23, 0.25);
+    }
+
+    .shop-memo-snackbar button {
+        min-height: 44px;
+        padding: 6px 10px;
+        color: #dff2e4;
+        background: transparent;
+        border: 1px solid #8db69a;
+        border-radius: 8px;
+        font: inherit;
+        font-weight: 700;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-memo-card {
+        transition: none !important;
+    }
+}
+
+/* ========================================
+   🖱️ PCメニュー：ホバー操作の視覚フィードバック
+   ======================================== */
+
+@media (min-width: 901px) and (hover: hover) {
+    /* 左固定メニュー：カーソル位置を動きで示す */
+    .app-sidebar-link {
+        transition: transform 0.16s ease;
+    }
+
+    .app-sidebar-link:hover,
+    .app-sidebar-link:focus-visible {
+        transform: translateX(4px);
+    }
+
+    /* 店舗メモツール内メニュー：カーソル位置を色で示す */
+    .shop-tools-nav-link {
+        transition:
+            color 0.16s ease,
+            background-color 0.16s ease;
+    }
+
+    .shop-tools-nav-link:not(.shop-tools-nav-link-current):hover,
+    .shop-tools-nav-link:not(.shop-tools-nav-link-current):focus-visible {
+        color: #284f36;
+        background: #f8fbf8;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-sidebar-link,
+    .shop-tools-nav-link {
+        transition: none;
+    }
+
+    .app-sidebar-link:hover,
+    .app-sidebar-link:focus-visible {
+        transform: none;
+    }
+}
+
+
+/* ========================================
+   🧭 店舗メモツール：PC / スマホ ナビ切り替え
+   ======================================== */
+
+/* PC用上部ナビ */
+.shop-tools-top-nav {
+    display: none;
+}
+
+@media (min-width: 901px) {
+    /* PCでは下部ナビを使わない */
+    .shop-tools-bottom-nav {
+        display: none;
+    }
+
+    /* PCでは上部タブを表示 */
+    .shop-tools-top-nav {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding: 0 24px;
+        background: #ffffff;
+        border-bottom: 1px solid #dfe8df;
+    }
+
+    .shop-tools-top-nav .shop-tools-nav-link {
+        min-height: 64px;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .shop-tools-top-nav .shop-tools-nav-link-current {
+        color: #284f36;
+        background: transparent;
+        box-shadow: inset 0 -3px 0 #527f66;
+        text-decoration: none;
+    }
+
+    /* PCでは固定下部ナビ分の余白を不要にする */
+    .app-shell-page.shop-tools-page {
+        padding-bottom: 24px;
+    }
+}
+
+@media (max-width: 900px) {
+    /* スマホでは上部タブを表示しない */
+    .shop-tools-top-nav {
+        display: none;
+    }
+}
+
+/* ========================================
+   📝 新規メモ作成ダイアログ
+   ======================================== */
+
+.shop-memo-create-dialog {
+    width: min(620px, calc(100% - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    overflow: auto;
+    background: #ffffff;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(36, 54, 42, 0.24);
+}
+
+.shop-memo-create-dialog::backdrop {
+    background: rgba(31, 42, 34, 0.45);
+}
+
+.shop-memo-create-dialog-content {
+    margin: 0;
+    padding: 22px;
+    border: 0;
+    border-radius: 18px;
+    background: #ffffff;
+}
+
+.shop-memo-create-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.shop-memo-create-dialog-header h2 {
+    margin: 0;
+}
+
+.shop-memo-create-close {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #526158;
+    background: #f3f7f4;
+    border: 1px solid #d7e2d9;
+    border-radius: 50%;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shop-memo-create-close:hover {
+    color: #284f36;
+    background: #e7efe9;
+}
+
+.shop-memo-create-dialog textarea {
+    min-height: 220px;
+    resize: vertical;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-create-dialog {
+        width: calc(100% - 24px);
+        max-height: calc(100vh - 24px);
+        border-radius: 16px;
+    }
+
+    .shop-memo-create-dialog-content {
+        padding: 18px;
+    }
+
+    .shop-memo-create-dialog textarea {
+        min-height: 180px;
+    }
+}
+
+/* ========================================
+   🧭 左固定メニュー：余白とホバー移動領域を調整
+   ======================================== */
+
+@media (min-width: 901px) {
+    .app-sidebar {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .app-sidebar-nav {
+        box-sizing: border-box;
+        padding-right: 4px;
+        overflow-x: hidden;
+    }
+}
+
+/* ========================================
+   🔍 店舗メモ：検索バー
+   ======================================== */
+
+.shop-memo-search-form {
+    margin-bottom: 18px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+.shop-memo-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.shop-memo-search-input-wrap {
+    position: relative;
+}
+
+.shop-memo-search-input-wrap input {
+    min-height: 52px;
+    padding: 12px 52px;
+    background: #f8faf8;
+    border: 1px solid #d7e2d9;
+    border-radius: 26px;
+}
+
+.shop-memo-search-input-wrap input::placeholder {
+    color: #7b857e;
+}
+
+.shop-memo-search-icon-button {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 4px;
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transform: translateY(-50%);
+    color: #526158;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.shop-memo-search-icon-button:hover {
+    background: #e9efea;
+}
+
+.shop-memo-search-clear {
+    right: 4px;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+}
+
+.shop-memo-search-icon-button:focus-visible,
+.shop-memo-search-clear:focus-visible {
+    outline: 3px solid #174b2a;
+    outline-offset: 2px;
+}
+
+/* ========================================
+   📝 店舗メモ：コンパクト一覧 最終レイアウト
+   ======================================== */
+
+.shop-memo-list-heading-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 14px;
+}
+
+.shop-memo-sort-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    padding: 0 8px;
+    color: #405b49;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.shop-memo-sort-link:hover {
+    background: #e9efea;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) {
+    position: relative;
+}
+
+.shop-memo-card-main {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: start;
+    pointer-events: none;
+}
+
+.shop-memo-card-copy {
+    display: block;
+    min-width: 0;
+}
+
+.shop-memo-title {
+    margin: 0 0 4px;
+    overflow: hidden;
+    color: #314a39;
+    font-size: 1rem;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-body {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    color: #69746d;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-memo-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shop-memo-date {
+    color: #78827b;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.shop-memo-field input,
+.shop-memo-field textarea {
+    width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    padding: 12px;
+    color: #4a3c31;
+    background: #ffffff;
+    border: 1px solid #aebfb1;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.shop-memo-field label {
+    margin-top: 12px;
+}
+
+.shop-memo-field label:first-of-type {
+    margin-top: 0;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-list-heading-row {
+        align-items: center;
+        flex-direction: row;
+    }
+
+    .shop-memo-list-heading-main {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .shop-memo-card-main {
+        gap: 8px;
+    }
+
+    .shop-memo-date {
+        font-size: 0.76rem;
+    }
+}
+
+/* ========================================
+   📝 店舗メモ：操作メニュー・編集導線
+   ======================================== */
+
+.shop-memo-card-open {
+    position: absolute;
+    z-index: 1;
+    inset: 2px 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.shop-memo-card-open:hover {
+    background: #f3f8f4;
+}
+
+.shop-memo-card-open:focus-visible {
+    outline: 3px solid #174b2a;
+    outline-offset: 0;
+}
+
+.shop-memo-menu-button {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #526158;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shop-memo-card-main a,
+.shop-memo-menu-button {
+    position: relative;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+.shop-memo-menu-button:hover,
+.shop-memo-menu-button[aria-expanded="true"] {
+    background: #e9efea;
+}
+
+.shop-memo-action-menu {
+    position: fixed;
+    z-index: 200;
+    width: 190px;
+    padding: 6px;
+    box-sizing: border-box;
+    background: #ffffff;
+    border: 1px solid #d7e2d9;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(36, 54, 42, 0.2);
+}
+
+.shop-memo-action-menu[hidden] {
+    display: none;
+}
+
+.shop-memo-action-menu form {
+    margin: 0;
+}
+
+.shop-memo-action-menu-button {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    color: #314a39;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.shop-memo-action-menu-button:hover {
+    background: #edf3ee;
+}
+
+.shop-memo-action-menu-trash {
+    color: #9b3434;
+}
+
+.shop-memo-action-menu-trash:hover {
+    background: #fff0f0;
+}
+
+.shop-memo-edit-dialog {
+    width: min(620px, calc(100% - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    overflow: auto;
+    background: #ffffff;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(36, 54, 42, 0.24);
+}
+
+.shop-memo-edit-dialog::backdrop {
+    background: rgba(31, 42, 34, 0.45);
+}
+
+.shop-memo-edit-dialog-content {
+    margin: 0;
+    padding: 22px;
+    border: 0;
+    border-radius: 18px;
+    background: #ffffff;
+}
+
+.shop-memo-dialog-close {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #526158;
+    background: #f3f7f4;
+    border: 1px solid #d7e2d9;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.shop-memo-dialog-close:hover {
+    background: #e7efe9;
+}
+
+/* ========================================
+   🗑️ 店舗メモ：ゴミ箱の確認ダイアログ
+   ======================================== */
+
+.shop-memo-confirm-dialog {
+    width: min(520px, calc(100% - 32px));
+    padding: 0;
+    background: #ffffff;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(36, 54, 42, 0.24);
+}
+
+.shop-memo-confirm-dialog::backdrop {
+    background: rgba(31, 42, 34, 0.45);
+}
+
+.shop-memo-confirm-dialog-content {
+    padding: 24px;
+}
+
+.shop-memo-confirm-dialog-content h2 {
+    margin: 0 0 14px;
+}
+
+.shop-memo-confirm-dialog-content p {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.shop-memo-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.shop-memo-confirm-actions form {
+    margin: 0;
+}
+
+.shop-memo-confirm-actions .btn {
+    min-height: 48px;
+}
+
+.shop-memo-cancel-button {
+    color: #405047;
+    background: #edf1ee;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-trash-heading-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .shop-memo-empty-trash-open {
+        width: 100%;
+    }
+
+    .shop-memo-confirm-actions {
+        flex-direction: column-reverse;
+    }
+
+    .shop-memo-confirm-actions form,
+    .shop-memo-confirm-actions .btn {
+        width: 100%;
+    }
+
+    /* 後方にある既存PCダイアログ規則よりスマホ全画面表示を優先する。 */
+    .shop-memo-create-dialog,
+    .shop-memo-edit-dialog {
+        inset: 0;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        margin: 0;
+        overflow: hidden;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .shop-memo-create-dialog-content,
+    .shop-memo-edit-dialog-content {
+        height: 100dvh;
+        min-height: 100%;
+        box-sizing: border-box;
+        padding:
+            max(8px, env(safe-area-inset-top))
+            12px
+            max(12px, env(safe-area-inset-bottom));
+        border-radius: 0;
+    }
+
+    .shop-memo-create-dialog textarea,
+    .shop-memo-edit-dialog textarea {
+        min-height: 0;
+        resize: none;
+    }
+}
+
+/* 後段の既存PC規則よりスマホ専用の入力面を優先する。 */
+@media (max-width: 700px) {
+    .shop-memo-list-heading-main {
+        align-items: center;
+        flex-direction: row;
+    }
+
+    .shop-memo-mobile-editor-back {
+        width: 50px;
+        min-width: 50px;
+        height: 50px;
+        min-height: 50px;
+        justify-content: center;
+        gap: 0;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .shop-memo-create-dialog form,
+    .shop-memo-edit-dialog form,
+    .shop-memo-field {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .shop-memo-field textarea,
+    .shop-memo-create-dialog textarea,
+    .shop-memo-edit-dialog textarea {
+        max-width: 100%;
+        min-height: 0;
+        padding: 10px 8px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        background: #ffffff;
+        border: 0;
+        border-radius: 0;
+        outline: 0;
+        box-shadow: none;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        resize: none;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .shop-memo-field textarea:focus,
+    .shop-memo-field textarea:focus-visible {
+        border: 0;
+        outline: 2px solid rgba(82, 127, 102, 0.48);
+        outline-offset: -2px;
+        box-shadow: none;
+    }
+
+    .shop-memo-mobile-editor-menu:not([hidden]) {
+        position: static;
+        z-index: auto;
+        width: 52px;
+        height: 52px;
+        margin-left: auto;
+        flex: 0 0 52px;
+        box-shadow: 0 3px 9px rgba(39, 72, 51, 0.2);
     }
 }

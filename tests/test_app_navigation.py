@@ -137,7 +137,7 @@ def test_mobile_navigation_has_accessible_open_and_close_controls(
     assert open_button.get("aria-label") == "主要メニューを開く"
     assert open_button.get("aria-controls") == "app-sidebar"
     assert open_button.get("aria-expanded") == "false"
-    assert "メニュー" in open_button.get_text()
+    assert open_button.get_text(strip=True) == "☰"
     assert close_button is not None
     assert close_button.get("aria-label") == "主要メニューを閉じる"
     assert overlay is not None

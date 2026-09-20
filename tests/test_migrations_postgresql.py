@@ -27,6 +27,7 @@ MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
 PRE_DATASET_REVISION = "9d3c1b7e5a42"
 PRE_MATERIAL_ORDER_REVISION = "e6b4c2d8f0a1"
 PRE_SHOP_MEMO_REVISION = "d4f7a9c2e6b1"
+SHOP_MEMO_REVISION = "f8c2a6d4e1b3"
 
 
 def _reset_public_schema(engine):
@@ -139,6 +140,25 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                     "RETURNING id"
                 ),
                 {"dataset_id": guest_dataset_id, "now": now},
+            ).scalar_one()
+            db.session.commit()
+
+            upgrade(
+                directory=str(MIGRATIONS_DIR),
+                revision=SHOP_MEMO_REVISION,
+            )
+            existing_shop_memo_id = db.session.execute(
+                text(
+                    "INSERT INTO shop_memos "
+                    "(dataset_id, body, created_at, updated_at) "
+                    "VALUES (:dataset_id, :body, :now, :now) "
+                    "RETURNING id"
+                ),
+                {
+                    "dataset_id": guest_dataset_id,
+                    "body": "  \n  既存メモタイトル  \n本文の続き",
+                    "now": now,
+                },
             ).scalar_one()
             db.session.commit()
 
@@ -269,30 +289,38 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
             assert set(shop_memo_columns) == {
                 "id",
                 "dataset_id",
+                "title",
                 "body",
                 "created_at",
                 "updated_at",
                 "deleted_at",
+                "pinned_at",
             }
             assert isinstance(shop_memo_columns["id"]["type"], sa.Integer)
             assert isinstance(shop_memo_columns["dataset_id"]["type"], sa.Uuid)
+            assert isinstance(shop_memo_columns["title"]["type"], sa.String)
+            assert shop_memo_columns["title"]["type"].length == 100
             assert isinstance(shop_memo_columns["body"]["type"], sa.Text)
             for timestamp_column in (
                 "created_at",
                 "updated_at",
                 "deleted_at",
+                "pinned_at",
             ):
                 column_type = shop_memo_columns[timestamp_column]["type"]
                 assert isinstance(column_type, sa.DateTime)
                 assert column_type.timezone is True
             assert shop_memo_columns["dataset_id"]["nullable"] is False
+            assert shop_memo_columns["title"]["nullable"] is False
             assert shop_memo_columns["body"]["nullable"] is False
             assert shop_memo_columns["created_at"]["nullable"] is False
             assert shop_memo_columns["updated_at"]["nullable"] is False
             assert shop_memo_columns["deleted_at"]["nullable"] is True
+            assert shop_memo_columns["pinned_at"]["nullable"] is True
             assert shop_memo_columns["created_at"]["default"] is not None
             assert shop_memo_columns["updated_at"]["default"] is not None
             assert shop_memo_columns["deleted_at"]["default"] is None
+            assert shop_memo_columns["pinned_at"]["default"] is None
 
             shop_memo_foreign_keys = inspector.get_foreign_keys("shop_memos")
             assert len(shop_memo_foreign_keys) == 1
@@ -316,27 +344,37 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 "ck_shop_memos_body_max_length",
                 "ck_shop_memos_body_nonblank",
                 "ck_shop_memos_deleted_not_before_creation",
+                "ck_shop_memos_title_max_length",
+                "ck_shop_memos_title_nonblank",
                 "ck_shop_memos_updated_not_before_creation",
                 "ck_shop_memos_updated_not_before_deletion",
+                "ck_shop_memos_pinned_not_before_creation",
             }
             assert any(
                 index["name"]
-                == "ix_shop_memos_dataset_deleted_updated_id"
-                and index["column_names"]
-                == ["dataset_id", "deleted_at", "updated_at", "id"]
+                == "ix_shop_memos_dataset_deleted_pinned_updated_id"
+                and index["column_names"] == [
+                    "dataset_id",
+                    "deleted_at",
+                    "pinned_at",
+                    "updated_at",
+                    "id",
+                ]
                 and not index["unique"]
                 for index in inspector.get_indexes("shop_memos")
             )
 
             insert_shop_memo = text(
                 "INSERT INTO shop_memos "
-                "(dataset_id, body, created_at, updated_at, deleted_at) "
-                "VALUES (:dataset_id, :body, :created_at, :updated_at, "
-                ":deleted_at) RETURNING id"
+                "(dataset_id, title, body, created_at, updated_at, "
+                "deleted_at) "
+                "VALUES (:dataset_id, :title, :body, :created_at, "
+                ":updated_at, :deleted_at) RETURNING id"
             )
             valid_memo_rows = [
                 {
                     "dataset_id": guest_dataset_id,
+                    "title": "通常メモ",
                     "body": "通常メモ",
                     "created_at": now,
                     "updated_at": now,
@@ -344,6 +382,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 },
                 {
                     "dataset_id": guest_dataset_id,
+                    "title": "ゴミ箱メモ",
                     "body": "ゴミ箱メモ",
                     "created_at": now,
                     "updated_at": now + datetime.timedelta(minutes=1),
@@ -351,6 +390,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 },
                 {
                     "dataset_id": guest_dataset_id,
+                    "title": "メ" * 100,
                     "body": "メ" * 2000,
                     "created_at": now,
                     "updated_at": now,
@@ -363,8 +403,46 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
             ]
             db.session.commit()
             assert len(memo_ids) == 3
+            assert db.session.execute(
+                text("SELECT title FROM shop_memos WHERE id = :id"),
+                {"id": existing_shop_memo_id},
+            ).scalar_one() == "既存メモタイトル"
+            assert db.session.execute(
+                text("SELECT pinned_at FROM shop_memos WHERE id = :id"),
+                {"id": existing_shop_memo_id},
+            ).scalar_one() is None
+            with pytest.raises(IntegrityError):
+                db.session.execute(
+                    text(
+                        "UPDATE shop_memos "
+                        "SET pinned_at = :invalid_pinned_at "
+                        "WHERE id = :id"
+                    ),
+                    {
+                        "id": existing_shop_memo_id,
+                        "invalid_pinned_at": (
+                            now - datetime.timedelta(seconds=1)
+                        ),
+                    },
+                )
+                db.session.commit()
+            db.session.rollback()
 
             invalid_memo_rows = [
+                {
+                    "title": "",
+                    "body": "タイトル空文字",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
+                {
+                    "title": "タ" * 101,
+                    "body": "タイトル101文字",
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                },
                 {
                     "body": "",
                     "created_at": now,
@@ -408,6 +486,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                         insert_shop_memo,
                         {
                             "dataset_id": guest_dataset_id,
+                            "title": "制約検証タイトル",
                             **invalid_row,
                         },
                     )

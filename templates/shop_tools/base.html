@@ -14,39 +14,21 @@
             <span aria-hidden="true">📝</span> 店舗メモツール
         </p>
         <h1>{% block tool_heading %}{% endblock %}</h1>
+        {% block tool_header_actions %}{% endblock %}
     </header>
+
+    {% with nav_class="shop-tools-top-nav" %}
+        {% include "shop_tools/_tool_navigation.html" %}
+    {% endwith %}
 
     <main class="shop-tools-content" id="shop-tools-content">
         {% block content %}{% endblock %}
     </main>
 </div>
 
-<nav class="shop-tools-bottom-nav" aria-label="店舗メモツールのメニュー">
-    <a
-        href="{{ url_for('material_orders.list_items') }}"
-        data-tool="orders"
-        class="shop-tools-nav-link{% if active_tool == 'orders' %} shop-tools-nav-link-current{% endif %}"
-        {% if active_tool == 'orders' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">🛒</span>
-        <span>発注</span>
-    </a>
-    <a
-        href="{{ url_for('shop_memos.list_memos') }}"
-        data-tool="memo"
-        class="shop-tools-nav-link{% if active_tool == 'memo' %} shop-tools-nav-link-current{% endif %}"
-        {% if active_tool == 'memo' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">📝</span>
-        <span>メモ</span>
-    </a>
-    <a
-        href="{{ url_for('shop_tools.tasks_placeholder') }}"
-        data-tool="tasks"
-        class="shop-tools-nav-link{% if active_tool == 'tasks' %} shop-tools-nav-link-current{% endif %}"
-        {% if active_tool == 'tasks' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">✅</span>
-        <span>タスク</span>
-    </a>
-</nav>
+{% with nav_class="shop-tools-bottom-nav" %}
+    {% include "shop_tools/_tool_navigation.html" %}
+{% endwith %}
 
 {% block floating_action %}{% endblock %}
 {% block scripts %}{% endblock %}

@@ -1,0 +1,28 @@
+<nav class="{{ nav_class }}" aria-label="店舗メモツールのメニュー">
+    <a
+        href="{{ url_for('material_orders.list_items') }}"
+        data-tool="orders"
+        class="shop-tools-nav-link{% if active_tool == 'orders' %} shop-tools-nav-link-current{% endif %}"
+        {% if active_tool == 'orders' %}aria-current="page"{% endif %}>
+        <span class="shop-tools-nav-icon" aria-hidden="true">🛒</span>
+        <span>発注</span>
+    </a>
+
+    <a
+        href="{{ url_for('shop_memos.list_memos') }}"
+        data-tool="memo"
+        class="shop-tools-nav-link{% if active_tool == 'memo' %} shop-tools-nav-link-current{% endif %}"
+        {% if active_tool == 'memo' %}aria-current="page"{% endif %}>
+        <span class="shop-tools-nav-icon" aria-hidden="true">📝</span>
+        <span>メモ</span>
+    </a>
+
+    <a
+        href="{{ url_for('shop_tools.tasks_placeholder') }}"
+        data-tool="tasks"
+        class="shop-tools-nav-link{% if active_tool == 'tasks' %} shop-tools-nav-link-current{% endif %}"
+        {% if active_tool == 'tasks' %}aria-current="page"{% endif %}>
+        <span class="shop-tools-nav-icon" aria-hidden="true">✅</span>
+        <span>タスク</span>
+    </a>
+</nav>

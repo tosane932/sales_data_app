@@ -104,6 +104,7 @@ def _create_shop_memo(dataset, *, body, deleted=False):
     deleted_at = NOW - datetime.timedelta(minutes=10) if deleted else None
     memo = ShopMemo(
         dataset=dataset,
+        title=body[:100],
         body=body,
         created_at=created_at,
         updated_at=deleted_at or created_at,

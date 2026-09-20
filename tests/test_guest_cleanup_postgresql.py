@@ -328,6 +328,7 @@ def _seed_cleanup_scenario(engine, cleanup_time):
             [
                 {
                     "dataset_id": dataset_id,
+                    "title": f"{label}通常メモ",
                     "body": f"{label}通常メモ",
                     "created_at": cleanup_time,
                     "updated_at": cleanup_time,
@@ -342,6 +343,7 @@ def _seed_cleanup_scenario(engine, cleanup_time):
             + [
                 {
                     "dataset_id": dataset_id,
+                    "title": f"{label}ゴミ箱メモ",
                     "body": f"{label}ゴミ箱メモ",
                     "created_at": cleanup_time,
                     "updated_at": cleanup_time,
