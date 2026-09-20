@@ -8,6 +8,7 @@ from models import Dataset, ShopMemo, db
 
 
 NOW = datetime.datetime(2026, 9, 14, 3, 0, tzinfo=datetime.timezone.utc)
+VALID_TITLE = "確認メモ"
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +41,7 @@ def test_shop_memo_can_be_created_with_utc_timestamps_and_no_deletion(
     flask_app,
     admin_dataset,
 ):
-    memo = ShopMemo(dataset=admin_dataset, body="牛乳の納品時間を確認する")
+    memo = ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body="牛乳の納品時間を確認する")
     db.session.add(memo)
     db.session.commit()
 
@@ -54,13 +55,14 @@ def test_shop_memo_can_be_created_with_utc_timestamps_and_no_deletion(
     assert saved_memo.updated_at is not None
     assert saved_memo.updated_at >= saved_memo.created_at
     assert saved_memo.deleted_at is None
+    assert saved_memo.pinned_at is None
 
 
 @pytest.mark.parametrize(
     "memo",
     [
-        lambda dataset: ShopMemo(dataset_id=None, body="Datasetなし"),
-        lambda dataset: ShopMemo(dataset=dataset, body=None),
+        lambda dataset: ShopMemo(title=VALID_TITLE, dataset_id=None, body="Datasetなし"),
+        lambda dataset: ShopMemo(title=VALID_TITLE, dataset=dataset, body=None),
     ],
 )
 def test_shop_memo_requires_dataset_and_body(
@@ -77,14 +79,57 @@ def test_shop_memo_rejects_empty_or_blank_body(
     admin_dataset,
     body,
 ):
-    _assert_commit_rejected(ShopMemo(dataset=admin_dataset, body=body))
+    _assert_commit_rejected(ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body=body))
+
+
+@pytest.mark.parametrize("title", ["", "   "])
+def test_shop_memo_rejects_empty_or_blank_title(
+    flask_app,
+    admin_dataset,
+    title,
+):
+    _assert_commit_rejected(
+        ShopMemo(
+            title=title,
+            dataset=admin_dataset,
+            body="本文",
+        )
+    )
+
+
+def test_shop_memo_accepts_100_character_title(
+    flask_app,
+    admin_dataset,
+):
+    memo = ShopMemo(
+        title="題" * 100,
+        dataset=admin_dataset,
+        body="本文",
+    )
+    db.session.add(memo)
+    db.session.commit()
+
+    assert db.session.get(ShopMemo, memo.id).title == "題" * 100
+
+
+def test_shop_memo_rejects_101_character_title(
+    flask_app,
+    admin_dataset,
+):
+    _assert_commit_rejected(
+        ShopMemo(
+            title="題" * 101,
+            dataset=admin_dataset,
+            body="本文",
+        )
+    )
 
 
 def test_shop_memo_accepts_2000_characters(
     flask_app,
     admin_dataset,
 ):
-    memo = ShopMemo(dataset=admin_dataset, body="メ" * 2000)
+    memo = ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body="メ" * 2000)
     db.session.add(memo)
     db.session.commit()
 
@@ -96,7 +141,7 @@ def test_shop_memo_rejects_2001_characters(
     admin_dataset,
 ):
     _assert_commit_rejected(
-        ShopMemo(dataset=admin_dataset, body="メ" * 2001)
+        ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body="メ" * 2001)
     )
 
 
@@ -106,8 +151,8 @@ def test_shop_memo_allows_duplicate_bodies(
 ):
     db.session.add_all(
         [
-            ShopMemo(dataset=admin_dataset, body="同じ本文"),
-            ShopMemo(dataset=admin_dataset, body="同じ本文"),
+            ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body="同じ本文"),
+            ShopMemo(title=VALID_TITLE, dataset=admin_dataset, body="同じ本文"),
         ]
     )
     db.session.commit()
@@ -134,6 +179,7 @@ def test_shop_memo_timestamp_order_is_enforced(
 ):
     _assert_commit_rejected(
         ShopMemo(
+            title=VALID_TITLE,
             dataset=admin_dataset,
             body="時刻制約確認",
             created_at=NOW,
@@ -143,10 +189,27 @@ def test_shop_memo_timestamp_order_is_enforced(
     )
 
 
+def test_shop_memo_rejects_pin_timestamp_before_creation(
+    flask_app,
+    admin_dataset,
+):
+    _assert_commit_rejected(
+        ShopMemo(
+            title=VALID_TITLE,
+            dataset=admin_dataset,
+            body="ピン時刻制約確認",
+            created_at=NOW,
+            updated_at=NOW,
+            pinned_at=NOW - datetime.timedelta(seconds=1),
+        )
+    )
+
+
 def test_dataset_delete_cascades_normal_and_deleted_shop_memos(flask_app):
     guest = _create_guest_dataset()
-    normal_memo = ShopMemo(dataset=guest, body="通常メモ")
+    normal_memo = ShopMemo(title=VALID_TITLE, dataset=guest, body="通常メモ")
     deleted_memo = ShopMemo(
+        title=VALID_TITLE,
         dataset=guest,
         body="ゴミ箱メモ",
         created_at=NOW,

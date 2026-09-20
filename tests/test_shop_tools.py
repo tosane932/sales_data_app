@@ -132,7 +132,7 @@ def test_future_tools_are_explicit_read_only_placeholders(
     assert document.select_one("main form") is None
 
 
-def test_material_orders_shell_keeps_visible_form_and_accessible_fab(
+def test_material_orders_shell_keeps_visible_form_and_plus_only_accessible_fab(
     authenticated_client,
     admin_dataset,
 ):
@@ -148,9 +148,8 @@ def test_material_orders_shell_keeps_visible_form_and_accessible_fab(
     assert fab.get("type") == "button"
     assert fab.get("aria-label") == "材料を追加"
     assert fab.get("aria-controls") == "material-name"
-    assert "材料を追加" in document.select_one(
-        ".shop-tools-fab-label"
-    ).get_text()
+    assert fab.get_text(strip=True) == "＋"
+    assert document.select_one(".shop-tools-fab-label") is None
 
 
 def test_shop_tools_templates_keep_autoescape_and_safe_dom_updates():
@@ -177,4 +176,5 @@ def test_shop_tools_css_preserves_tap_targets_and_keyboard_focus():
 
     assert ".shop-tools-nav-link" in css_source
     assert "min-height: 48px" in css_source
+    assert ".shop-memo-body a:focus-visible" in css_source
     assert ":focus-visible" in css_source

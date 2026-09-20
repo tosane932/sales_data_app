@@ -11,6 +11,12 @@
     <div class="shop-memos-error" role="alert">⚠️ {{ error }}</div>
     {% endif %}
 
+    {% with messages = get_flashed_messages(category_filter=['success']) %}
+        {% for message in messages %}
+        <div class="shop-memos-success" role="status">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
     <a href="{{ url_for('shop_memos.list_memos') }}" class="shop-memo-back-link">
         ← メモ一覧へ戻る
     </a>
@@ -23,8 +29,48 @@
     {% endwith %}
 
     <section class="shop-memo-list-section" aria-labelledby="trash-list-heading">
-        <h2 id="trash-list-heading">ゴミ箱 {{ trash_count }}件</h2>
+        <div class="shop-memo-trash-heading-row">
+            <h2 id="trash-list-heading">ゴミ箱 {{ trash_count }}件</h2>
+            {% if trash_count > 0 %}
+            <button
+                type="button"
+                id="shop-memo-empty-trash-open"
+                class="shop-memo-empty-trash-open"
+                aria-haspopup="dialog"
+                aria-controls="shop-memo-empty-trash-dialog">
+                ゴミ箱を空にする
+            </button>
+            {% endif %}
+        </div>
         <p class="shop-memo-trash-help">不要なメモは、ここから完全に削除できます。</p>
+
+        {% if trash_count > 0 %}
+        <dialog
+            id="shop-memo-empty-trash-dialog"
+            class="shop-memo-confirm-dialog"
+            aria-labelledby="shop-memo-empty-trash-heading">
+            <section class="shop-memo-confirm-dialog-content">
+                <h2 id="shop-memo-empty-trash-heading">ゴミ箱を空にしますか？</h2>
+                <p>
+                    ゴミ箱内の{{ trash_count }}件を完全に削除します。<br>
+                    この操作は取り消せません。
+                </p>
+                <div class="shop-memo-confirm-actions">
+                    <form method="dialog">
+                        <button type="submit" class="btn shop-memo-cancel-button">
+                            キャンセル
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('shop_memos.empty_trash') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn shop-memo-delete-button">
+                            完全に削除
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </dialog>
+        {% endif %}
 
         {% if memos %}
         <div class="shop-memo-list">
@@ -54,9 +100,9 @@
             {% endfor %}
         </div>
         {% elif search_query %}
-        <p class="shop-memo-empty">検索条件に一致するメモはありません。</p>
+        <p class="shop-memo-empty">検索条件に一致する削除済みメモはありません。検索文字を変えるか、×ボタンで検索を解除してください。</p>
         {% else %}
-        <p class="shop-memo-empty">ゴミ箱は空です。</p>
+        <p class="shop-memo-empty">ゴミ箱は空です。削除済みメモはここに表示されます。</p>
         {% endif %}
     </section>
 {% endblock %}

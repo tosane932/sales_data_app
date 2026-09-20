@@ -38,11 +38,19 @@ def _guest_client(flask_app, dataset):
     return test_client
 
 
-def _create_memo(dataset, *, body, deleted=False, minute_offset=0):
+def _create_memo(
+    dataset,
+    *,
+    body,
+    title=None,
+    deleted=False,
+    minute_offset=0,
+):
     created_at = NOW + datetime.timedelta(minutes=minute_offset)
     deleted_at = created_at if deleted else None
     memo = ShopMemo(
         dataset=dataset,
+        title=body[:100] if title is None else title,
         body=body,
         created_at=created_at,
         updated_at=created_at,
@@ -55,8 +63,21 @@ def _create_memo(dataset, *, body, deleted=False, minute_offset=0):
 
 def _post_with_csrf(client, csrf_token, path, data=None):
     payload = dict(data or {})
+    if "body" in payload and "title" not in payload:
+        payload["title"] = "テストタイトル"
     payload["csrf_token"] = csrf_token(client, "/shop-tools/memo")
     return client.post(path, data=payload, follow_redirects=False)
+
+
+def _post_json_with_csrf(client, csrf_token, path, payload=None):
+    return client.post(
+        path,
+        json=payload or {},
+        headers={
+            "X-CSRFToken": csrf_token(client, "/shop-tools/memo"),
+        },
+        follow_redirects=False,
+    )
 
 
 def _memo_snapshot():
@@ -64,10 +85,12 @@ def _memo_snapshot():
         (
             memo.id,
             memo.dataset_id,
+            memo.title,
             memo.body,
             memo.created_at,
             memo.updated_at,
             memo.deleted_at,
+            memo.pinned_at,
         )
         for memo in ShopMemo.query.order_by(ShopMemo.id)
     ]
@@ -89,7 +112,7 @@ def test_admin_can_open_memo_list_and_create_trimmed_multiline_memo(
     )
 
     assert empty_response.status_code == 200
-    assert "メモ 0件" in empty_document.get_text()
+    assert "0件のメモ" in empty_document.get_text()
     assert empty_document.select_one('label[for="shop-memo-body"]') is not None
 
     response = _post_with_csrf(
@@ -122,6 +145,113 @@ def test_create_accepts_two_thousand_characters(
 
     assert response.status_code == 303
     assert ShopMemo.query.one().body == body
+
+
+def test_mobile_autosave_creates_body_only_memo_with_derived_title(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    body = "\n  洋生卸 間違い注意  \n木曜日は数量を再確認する"
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo/autosave",
+        {"body": body},
+    )
+
+    assert response.status_code == 201
+    assert response.json["ok"] is True
+    memo = ShopMemo.query.one()
+    assert memo.dataset_id == admin_dataset.id
+    assert memo.title == "洋生卸 間違い注意"
+    assert memo.body == body
+    assert response.json["memo"]["id"] == memo.id
+    assert response.json["memo"]["pinned"] is False
+
+
+@pytest.mark.parametrize("body", ["", "   ", "\n\t\n"])
+def test_mobile_autosave_does_not_create_empty_or_blank_memo(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    body,
+):
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo/autosave",
+        {"body": body},
+    )
+
+    assert response.status_code == 400
+    assert response.json["ok"] is False
+    assert ShopMemo.query.count() == 0
+
+
+@pytest.mark.parametrize("body", ["メ" * 2001, 123, None])
+def test_mobile_autosave_rejects_invalid_body_without_database_change(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    body,
+):
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo/autosave",
+        {"body": body},
+    )
+
+    assert response.status_code == 400
+    assert response.json["ok"] is False
+    assert ShopMemo.query.count() == 0
+
+
+def test_mobile_autosave_edits_body_and_derived_title(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    memo = _create_memo(admin_dataset, title="編集前", body="編集前の本文")
+    memo_id = memo.id
+    previous_updated_at = memo.updated_at
+    body = "新しい先頭行\n編集後の本文"
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo_id}/autosave",
+        {"body": body},
+    )
+
+    assert response.status_code == 200
+    db.session.expire_all()
+    saved = db.session.get(ShopMemo, memo_id)
+    assert saved.title == "新しい先頭行"
+    assert saved.body == body
+    assert saved.updated_at >= previous_updated_at
+
+
+def test_mobile_autosave_escapes_html_when_rendered(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    attack = "<img src=x onerror=alert(1)>"
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo/autosave",
+        {"body": attack},
+    )
+    html = authenticated_client.get("/shop-tools/memo").get_data(as_text=True)
+
+    assert response.status_code == 201
+    assert attack not in html
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html
 
 
 def test_oversized_memo_request_is_rejected_before_database_change(
@@ -209,6 +339,200 @@ def test_memo_full_lifecycle_updates_active_and_trash_views(
     assert db.session.get(ShopMemo, memo_id) is None
 
 
+def test_pin_and_unpin_are_idempotent_and_do_not_change_content_updated_at(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    memo = _create_memo(admin_dataset, body="ピン対象")
+    memo_id = memo.id
+    content_updated_at = memo.updated_at
+
+    first_pin = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo_id}/pin",
+        {"pinned": True},
+    )
+    db.session.expire_all()
+    first_pinned_at = db.session.get(ShopMemo, memo_id).pinned_at
+    second_pin = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo_id}/pin",
+        {"pinned": True},
+    )
+    db.session.expire_all()
+    pinned_again = db.session.get(ShopMemo, memo_id)
+
+    assert first_pin.status_code == 200
+    assert second_pin.status_code == 200
+    assert first_pinned_at is not None
+    assert pinned_again.pinned_at == first_pinned_at
+    assert pinned_again.updated_at == content_updated_at
+
+    unpin = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo_id}/pin",
+        {"pinned": False},
+    )
+    db.session.expire_all()
+    unpinned = db.session.get(ShopMemo, memo_id)
+
+    assert unpin.status_code == 200
+    assert unpinned.pinned_at is None
+    assert unpinned.updated_at == content_updated_at
+
+
+@pytest.mark.parametrize("pinned", [None, 1, "true", [], {}])
+def test_pin_rejects_non_boolean_state_without_database_change(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    pinned,
+):
+    memo = _create_memo(admin_dataset, body="ピン形式確認")
+    before = _memo_snapshot()
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo.id}/pin",
+        {"pinned": pinned},
+    )
+
+    assert response.status_code == 400
+    assert response.json["ok"] is False
+    assert _memo_snapshot() == before
+
+
+def test_pinned_memos_are_listed_before_newer_unpinned_memos(
+    authenticated_client,
+    admin_dataset,
+):
+    pinned = _create_memo(
+        admin_dataset,
+        title="ピン留め",
+        body="ピン留め本文",
+        minute_offset=0,
+    )
+    pinned.pinned_at = NOW + datetime.timedelta(minutes=2)
+    unpinned = _create_memo(
+        admin_dataset,
+        title="新しい通常メモ",
+        body="新しい通常本文",
+        minute_offset=10,
+    )
+    db.session.commit()
+
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+    listed_ids = [
+        int(card["data-memo-id"])
+        for card in document.select("article.shop-memo-card")
+    ]
+
+    assert listed_ids[:2] == [pinned.id, unpinned.id]
+    assert document.select_one(
+        f'article[data-memo-id="{pinned.id}"] .shop-memo-pin-indicator'
+    ) is not None
+
+
+def test_duplicate_creates_unpinned_copy_with_new_identity_and_timestamps(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    source = _create_memo(
+        admin_dataset,
+        title="複製元タイトル",
+        body="複製元の本文",
+    )
+    source.pinned_at = NOW + datetime.timedelta(minutes=1)
+    db.session.commit()
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{source.id}/duplicate",
+    )
+
+    assert response.status_code == 201
+    memos = ShopMemo.query.order_by(ShopMemo.id).all()
+    assert len(memos) == 2
+    duplicate = memos[1]
+    assert duplicate.id != source.id
+    assert duplicate.dataset_id == admin_dataset.id
+    assert duplicate.title == source.title
+    assert duplicate.body == source.body
+    assert duplicate.created_at >= source.created_at
+    assert duplicate.updated_at >= source.updated_at
+    assert duplicate.pinned_at is None
+
+
+def test_duplicate_obeys_total_memo_limit(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    memos = [
+        ShopMemo(
+            dataset=admin_dataset,
+            title=f"上限メモ{index}",
+            body=f"上限メモ{index}",
+            created_at=NOW,
+            updated_at=NOW,
+            deleted_at=NOW if index == 0 else None,
+        )
+        for index in range(100)
+    ]
+    db.session.add_all(memos)
+    db.session.commit()
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memos[1].id}/duplicate",
+    )
+
+    assert response.status_code == 400
+    assert response.json["ok"] is False
+    assert ShopMemo.query.count() == 100
+
+
+def test_json_trash_and_restore_support_mobile_undo(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    memo = _create_memo(admin_dataset, body="Undo対象")
+
+    trash_response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo.id}/trash",
+    )
+    assert trash_response.status_code == 200
+    assert trash_response.json["ok"] is True
+    assert trash_response.json["restore_url"].endswith(
+        f"/shop-tools/memo/{memo.id}/restore"
+    )
+    db.session.expire_all()
+    assert db.session.get(ShopMemo, memo.id).deleted_at is not None
+
+    restore_response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        trash_response.json["restore_url"],
+    )
+    assert restore_response.status_code == 200
+    db.session.expire_all()
+    assert db.session.get(ShopMemo, memo.id).deleted_at is None
+
+
 def test_trash_lists_only_current_dataset_deleted_memos_with_deleted_time(
     flask_app,
     authenticated_client,
@@ -227,6 +551,158 @@ def test_trash_lists_only_current_dataset_deleted_memos_with_deleted_time(
     assert "削除日時：2026/09/15 00:00" in document.get_text()
     assert "通常一覧だけのメモ" not in document.get_text()
     assert "別Datasetゴミ箱メモ" not in document.get_text()
+
+
+def test_empty_trash_deletes_only_current_dataset_trash_and_reports_count(
+    flask_app,
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    other_guest = _create_guest_dataset(minute_offset=1)
+    active_memo = _create_memo(admin_dataset, body="Admin通常メモ")
+    deleted_memos = [
+        _create_memo(admin_dataset, body="Adminゴミ箱A", deleted=True),
+        _create_memo(admin_dataset, body="Adminゴミ箱B", deleted=True),
+    ]
+    other_deleted_memo = _create_memo(
+        other_guest,
+        body="別Datasetゴミ箱メモ",
+        deleted=True,
+    )
+    active_memo_id = active_memo.id
+    deleted_memo_ids = [memo.id for memo in deleted_memos]
+    other_deleted_memo_id = other_deleted_memo.id
+
+    response = authenticated_client.post(
+        "/shop-tools/memo/trash/empty",
+        data={
+            "csrf_token": csrf_token(
+                authenticated_client,
+                "/shop-tools/memo/trash",
+            )
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert "ゴミ箱のメモを2件完全に削除しました。" in response.get_data(
+        as_text=True
+    )
+    db.session.expire_all()
+    assert db.session.get(ShopMemo, active_memo_id) is not None
+    assert all(
+        db.session.get(ShopMemo, memo_id) is None
+        for memo_id in deleted_memo_ids
+    )
+    assert db.session.get(ShopMemo, other_deleted_memo_id) is not None
+
+
+def test_guest_empty_trash_cannot_cross_admin_or_other_guest_dataset(
+    flask_app,
+    admin_dataset,
+    csrf_token,
+):
+    guest_a = _create_guest_dataset(minute_offset=1)
+    guest_b = _create_guest_dataset(minute_offset=2)
+    own_active_memo = _create_memo(guest_a, body="Guest A通常メモ")
+    own_deleted_memo = _create_memo(
+        guest_a,
+        body="Guest Aゴミ箱メモ",
+        deleted=True,
+    )
+    protected_memos = [
+        _create_memo(admin_dataset, body="Adminゴミ箱メモ", deleted=True),
+        _create_memo(guest_b, body="Guest Bゴミ箱メモ", deleted=True),
+    ]
+    own_active_memo_id = own_active_memo.id
+    own_deleted_memo_id = own_deleted_memo.id
+    protected_memo_ids = [memo.id for memo in protected_memos]
+    guest_client = _guest_client(flask_app, guest_a)
+
+    response = guest_client.post(
+        "/shop-tools/memo/trash/empty",
+        data={
+            "csrf_token": csrf_token(
+                guest_client,
+                "/shop-tools/memo/trash",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.session.expire_all()
+    assert db.session.get(ShopMemo, own_active_memo_id) is not None
+    assert db.session.get(ShopMemo, own_deleted_memo_id) is None
+    assert all(
+        db.session.get(ShopMemo, memo_id) is not None
+        for memo_id in protected_memo_ids
+    )
+
+
+def test_empty_trash_is_post_only_and_requires_valid_csrf(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    deleted_memo = _create_memo(
+        admin_dataset,
+        body="CSRF保護ゴミ箱メモ",
+        deleted=True,
+    )
+    valid_token = csrf_token(
+        authenticated_client,
+        "/shop-tools/memo/trash",
+    )
+
+    get_response = authenticated_client.get("/shop-tools/memo/trash/empty")
+    missing_response = authenticated_client.post(
+        "/shop-tools/memo/trash/empty"
+    )
+    tampered_response = authenticated_client.post(
+        "/shop-tools/memo/trash/empty",
+        data={"csrf_token": _tamper_csrf_token(valid_token)},
+    )
+
+    assert get_response.status_code == 405
+    assert missing_response.status_code == 400
+    assert tampered_response.status_code == 400
+    assert db.session.get(ShopMemo, deleted_memo.id) is not None
+
+
+def test_empty_trash_commit_failure_rolls_back_all_deletions(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    monkeypatch,
+):
+    _create_memo(admin_dataset, body="残る通常メモ")
+    _create_memo(admin_dataset, body="rollbackゴミ箱A", deleted=True)
+    _create_memo(admin_dataset, body="rollbackゴミ箱B", deleted=True)
+    before = _memo_snapshot()
+    token = csrf_token(authenticated_client, "/shop-tools/memo/trash")
+    real_rollback = db.session.rollback
+    rollback = Mock(wraps=real_rollback)
+    monkeypatch.setattr(db.session, "rollback", rollback)
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test empty trash failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
+
+    response = authenticated_client.post(
+        "/shop-tools/memo/trash/empty",
+        data={"csrf_token": token},
+    )
+
+    assert response.status_code == 500
+    assert rollback.call_count == 1
+    assert "ゴミ箱を空にできませんでした。" in response.get_data(
+        as_text=True
+    )
+    assert _memo_snapshot() == before
 
 
 @pytest.mark.parametrize(
@@ -290,6 +766,64 @@ def test_search_ui_shows_clear_button_only_for_nonempty_query(
     assert "「納品」の検索結果：0件" in search_document.get_text()
 
 
+def test_memo_empty_states_distinguish_context_and_show_next_action(
+    authenticated_client,
+    admin_dataset,
+):
+    expected_by_path = {
+        "/shop-tools/memo": (
+            "まだメモはありません。"
+            "＋ボタンから最初のメモを追加できます。"
+        ),
+        "/shop-tools/memo?q=none": (
+            "検索条件に一致するメモはありません。"
+            "検索文字を変えるか、×ボタンで検索を解除してください。"
+        ),
+        "/shop-tools/memo/trash": (
+            "ゴミ箱は空です。削除済みメモはここに表示されます。"
+        ),
+        "/shop-tools/memo/trash?q=none": (
+            "検索条件に一致する削除済みメモはありません。"
+            "検索文字を変えるか、×ボタンで検索を解除してください。"
+        ),
+    }
+
+    for path, expected in expected_by_path.items():
+        response = authenticated_client.get(path)
+        document = BeautifulSoup(
+            response.get_data(as_text=True), "html.parser"
+        )
+        assert response.status_code == 200
+        assert expected in document.get_text()
+
+
+def test_active_memo_list_reserves_space_below_fixed_fab(
+    authenticated_client,
+    admin_dataset,
+):
+    active_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+    trash_document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo/trash").get_data(
+            as_text=True
+        ),
+        "html.parser",
+    )
+    css_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+
+    assert active_document.select_one(
+        ".shop-memo-list-section.shop-memo-list-section-has-fab"
+    ) is not None
+    assert trash_document.select_one(
+        ".shop-memo-list-section-has-fab"
+    ) is None
+    assert ".shop-memo-list-section-has-fab" in css_source
+
+
 def test_admin_and_guests_only_search_their_own_memos(
     flask_app,
     authenticated_client,
@@ -348,6 +882,7 @@ def test_hundredth_memo_succeeds_and_limit_counts_trashed_memos(
         [
             ShopMemo(
                 dataset=admin_dataset,
+                title=f"既存メモ{index}",
                 body=f"既存メモ{index}",
                 deleted_at=NOW if index == 0 else None,
                 created_at=NOW,
@@ -389,6 +924,7 @@ def test_permanent_delete_frees_one_memo_slot(
     memos = [
         ShopMemo(
             dataset=admin_dataset,
+            title=f"上限確認メモ{index}",
             body=f"上限確認メモ{index}",
             deleted_at=NOW if index == 0 else None,
             created_at=NOW,
@@ -526,6 +1062,106 @@ def test_external_dataset_id_is_ignored_when_creating_memo(
     assert ShopMemo.query.one().dataset_id == guest_a.id
 
 
+@pytest.mark.parametrize("operation", ["autosave", "pin", "duplicate"])
+def test_guest_cannot_use_mobile_mutations_on_other_dataset_memo(
+    flask_app,
+    admin_dataset,
+    csrf_token,
+    operation,
+):
+    guest_a = _create_guest_dataset(minute_offset=1)
+    guest_b = _create_guest_dataset(minute_offset=2)
+    protected = _create_memo(guest_b, body="Guest B保護メモ")
+    guest_client = _guest_client(flask_app, guest_a)
+    before = _memo_snapshot()
+    payload = {
+        "autosave": {"body": "越境編集"},
+        "pin": {"pinned": True},
+        "duplicate": {},
+    }[operation]
+
+    response = _post_json_with_csrf(
+        guest_client,
+        csrf_token,
+        f"/shop-tools/memo/{protected.id}/{operation}",
+        payload,
+    )
+    missing = _post_json_with_csrf(
+        guest_client,
+        csrf_token,
+        f"/shop-tools/memo/{protected.id + 9999}/{operation}",
+        payload,
+    )
+
+    assert response.status_code == 404
+    assert missing.status_code == 404
+    assert _memo_snapshot() == before
+
+
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/shop-tools/memo/autosave", {"body": "CSRF不正新規"}),
+        ("/shop-tools/memo/1/autosave", {"body": "CSRF不正編集"}),
+        ("/shop-tools/memo/1/pin", {"pinned": True}),
+        ("/shop-tools/memo/1/duplicate", {}),
+    ],
+)
+def test_mobile_mutations_require_valid_csrf_without_database_changes(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    path,
+    payload,
+):
+    if "/1/" in path:
+        _create_memo(admin_dataset, body="CSRF保護メモ")
+    valid_token = csrf_token(authenticated_client, "/shop-tools/memo")
+    before = _memo_snapshot()
+
+    missing = authenticated_client.post(path, json=payload)
+    tampered = authenticated_client.post(
+        path,
+        json=payload,
+        headers={"X-CSRFToken": _tamper_csrf_token(valid_token)},
+    )
+
+    assert missing.status_code == 400
+    assert tampered.status_code == 400
+    assert _memo_snapshot() == before
+
+
+def test_mobile_autosave_counts_trashed_memos_toward_limit(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+):
+    db.session.add_all(
+        [
+            ShopMemo(
+                dataset=admin_dataset,
+                title=f"上限メモ{index}",
+                body=f"上限メモ{index}",
+                created_at=NOW,
+                updated_at=NOW,
+                deleted_at=NOW if index == 0 else None,
+            )
+            for index in range(100)
+        ]
+    )
+    db.session.commit()
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        "/shop-tools/memo/autosave",
+        {"body": "101件目"},
+    )
+
+    assert response.status_code == 400
+    assert ShopMemo.query.count() == 100
+
+
 @pytest.mark.parametrize(
     ("operation", "deleted"),
     [
@@ -647,15 +1283,20 @@ def test_invalid_edit_preserves_input_without_database_change(
         authenticated_client,
         csrf_token,
         f"/shop-tools/memo/{memo.id}/edit",
-        {"body": "   "},
+        {"title": "入力中のタイトル", "body": "   "},
     )
 
     assert response.status_code == 400
     assert _memo_snapshot() == before
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
-    edit_details = document.select_one("details.shop-memo-edit[open]")
-    assert edit_details is not None
-    assert edit_details.select_one('textarea[name="body"]').text == "   "
+    edit_dialog = document.select_one(
+        'dialog.shop-memo-edit-dialog[data-open-on-load="true"]'
+    )
+    assert edit_dialog is not None
+    assert edit_dialog.select_one('input[name="title"]')["value"] == (
+        "入力中のタイトル"
+    )
+    assert edit_dialog.select_one('textarea[name="body"]').text == "   "
 
 
 @pytest.mark.parametrize(
@@ -690,7 +1331,11 @@ def test_mutation_commit_failure_rolls_back_memo_change(
     monkeypatch.setattr(db.session, "commit", fail_after_flush)
     payload = {
         "csrf_token": token,
-        **({"body": "保存されない変更"} if operation == "edit" else {}),
+        **(
+            {"title": "更新タイトル", "body": "保存されない変更"}
+            if operation == "edit"
+            else {}
+        ),
     }
 
     response = authenticated_client.post(
@@ -722,7 +1367,11 @@ def test_create_commit_failure_rolls_back_new_memo(
     monkeypatch.setattr(db.session, "commit", fail_after_flush)
     response = authenticated_client.post(
         "/shop-tools/memo",
-        data={"body": "保存されないメモ", "csrf_token": token},
+        data={
+            "title": "保存されないタイトル",
+            "body": "保存されないメモ",
+            "csrf_token": token,
+        },
     )
 
     assert response.status_code == 500
@@ -731,6 +1380,82 @@ def test_create_commit_failure_rolls_back_new_memo(
         response.get_data(as_text=True)
     )
     assert ShopMemo.query.count() == 0
+
+
+@pytest.mark.parametrize("operation", ["create", "edit"])
+def test_mobile_autosave_commit_failure_rolls_back(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    monkeypatch,
+    operation,
+):
+    memo = (
+        _create_memo(admin_dataset, body="autosave rollback元")
+        if operation == "edit"
+        else None
+    )
+    before = _memo_snapshot()
+    real_rollback = db.session.rollback
+    rollback = Mock(wraps=real_rollback)
+    monkeypatch.setattr(db.session, "rollback", rollback)
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test mobile autosave failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
+    path = (
+        f"/shop-tools/memo/{memo.id}/autosave"
+        if memo is not None
+        else "/shop-tools/memo/autosave"
+    )
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        path,
+        {"body": "保存されないautosave"},
+    )
+
+    assert response.status_code == 500
+    assert response.json["ok"] is False
+    assert rollback.call_count == 1
+    assert _memo_snapshot() == before
+
+
+@pytest.mark.parametrize("operation", ["pin", "duplicate"])
+def test_mobile_action_commit_failure_rolls_back(
+    authenticated_client,
+    admin_dataset,
+    csrf_token,
+    monkeypatch,
+    operation,
+):
+    memo = _create_memo(admin_dataset, body="スマホ操作rollback元")
+    before = _memo_snapshot()
+    real_rollback = db.session.rollback
+    rollback = Mock(wraps=real_rollback)
+    monkeypatch.setattr(db.session, "rollback", rollback)
+
+    def fail_after_flush():
+        db.session.flush()
+        raise SQLAlchemyError("test mobile action failure after flush")
+
+    monkeypatch.setattr(db.session, "commit", fail_after_flush)
+    payload = {"pinned": True} if operation == "pin" else {}
+
+    response = _post_json_with_csrf(
+        authenticated_client,
+        csrf_token,
+        f"/shop-tools/memo/{memo.id}/{operation}",
+        payload,
+    )
+
+    assert response.status_code == 500
+    assert response.json["ok"] is False
+    assert rollback.call_count == 1
+    assert _memo_snapshot() == before
 
 
 def test_anonymous_user_cannot_view_or_create_shop_memos(
@@ -749,6 +1474,60 @@ def test_anonymous_user_cannot_view_or_create_shop_memos(
     assert get_response.status_code == 302
     assert post_response.status_code == 302
     assert ShopMemo.query.count() == 0
+
+
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/shop-tools/memo/autosave", {"body": "匿名autosave"}),
+        ("/shop-tools/memo/1/autosave", {"body": "匿名編集"}),
+        ("/shop-tools/memo/1/pin", {"pinned": True}),
+        ("/shop-tools/memo/1/duplicate", {}),
+    ],
+)
+def test_anonymous_user_cannot_use_mobile_memo_mutations(
+    client,
+    admin_dataset,
+    csrf_token,
+    path,
+    payload,
+):
+    _create_memo(admin_dataset, body="匿名操作から保護")
+    token = csrf_token(client, "/login")
+    before = _memo_snapshot()
+
+    response = client.post(
+        path,
+        json=payload,
+        headers={"X-CSRFToken": token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert _memo_snapshot() == before
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/shop-tools/memo/autosave",
+        "/shop-tools/memo/1/autosave",
+        "/shop-tools/memo/1/pin",
+        "/shop-tools/memo/1/duplicate",
+    ],
+)
+def test_mobile_memo_mutations_do_not_accept_get(
+    authenticated_client,
+    admin_dataset,
+    path,
+):
+    _create_memo(admin_dataset, body="GETではスマホ操作不可")
+    before = _memo_snapshot()
+
+    response = authenticated_client.get(path)
+
+    assert response.status_code == 405
+    assert _memo_snapshot() == before
 
 
 def test_shop_memo_input_is_html_escaped_and_sources_avoid_inner_html(
@@ -805,6 +1584,7 @@ def test_shop_memo_linkifies_http_urls_and_preserves_text_and_line_breaks(
         set(link.get("rel", [])) == {"noopener", "noreferrer"}
         for link in links
     )
+    assert all(link.find_parent("button") is None for link in links)
 
 
 def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
@@ -828,8 +1608,7 @@ def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
     )
 
     active_link = active_document.select_one(
-        f'article:has(form[action$="/{active_memo.id}/edit"]) '
-        ".shop-memo-body a"
+        f'article[data-memo-id="{active_memo.id}"] .shop-memo-body a'
     )
     trash_link = trash_document.select_one(
         f'article:has(form[action$="/{deleted_memo.id}/restore"]) '
@@ -944,7 +1723,7 @@ def test_shop_memo_edit_keeps_raw_url_text_in_textarea_and_database(
     assert db.session.get(ShopMemo, memo.id).body == edited_body
 
 
-def test_memo_ui_has_explicit_confirmations_and_accessible_controls(
+def test_memo_ui_has_accessible_controls_and_irreversible_delete_confirmation(
     authenticated_client,
     admin_dataset,
 ):
@@ -966,8 +1745,34 @@ def test_memo_ui_has_explicit_confirmations_and_accessible_controls(
         f'form[action="/shop-tools/memo/{active_memo.id}/edit"] '
         'input[name="csrf_token"]'
     ) is not None
+    memo_card = active_document.select_one(
+        f'article[data-memo-id="{active_memo.id}"]'
+    )
+    row_open_button = memo_card.select_one(
+        ":scope > .shop-memo-card-open"
+    )
+    assert row_open_button is not None
+    assert row_open_button.get("type") == "button"
+    assert row_open_button.get("aria-controls") == (
+        f"shop-memo-edit-dialog-{active_memo.id}"
+    )
+    assert row_open_button.get("data-dialog-id") == (
+        f"shop-memo-edit-dialog-{active_memo.id}"
+    )
+    assert row_open_button.select_one(".shop-memo-title") is None
+    menu_button = active_document.select_one(
+        f'article[data-memo-id="{active_memo.id}"] '
+        f'.shop-memo-menu-button'
+        f'[data-trash-url="/shop-tools/memo/{active_memo.id}/trash"]'
+    )
+    assert menu_button is not None
+    assert menu_button.get("aria-haspopup") == "menu"
+    assert menu_button.get("aria-expanded") == "false"
+    assert menu_button.get("data-dialog-id") == (
+        f"shop-memo-edit-dialog-{active_memo.id}"
+    )
     assert active_document.select_one(
-        f'details form[action="/shop-tools/memo/{active_memo.id}/trash"]'
+        '#shop-memo-menu-trash-form input[name="csrf_token"]'
     ) is not None
     assert trash_document.select_one(
         f'form[action="/shop-tools/memo/{deleted_memo.id}/restore"]'
@@ -978,6 +1783,26 @@ def test_memo_ui_has_explicit_confirmations_and_accessible_controls(
     assert permanent_delete is not None
     assert "この操作は取り消せません" in permanent_delete.parent.get_text()
 
+    empty_trash_button = trash_document.select_one(
+        "#shop-memo-empty-trash-open"
+    )
+    empty_trash_dialog = trash_document.select_one(
+        "#shop-memo-empty-trash-dialog"
+    )
+    assert empty_trash_button is not None
+    assert empty_trash_button.get("aria-controls") == (
+        "shop-memo-empty-trash-dialog"
+    )
+    assert empty_trash_dialog is not None
+    assert "ゴミ箱内の1件を完全に削除します。" in (
+        empty_trash_dialog.get_text()
+    )
+    empty_trash_form = empty_trash_dialog.select_one(
+        'form[method="POST"][action="/shop-tools/memo/trash/empty"]'
+    )
+    assert empty_trash_form is not None
+    assert empty_trash_form.select_one('input[name="csrf_token"]') is not None
+
     script_source = (
         Path(app_module.app.root_path) / "static" / "shop_memos.js"
     ).read_text()
@@ -985,3 +1810,160 @@ def test_memo_ui_has_explicit_confirmations_and_accessible_controls(
     assert 'memoSearchClearButton.addEventListener("click"' in script_source
     assert 'memoSearchInput.value = ""' in script_source
     assert "window.location.replace" in script_source
+
+
+def test_empty_trash_control_is_hidden_when_trash_is_empty(
+    authenticated_client,
+    admin_dataset,
+):
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo/trash").get_data(
+            as_text=True
+        ),
+        "html.parser",
+    )
+
+    assert document.select_one("#shop-memo-empty-trash-open") is None
+    assert document.select_one("#shop-memo-empty-trash-dialog") is None
+
+
+def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
+    authenticated_client,
+    admin_dataset,
+):
+    memo = _create_memo(admin_dataset, body="スマホ操作対象")
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+
+    config = document.select_one("#shop-memo-mobile-config")
+    assert config is not None
+    assert config.get("data-create-url") == "/shop-tools/memo/autosave"
+    assert config.get("data-list-url") == "/shop-tools/memo"
+    assert config.get("data-csrf-token")
+
+    card = document.select_one(f'article[data-memo-id="{memo.id}"]')
+    assert card.get("data-autosave-url") == (
+        f"/shop-tools/memo/{memo.id}/autosave"
+    )
+    assert card.get("data-pin-url") == f"/shop-tools/memo/{memo.id}/pin"
+    assert card.get("data-duplicate-url") is None
+    assert card.get("data-trash-url") == (
+        f"/shop-tools/memo/{memo.id}/trash"
+    )
+    assert card.get("data-pinned") == "false"
+    assert card.select_one(".shop-memo-menu-button") is not None
+
+    edit_dialog = document.select_one(f"#shop-memo-edit-dialog-{memo.id}")
+    edit_back = edit_dialog.select_one(".shop-memo-mobile-editor-back")
+    assert edit_back is not None
+    assert edit_back.get("aria-label") == "メモ一覧に戻る"
+    assert edit_back.get_text(strip=True) == "←"
+    edit_toolbar = edit_dialog.select_one(
+        ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
+    )
+    assert edit_toolbar is not None
+    assert edit_toolbar.get("data-scroll-state") == "end"
+    assert edit_toolbar.select_one(".shop-memo-mobile-editor-menu") is not None
+    assert edit_dialog.select_one('textarea[name="body"]') is not None
+    assert edit_dialog.get("data-duplicate-url") is None
+
+    create_dialog = document.select_one("#shop-memo-create-dialog")
+    assert create_dialog.get("data-autosave-url") == (
+        "/shop-tools/memo/autosave"
+    )
+    create_back = create_dialog.select_one(".shop-memo-mobile-editor-back")
+    assert create_back is not None
+    assert create_back.get("aria-label") == "メモ一覧に戻る"
+    assert create_back.get_text(strip=True) == "←"
+    create_toolbar = create_dialog.select_one(
+        ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
+    )
+    assert create_toolbar is not None
+    assert create_toolbar.has_attr("hidden")
+
+    action_sheet = document.select_one("#shop-memo-mobile-actions")
+    assert action_sheet is not None
+    assert action_sheet.select_one('[data-mobile-action="pin"]') is not None
+    copy_action = action_sheet.select_one('[data-mobile-action="copy"]')
+    assert copy_action is not None
+    assert copy_action.get("type") == "button"
+    assert copy_action.get_text(" ", strip=True) == "📋 コピー"
+    assert action_sheet.select_one(
+        '[data-mobile-action="duplicate"]'
+    ) is None
+    assert action_sheet.select_one('[data-mobile-action="trash"]') is not None
+
+    snackbar = document.select_one("#shop-memo-snackbar")
+    assert snackbar is not None
+    assert snackbar.select_one("#shop-memo-snackbar-undo") is not None
+
+    script_source = (
+        Path(app_module.app.root_path) / "static" / "shop_memos.js"
+    ).read_text()
+    assert "LONG_PRESS_MS: 500" in script_source
+    assert "MOVE_CANCEL_PX: 10" in script_source
+    assert "DELETE_DISTANCE_RATIO: 0.7" in script_source
+    assert "FAST_SWIPE_MIN_RATIO: 0.25" in script_source
+    assert "AUTOSAVE_DELAY_MS: 750" in script_source
+    assert "SCROLL_END_TOLERANCE_PX:" in script_source
+    assert "scrollHeight" in script_source
+    assert "clientHeight" in script_source
+    assert "scrollTop" in script_source
+    assert "navigator.clipboard.writeText" in script_source
+    assert 'document.execCommand("copy")' in script_source
+    assert '"コピーしました"' in script_source
+    assert "postMemoJson(context.duplicateUrl)" not in script_source
+    assert "innerHTML" not in script_source
+
+    style_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+    assert '.shop-memo-mobile-editor-toolbar[data-scroll-state="more"]' in (
+        style_source
+    )
+    assert '.shop-memo-mobile-editor-toolbar[data-scroll-state="end"]' in (
+        style_source
+    )
+    assert "overflow-y: auto" in style_source
+    assert ".shop-memo-mobile-editor-back:focus-visible" in style_source
+
+
+def test_mobile_memo_header_has_compact_trash_link_and_count(
+    authenticated_client,
+    admin_dataset,
+):
+    for index in range(4):
+        _create_memo(admin_dataset, body=f"通常メモ{index}")
+    _create_memo(admin_dataset, body="ゴミ箱メモ", deleted=True)
+
+    before = _memo_snapshot()
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+
+    mobile_trash_link = document.select_one(
+        ".shop-tools-header .shop-memo-mobile-trash-link"
+    )
+    assert mobile_trash_link is not None
+    assert mobile_trash_link.get("href") == "/shop-tools/memo/trash"
+    assert mobile_trash_link.get("aria-label") == "ゴミ箱を開く（1件）"
+    assert mobile_trash_link.get_text(" ", strip=True) == "🗑️ 1"
+    assert mobile_trash_link.select_one(
+        ".shop-memo-mobile-trash-count"
+    ) is not None
+
+    desktop_trash_link = document.select_one(
+        ".shop-memo-list-heading-main .shop-memo-trash-link"
+    )
+    assert desktop_trash_link is not None
+    assert "ゴミ箱 1件" in desktop_trash_link.get_text(" ", strip=True)
+    assert document.select_one(".shop-memo-count-desktop").get_text(
+        strip=True
+    ) == "4件のメモ"
+    assert document.select_one(".shop-memo-count-mobile").get_text(
+        strip=True
+    ) == "(4件)"
+    assert _memo_snapshot() == before

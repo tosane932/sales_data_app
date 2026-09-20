@@ -105,13 +105,25 @@ def test_guest_sees_shared_sidebar_with_correct_current_page(
     login_link = document.select_one("#app-sidebar a.app-sidebar-login-link")
     assert login_link is not None
     assert login_link["href"] == "/login"
-    assert "管理者ログイン画面を開く" in login_link.get_text()
+    assert "ログイン画面に戻る" in login_link.get_text()
+    assert "管理者ログイン画面を開く" not in login_link.get_text()
     assert "ゲスト利用は継続します" in login_link.get_text()
     logout_button = document.select_one(
         "#app-sidebar .app-sidebar-logout-button"
     )
     assert "ゲストを終了する" in logout_button.get_text()
     assert "ログアウト" not in logout_button.get_text()
+
+
+def test_guest_returning_to_login_page_keeps_guest_session(flask_app):
+    guest_client = _guest_client(flask_app)
+
+    login_response = guest_client.get("/login")
+    protected_response = guest_client.get("/material-orders")
+
+    assert login_response.status_code == 200
+    assert protected_response.status_code == 200
+    assert "利用中：ゲストデモ" in protected_response.get_data(as_text=True)
 
 
 @pytest.mark.parametrize("route", APP_ROUTES.values())
@@ -137,7 +149,7 @@ def test_mobile_navigation_has_accessible_open_and_close_controls(
     assert open_button.get("aria-label") == "主要メニューを開く"
     assert open_button.get("aria-controls") == "app-sidebar"
     assert open_button.get("aria-expanded") == "false"
-    assert "メニュー" in open_button.get_text()
+    assert open_button.get_text(strip=True) == "☰"
     assert close_button is not None
     assert close_button.get("aria-label") == "主要メニューを閉じる"
     assert overlay is not None

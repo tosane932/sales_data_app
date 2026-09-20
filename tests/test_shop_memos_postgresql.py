@@ -105,7 +105,7 @@ def submit_memo(body):
 
     response = client.post(
         "/shop-tools/memo",
-        data={"body": body},
+        data={"title": body, "body": body},
         follow_redirects=False,
     )
     return response.status_code
@@ -161,7 +161,7 @@ try:
 
     rejected_create = post(
         "/shop-tools/memo",
-        {"body": "上限中は作成不可"},
+        {"title": "上限中は作成不可", "body": "上限中は作成不可"},
     )
     move_to_trash = post(f"/shop-tools/memo/{own_active_id}/trash")
     restore = post(f"/shop-tools/memo/{own_deleted_id}/restore")
@@ -175,7 +175,10 @@ try:
     permanent_delete = post(f"/shop-tools/memo/{own_active_id}/delete")
     accepted_create = post(
         "/shop-tools/memo",
-        {"body": "完全削除後の100件目"},
+        {
+            "title": "完全削除後の100件目",
+            "body": "完全削除後の100件目",
+        },
     )
 
     with app_module.app.app_context():
@@ -404,6 +407,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
                 [
                     {
                         "dataset_id": guest_a_id,
+                        "title": f"上限用メモ{index}",
                         "body": f"上限用メモ{index}",
                         "created_at": now,
                         "updated_at": now,
@@ -416,6 +420,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=guest_a_id,
+                    title="Guest A通常メモ",
                     body="Guest A通常メモ",
                     created_at=now,
                     updated_at=now,
@@ -427,6 +432,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=guest_a_id,
+                    title="Guest Aゴミ箱メモ",
                     body="Guest Aゴミ箱メモ",
                     created_at=now,
                     updated_at=now,
@@ -438,6 +444,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=guest_b_id,
+                    title="Guest Bゴミ箱メモ",
                     body="Guest Bゴミ箱メモ",
                     created_at=now,
                     updated_at=now,
@@ -449,6 +456,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=admin_id,
+                    title="Adminゴミ箱メモ",
                     body="Adminゴミ箱メモ",
                     created_at=now,
                     updated_at=now,
@@ -546,6 +554,7 @@ def test_restore_and_permanent_delete_roll_back_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=admin_id,
+                    title="復元rollback対象",
                     body="復元rollback対象",
                     created_at=now,
                     updated_at=now,
@@ -557,6 +566,7 @@ def test_restore_and_permanent_delete_roll_back_on_postgresql(tmp_path):
                 ShopMemo.__table__.insert()
                 .values(
                     dataset_id=admin_id,
+                    title="完全削除rollback対象",
                     body="完全削除rollback対象",
                     created_at=now,
                     updated_at=now,
@@ -649,6 +659,7 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
             existing_memos = [
                 {
                     "dataset_id": guest_a_id,
+                    "title": f"Guest A既存メモ{index}",
                     "body": f"Guest A既存メモ{index}",
                     "created_at": now,
                     "updated_at": now,
@@ -660,6 +671,7 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
                 [
                     {
                         "dataset_id": guest_b_id,
+                        "title": "Guest B保護メモ",
                         "body": "Guest B保護メモ",
                         "created_at": now,
                         "updated_at": now,
@@ -667,6 +679,7 @@ def test_concurrent_memo_posts_never_exceed_dataset_limit(tmp_path):
                     },
                     {
                         "dataset_id": admin_id,
+                        "title": "Admin保護メモ",
                         "body": "Admin保護メモ",
                         "created_at": now,
                         "updated_at": now,
