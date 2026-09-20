@@ -176,4 +176,5 @@ def test_shop_tools_css_preserves_tap_targets_and_keyboard_focus():
 
     assert ".shop-tools-nav-link" in css_source
     assert "min-height: 48px" in css_source
+    assert ".shop-memo-body a:focus-visible" in css_source
     assert ":focus-visible" in css_source
