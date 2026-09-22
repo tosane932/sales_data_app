@@ -1,4 +1,5 @@
 import datetime
+import re
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,54 @@ APP_ROUTES = {
     "dashboard": "/dashboard",
     "shop-tools": "/material-orders",
 }
+
+APP_SIDEBAR_ITEMS = {
+    "products": ("商品・メニュー登録", "package-plus"),
+    "sales": ("日次売上入力", "clipboard-pen-line"),
+    "dashboard": ("売上データ分析", "chart-column"),
+    "shop-tools": ("店舗メモツール", "wrench"),
+}
+
+
+def _assert_inline_icon(container, icon_name):
+    icon = container.select_one(f'svg[data-icon="{icon_name}"]')
+
+    assert icon is not None
+    assert icon.get("viewbox") == "0 0 24 24"
+    assert icon.get("fill") == "none"
+    assert icon.get("stroke") == "currentColor"
+    assert icon.get("stroke-width") == "2"
+    assert icon.get("aria-hidden") == "true"
+    assert icon.get("focusable") == "false"
+
+
+def _css_rule_body(style_source, selector):
+    match = re.search(
+        rf"{re.escape(selector)}\s*\{{(?P<body>.*?)\}}",
+        style_source,
+        re.DOTALL,
+    )
+    assert match is not None
+    return match.group("body")
+
+
+def _contrast_with_white(hex_color):
+    channels = [
+        int(hex_color[index:index + 2], 16) / 255
+        for index in (1, 3, 5)
+    ]
+    linear_channels = [
+        channel / 12.92
+        if channel <= 0.04045
+        else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in channels
+    ]
+    luminance = (
+        0.2126 * linear_channels[0]
+        + 0.7152 * linear_channels[1]
+        + 0.0722 * linear_channels[2]
+    )
+    return 1.05 / (luminance + 0.05)
 
 
 def _guest_client(flask_app):
@@ -47,7 +96,11 @@ def _assert_app_navigation(document, active_page, user_label):
     }
     assert set(links) == set(APP_ROUTES)
     for page, path in APP_ROUTES.items():
+        label, icon_name = APP_SIDEBAR_ITEMS[page]
         assert links[page]["href"] == path
+        assert links[page].get_text(" ", strip=True) == label
+        assert "touch-control-no-select" in links[page].get("class", [])
+        _assert_inline_icon(links[page], icon_name)
         if page == active_page:
             assert links[page].get("aria-current") == "page"
             assert "app-sidebar-link-current" in links[page].get(
@@ -58,6 +111,16 @@ def _assert_app_navigation(document, active_page, user_label):
             assert links[page].get("aria-current") is None
 
     assert user_label in sidebar.get_text()
+    brand = sidebar.select_one("a.app-sidebar-brand")
+    assert brand is not None
+    assert brand.get_text(" ", strip=True) == "sales_data_app"
+    assert "🍞" not in brand.get_text()
+    assert "touch-control-no-select" in brand.get("class", [])
+    _assert_inline_icon(brand, "wheat")
+
+    for emoji in ("🥐", "📝", "📊", "🧰"):
+        assert emoji not in navigation.get_text()
+
     logout_form = sidebar.select_one('form[action="/logout"]')
     assert logout_form is not None
     assert logout_form.get("method", "").lower() == "post"
@@ -83,8 +146,11 @@ def test_admin_sees_shared_sidebar_with_correct_current_page(
         "#app-sidebar .app-sidebar-logout-button"
     )
     assert "ログアウト" in logout_button.get_text()
+    assert "🚪" not in logout_button.get_text()
     assert "ゲストを終了する" not in document.get_text()
     assert "ゲスト利用は継続します" not in document.get_text()
+    assert "touch-control-no-select" in logout_button.get("class", [])
+    _assert_inline_icon(logout_button, "log-out")
 
 
 @pytest.mark.parametrize(
@@ -108,12 +174,17 @@ def test_guest_sees_shared_sidebar_with_correct_current_page(
     assert "ログイン画面に戻る" in login_link.get_text()
     assert "管理者ログイン画面を開く" not in login_link.get_text()
     assert "ゲスト利用は継続します" in login_link.get_text()
+    assert "🔐" not in login_link.get_text()
+    assert "touch-control-no-select" in login_link.get("class", [])
+    _assert_inline_icon(login_link, "log-in")
     logout_button = document.select_one(
         "#app-sidebar .app-sidebar-logout-button"
     )
     assert "ゲストを終了する" in logout_button.get_text()
+    assert "🚪" not in logout_button.get_text()
     assert "ログアウト" not in logout_button.get_text()
     assert "touch-control-no-select" in logout_button.get("class", [])
+    _assert_inline_icon(logout_button, "log-out")
 
 
 def test_guest_returning_to_login_page_keeps_guest_session(flask_app):
@@ -150,13 +221,71 @@ def test_mobile_navigation_has_accessible_open_and_close_controls(
     assert open_button.get("aria-label") == "主要メニューを開く"
     assert open_button.get("aria-controls") == "app-sidebar"
     assert open_button.get("aria-expanded") == "false"
-    assert open_button.get_text(strip=True) == "☰"
+    assert "☰" not in open_button.get_text()
     assert "touch-control-no-select" in open_button.get("class", [])
+    _assert_inline_icon(open_button, "menu")
     assert close_button is not None
     assert close_button.get("aria-label") == "主要メニューを閉じる"
+    assert "×" not in close_button.get_text()
     assert "touch-control-no-select" in close_button.get("class", [])
+    _assert_inline_icon(close_button, "x")
     assert overlay is not None
     assert overlay.has_attr("hidden")
+
+
+def test_sidebar_category_colors_use_contrasting_white_foreground():
+    style_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+    category_colors = {
+        ".app-sidebar-link-products": "#9a641f",
+        ".app-sidebar-link-sales": "#477b59",
+        ".app-sidebar-link-dashboard": "#bc4848",
+        ".app-sidebar-link-shop-tools": "#48739c",
+    }
+
+    link_rule = _css_rule_body(style_source, ".app-sidebar-link")
+    current_rule = _css_rule_body(
+        style_source,
+        ".app-sidebar-link-current",
+    )
+    assert "color: #ffffff;" in link_rule
+    assert "background: var(--app-menu-color);" in link_rule
+    assert "color: #ffffff;" in current_rule
+    assert "background: var(--app-menu-color);" in current_rule
+    assert "text-decoration: underline;" in current_rule
+
+    for selector, color in category_colors.items():
+        category_rule = _css_rule_body(style_source, selector)
+        assert f"--app-menu-color: {color};" in category_rule
+        assert _contrast_with_white(color) >= 4.5
+
+
+def test_mobile_sidebar_links_restore_press_shift_with_overflow_room():
+    style_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+
+    link_rule = _css_rule_body(style_source, ".app-sidebar-link")
+    assert "transition: transform 0.16s ease;" in link_rule
+    assert """
+    .app-sidebar-link:active {
+        transform: translateX(4px);
+    }
+""" in style_source
+    assert """
+    .app-sidebar-nav {
+        box-sizing: border-box;
+        padding-right: 6px;
+    }
+""" in style_source
+    assert """
+    .app-sidebar-link:hover,
+    .app-sidebar-link:focus-visible,
+    .app-sidebar-link:active {
+        transform: none;
+    }
+""" in style_source
 
 
 def test_app_navigation_supports_escape_and_focus_return_without_inner_html():

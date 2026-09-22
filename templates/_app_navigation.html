@@ -21,7 +21,22 @@
     aria-label="主要メニューを開く"
     aria-controls="app-sidebar"
     aria-expanded="false">
-    <span aria-hidden="true">☰</span>
+    <span class="app-navigation-button-icon" aria-hidden="true">
+        <svg
+            data-icon="menu"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            focusable="false"
+            aria-hidden="true">
+            <path d="M4 5h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 19h16"></path>
+        </svg>
+    </span>
 </button>
 
 <button
@@ -34,14 +49,48 @@
 <aside id="app-sidebar" class="app-sidebar" aria-label="アプリメニュー">
     <div class="app-sidebar-header">
         <a href="{{ url_for('index') }}" class="app-sidebar-brand touch-control-no-select">
-            <span aria-hidden="true">🍞</span>
+            <span class="app-sidebar-brand-icon" aria-hidden="true">
+                <svg
+                    data-icon="wheat"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <path d="M2 22 16 8"></path>
+                    <path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"></path>
+                    <path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"></path>
+                    <path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"></path>
+                    <path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4Z"></path>
+                    <path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"></path>
+                    <path d="M15.47 13.47 17 15l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L9 15l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"></path>
+                    <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"></path>
+                </svg>
+            </span>
             <span>sales_data_app</span>
         </a>
         <button
             type="button"
             class="app-navigation-close-button touch-control-no-select"
             aria-label="主要メニューを閉じる">
-            <span aria-hidden="true">×</span>
+            <span class="app-navigation-button-icon" aria-hidden="true">
+                <svg
+                    data-icon="x"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </span>
         </button>
     </div>
 
@@ -51,7 +100,25 @@
             data-page="products"
             class="app-sidebar-link app-sidebar-link-products touch-control-no-select{% if active_app_page == 'products' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'products' %}aria-current="page"{% endif %}>
-            <span class="app-sidebar-icon" aria-hidden="true">🥐</span>
+            <span class="app-sidebar-icon" aria-hidden="true">
+                <svg
+                    data-icon="package-plus"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <path d="M12 22V12"></path>
+                    <path d="M16 17h6"></path>
+                    <path d="M19 14v6"></path>
+                    <path d="M21 10.535V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.675-.955"></path>
+                    <path d="M3.29 7 12 12l8.71-5"></path>
+                    <path d="m7.5 4.27 8.997 5.148"></path>
+                </svg>
+            </span>
             <span>商品・メニュー登録</span>
         </a>
         <a
@@ -59,7 +126,24 @@
             data-page="sales"
             class="app-sidebar-link app-sidebar-link-sales touch-control-no-select{% if active_app_page == 'sales' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'sales' %}aria-current="page"{% endif %}>
-            <span class="app-sidebar-icon" aria-hidden="true">📝</span>
+            <span class="app-sidebar-icon" aria-hidden="true">
+                <svg
+                    data-icon="clipboard-pen-line"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <rect width="8" height="4" x="8" y="2" rx="1"></rect>
+                    <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-.5"></path>
+                    <path d="M16 4h2a2 2 0 0 1 1.73 1"></path>
+                    <path d="M8 18h1"></path>
+                    <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path>
+                </svg>
+            </span>
             <span>日次売上入力</span>
         </a>
         <a
@@ -67,7 +151,23 @@
             data-page="dashboard"
             class="app-sidebar-link app-sidebar-link-dashboard touch-control-no-select{% if active_app_page == 'dashboard' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'dashboard' %}aria-current="page"{% endif %}>
-            <span class="app-sidebar-icon" aria-hidden="true">📊</span>
+            <span class="app-sidebar-icon" aria-hidden="true">
+                <svg
+                    data-icon="chart-column"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+                    <path d="M18 17V9"></path>
+                    <path d="M13 17V5"></path>
+                    <path d="M8 17v-3"></path>
+                </svg>
+            </span>
             <span>売上データ分析</span>
         </a>
         <a
@@ -75,7 +175,20 @@
             data-page="shop-tools"
             class="app-sidebar-link app-sidebar-link-shop-tools touch-control-no-select{% if active_app_page == 'shop-tools' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'shop-tools' %}aria-current="page"{% endif %}>
-            <span class="app-sidebar-icon" aria-hidden="true">🧰</span>
+            <span class="app-sidebar-icon" aria-hidden="true">
+                <svg
+                    data-icon="wrench"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    focusable="false"
+                    aria-hidden="true">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"></path>
+                </svg>
+            </span>
             <span>店舗メモツール</span>
         </a>
     </nav>
@@ -89,14 +202,45 @@
             <button
                 type="submit"
                 class="btn app-sidebar-logout-button touch-control-no-select">
-                <span aria-hidden="true">🚪</span>
+                <span class="app-sidebar-session-icon" aria-hidden="true">
+                    <svg
+                        data-icon="log-out"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        focusable="false"
+                        aria-hidden="true">
+                        <path d="m16 17 5-5-5-5"></path>
+                        <path d="M21 12H9"></path>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    </svg>
+                </span>
                 {% if current_user.is_guest %}ゲストを終了する{% else %}ログアウト{% endif %}
             </button>
         </form>
         {% if current_user.is_guest %}
         <a href="{{ url_for('login') }}" class="app-sidebar-login-link touch-control-no-select">
             <span class="app-sidebar-login-title">
-                <span aria-hidden="true">🔐</span> ログイン画面に戻る
+                <span class="app-sidebar-session-icon" aria-hidden="true">
+                    <svg
+                        data-icon="log-in"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        focusable="false"
+                        aria-hidden="true">
+                        <path d="m10 17 5-5-5-5"></path>
+                        <path d="M15 12H3"></path>
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    </svg>
+                </span>
+                <span>ログイン画面に戻る</span>
             </span>
             <small class="app-sidebar-login-note">ゲスト利用は継続します</small>
         </a>

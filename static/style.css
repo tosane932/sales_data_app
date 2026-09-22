@@ -2224,6 +2224,21 @@ body.app-shell-page {
     text-decoration: none;
 }
 
+.app-sidebar-brand-icon,
+.app-sidebar-icon,
+.app-sidebar-session-icon,
+.app-navigation-button-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-sidebar-brand-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
 .app-navigation-close-button {
     display: none;
 }
@@ -2244,43 +2259,47 @@ body.app-shell-page {
     gap: 11px;
     padding: 10px 12px;
     box-sizing: border-box;
-    color: #51473f;
-    background: #ffffff;
-    border: 1px solid #eee7dc;
-    border-left: 5px solid var(--app-menu-color);
+    color: #ffffff;
+    background: var(--app-menu-color);
+    border: 2px solid transparent;
     border-radius: 10px;
     font-size: 15px;
     font-weight: 600;
     line-height: 1.35;
     text-decoration: none;
+    transition: transform 0.16s ease;
 }
 
 .app-sidebar-link-products {
-    --app-menu-color: #c58a35;
+    --app-menu-color: #9a641f;
 }
 
 .app-sidebar-link-sales {
-    --app-menu-color: #4d8a64;
+    --app-menu-color: #477b59;
 }
 
 .app-sidebar-link-dashboard {
-    --app-menu-color: #cf5656;
+    --app-menu-color: #bc4848;
 }
 
 .app-sidebar-link-shop-tools {
-    --app-menu-color: #517da8;
+    --app-menu-color: #48739c;
 }
 
 .app-sidebar-icon {
-    flex: 0 0 auto;
-    font-size: 20px;
+    width: 24px;
+    height: 24px;
+}
+
+.app-sidebar-icon svg {
+    width: 22px;
+    height: 22px;
 }
 
 .app-sidebar-link-current {
-    color: #30271f;
-    background: #f7f1e6;
-    border-width: 2px 2px 2px 7px;
-    border-color: var(--app-menu-color);
+    color: #ffffff;
+    background: var(--app-menu-color);
+    border-color: rgba(255, 255, 255, 0.82);
     font-weight: bold;
     box-shadow: 0 3px 10px rgba(66, 52, 35, 0.09);
     text-decoration: underline;
@@ -2309,10 +2328,20 @@ body.app-shell-page {
 }
 
 .app-sidebar-logout-button {
+    display: flex;
     width: 100%;
     min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     color: #ffffff;
     background: #665c54;
+}
+
+.app-sidebar-session-icon,
+.app-sidebar-session-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .app-sidebar-login-link {
@@ -2335,8 +2364,16 @@ body.app-shell-page {
 }
 
 .app-sidebar-login-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     text-decoration: underline;
     text-underline-offset: 3px;
+}
+
+.app-navigation-button-icon svg {
+    width: 26px;
+    height: 26px;
 }
 
 .app-sidebar-login-note {
@@ -2425,6 +2462,15 @@ body.app-shell-page {
 
     body.app-shell-page.app-navigation-open {
         overflow: hidden;
+    }
+
+    .app-sidebar-nav {
+        box-sizing: border-box;
+        padding-right: 6px;
+    }
+
+    .app-sidebar-link:active {
+        transform: translateX(4px);
     }
 
     .app-navigation-open-button,
@@ -3064,10 +3110,6 @@ body.app-shell-page {
 
 @media (min-width: 901px) and (hover: hover) {
     /* 左固定メニュー：カーソル位置を動きで示す */
-    .app-sidebar-link {
-        transition: transform 0.16s ease;
-    }
-
     .app-sidebar-link:hover,
     .app-sidebar-link:focus-visible {
         transform: translateX(4px);
@@ -3094,7 +3136,8 @@ body.app-shell-page {
     }
 
     .app-sidebar-link:hover,
-    .app-sidebar-link:focus-visible {
+    .app-sidebar-link:focus-visible,
+    .app-sidebar-link:active {
         transform: none;
     }
 }
