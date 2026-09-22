@@ -4,7 +4,22 @@
         data-tool="orders"
         class="shop-tools-nav-link{% if active_tool == 'orders' %} shop-tools-nav-link-current{% endif %}"
         {% if active_tool == 'orders' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">🛒</span>
+        <span class="shop-tools-nav-icon" aria-hidden="true">
+            <svg
+                data-icon="shopping-cart"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <circle cx="8" cy="21" r="1"></circle>
+                <circle cx="19" cy="21" r="1"></circle>
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.78a2 2 0 0 0 1.95-1.57L21 8H5.12"></path>
+            </svg>
+        </span>
         <span>発注</span>
     </a>
 
@@ -13,7 +28,25 @@
         data-tool="memo"
         class="shop-tools-nav-link{% if active_tool == 'memo' %} shop-tools-nav-link-current{% endif %}"
         {% if active_tool == 'memo' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">📝</span>
+        <span class="shop-tools-nav-icon" aria-hidden="true">
+            <svg
+                data-icon="notebook-pen"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"></path>
+                <path d="M2 6h4"></path>
+                <path d="M2 10h4"></path>
+                <path d="M2 14h4"></path>
+                <path d="M2 18h4"></path>
+                <path d="M21.38 5.62a1 1 0 0 0-3-3L12 9l-1 4 4-1Z"></path>
+            </svg>
+        </span>
         <span>メモ</span>
     </a>
 
@@ -22,7 +55,24 @@
         data-tool="tasks"
         class="shop-tools-nav-link{% if active_tool == 'tasks' %} shop-tools-nav-link-current{% endif %}"
         {% if active_tool == 'tasks' %}aria-current="page"{% endif %}>
-        <span class="shop-tools-nav-icon" aria-hidden="true">✅</span>
+        <span class="shop-tools-nav-icon" aria-hidden="true">
+            <svg
+                data-icon="list-todo"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <rect x="3" y="5" width="6" height="6" rx="1"></rect>
+                <path d="m3 17 2 2 4-4"></path>
+                <path d="M13 6h8"></path>
+                <path d="M13 12h8"></path>
+                <path d="M13 18h8"></path>
+            </svg>
+        </span>
         <span>タスク</span>
     </a>
 </nav>

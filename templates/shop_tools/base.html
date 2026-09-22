@@ -9,13 +9,15 @@
 <body class="shop-tools-page app-shell-page">
 {% include "_app_navigation.html" %}
 <div class="shop-tools-shell">
-    <header class="shop-tools-header">
+    {% block tool_header_region %}
+    <header class="shop-tools-header{% block tool_header_class %}{% endblock %}">
         <p class="shop-tools-brand">
             <span aria-hidden="true">📝</span> 店舗メモツール
         </p>
         <h1>{% block tool_heading %}{% endblock %}</h1>
         {% block tool_header_actions %}{% endblock %}
     </header>
+    {% endblock %}
 
     {% with nav_class="shop-tools-top-nav" %}
         {% include "shop_tools/_tool_navigation.html" %}

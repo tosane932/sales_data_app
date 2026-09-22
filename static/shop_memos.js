@@ -9,6 +9,8 @@ const MOBILE_MEMO_SETTINGS = Object.freeze({
     FAST_SWIPE_MIN_RATIO: 0.25,
     FAST_SWIPE_VELOCITY: 0.65,
     SCROLL_END_TOLERANCE_PX: 3,
+    SWIPE_ICON_OFFSET_PX: 12,
+    SWIPE_ICON_MIN_SCALE: 0.82,
     SNACKBAR_DURATION_MS: 10000,
     COPY_FEEDBACK_DURATION_MS: 2500,
 });
@@ -28,6 +30,9 @@ const mobileActionClose = mobileActionSheet?.querySelector(
 );
 const mobilePinAction = mobileActionSheet?.querySelector(
     '[data-mobile-action="pin"]'
+);
+const mobilePinActionLabel = mobilePinAction?.querySelector(
+    '[data-mobile-action-label="pin"]'
 );
 const mobileCopyAction = mobileActionSheet?.querySelector(
     '[data-mobile-action="copy"]'
@@ -235,23 +240,36 @@ const updateEditorScrollIndicator = (dialog) => {
     const scrollContainer = dialog.querySelector(
         ".shop-memo-create-dialog-content, .shop-memo-edit-dialog-content"
     );
+    const header = dialog.querySelector(
+        ".shop-memo-mobile-dialog-header"
+    );
     const toolbar = dialog.querySelector(
         ".shop-memo-mobile-editor-toolbar"
     );
-    if (!scrollContainer || !toolbar) {
+    if (!scrollContainer || !header || !toolbar) {
         return;
     }
 
+    const maximumScroll = Math.max(
+        scrollContainer.scrollHeight - scrollContainer.clientHeight,
+        0
+    );
     const remainingScroll = (
-        scrollContainer.scrollHeight
-        - scrollContainer.clientHeight
-        - scrollContainer.scrollTop
+        maximumScroll - scrollContainer.scrollTop
     );
-    toolbar.dataset.scrollState = (
-        remainingScroll > MOBILE_MEMO_SETTINGS.SCROLL_END_TOLERANCE_PX
-            ? "more"
-            : "end"
-    );
+    const tolerance = MOBILE_MEMO_SETTINGS.SCROLL_END_TOLERANCE_PX;
+    let scrollState = "middle";
+
+    if (maximumScroll <= tolerance) {
+        scrollState = "no-scroll";
+    } else if (scrollContainer.scrollTop <= tolerance) {
+        scrollState = "at-top";
+    } else if (remainingScroll <= tolerance) {
+        scrollState = "at-bottom";
+    }
+
+    header.dataset.scrollState = scrollState;
+    toolbar.dataset.scrollState = scrollState;
 };
 
 const scheduleScrollIndicatorUpdate = (dialog) => {
@@ -447,7 +465,9 @@ const openMemoDialog = (dialog) => {
 
     if (MOBILE_MEMO_MEDIA.matches) {
         refreshMobileEditorLayout(dialog);
-        dialog.querySelector('textarea[name="body"]')?.focus();
+        if (dialog.dataset.editorMode === "create") {
+            dialog.querySelector('textarea[name="body"]')?.focus();
+        }
     } else {
         dialog.querySelector('input[name="title"]')?.focus();
     }
@@ -587,9 +607,9 @@ const openMobileActionSheet = (element) => {
     activeMobileMemo = context;
     mobilePreviewTitle.textContent = context.title;
     mobilePreviewBody.textContent = context.body;
-    mobilePinAction.textContent = context.pinned
-        ? "📌 ピン留め解除"
-        : "📌 ピン留め";
+    mobilePinActionLabel.textContent = context.pinned
+        ? "ピンを外す"
+        : "ピン留め";
     mobileActionSheet.showModal();
     mobilePinAction.focus();
 };
@@ -743,9 +763,61 @@ mobileActionSheet?.addEventListener("click", (event) => {
     }
 });
 
-const resetSwipePosition = (card) => {
+const resetSwipeVisual = (row) => {
+    delete row.dataset.swipeDirection;
+    row.classList.remove("is-swipe-threshold-crossed");
+    row.style.removeProperty("--shop-memo-swipe-progress");
+    row.style.removeProperty("--shop-memo-swipe-icon-offset");
+    row.style.removeProperty("--shop-memo-swipe-icon-scale");
+};
+
+const updateSwipeVisual = (row, gesture, deltaX, cardWidth) => {
+    if (!deltaX || cardWidth <= 0) {
+        resetSwipeVisual(row);
+        return;
+    }
+
+    const direction = deltaX > 0 ? "pin" : "delete";
+    const thresholdRatio = direction === "pin"
+        ? MOBILE_MEMO_SETTINGS.PIN_DISTANCE_RATIO
+        : MOBILE_MEMO_SETTINGS.DELETE_DISTANCE_RATIO;
+    const distanceRatio = Math.abs(deltaX) / cardWidth;
+    const progress = Math.min(distanceRatio / thresholdRatio, 1);
+    const offsetDirection = direction === "pin" ? -1 : 1;
+    const iconOffset = (
+        offsetDirection
+        * MOBILE_MEMO_SETTINGS.SWIPE_ICON_OFFSET_PX
+        * (1 - progress)
+    );
+    const iconScale = (
+        MOBILE_MEMO_SETTINGS.SWIPE_ICON_MIN_SCALE
+        + (1 - MOBILE_MEMO_SETTINGS.SWIPE_ICON_MIN_SCALE) * progress
+    );
+
+    row.dataset.swipeDirection = direction;
+    row.style.setProperty(
+        "--shop-memo-swipe-progress",
+        progress.toFixed(3)
+    );
+    row.style.setProperty(
+        "--shop-memo-swipe-icon-offset",
+        `${iconOffset.toFixed(2)}px`
+    );
+    row.style.setProperty(
+        "--shop-memo-swipe-icon-scale",
+        iconScale.toFixed(3)
+    );
+
+    if (!gesture.thresholdFeedbackShown && distanceRatio >= thresholdRatio) {
+        gesture.thresholdFeedbackShown = true;
+        row.classList.add("is-swipe-threshold-crossed");
+    }
+};
+
+const resetSwipePosition = (card, row) => {
     card.style.transition = "transform 0.18s ease";
     card.style.transform = "translateX(0)";
+    resetSwipeVisual(row);
     window.setTimeout(() => {
         card.style.transition = "";
     }, 180);
@@ -784,7 +856,9 @@ document.querySelectorAll(".shop-memo-swipe-row").forEach((row) => {
             startTime: performance.now(),
             horizontal: false,
             vertical: false,
+            thresholdFeedbackShown: false,
         };
+        resetSwipeVisual(row);
         longPressTimer = window.setTimeout(() => {
             if (!gesture || gesture.horizontal || gesture.vertical) {
                 return;
@@ -841,19 +915,20 @@ document.querySelectorAll(".shop-memo-swipe-row").forEach((row) => {
             Math.min(deltaX, maximumMovement)
         );
         card.style.transform = `translateX(${boundedDelta}px)`;
+        updateSwipeVisual(row, gesture, boundedDelta, card.offsetWidth);
     }, {passive: false});
 
     const finishGesture = (event) => {
         cancelLongPress();
         if (!gesture) {
-            resetSwipePosition(card);
+            resetSwipePosition(card, row);
             return;
         }
 
         const touch = event.changedTouches?.[0];
         if (!touch || !gesture.horizontal) {
             gesture = null;
-            resetSwipePosition(card);
+            resetSwipePosition(card, row);
             return;
         }
 
@@ -873,7 +948,7 @@ document.querySelectorAll(".shop-memo-swipe-row").forEach((row) => {
         );
 
         gesture = null;
-        resetSwipePosition(card);
+        resetSwipePosition(card, row);
         if (!shouldDelete && !shouldPin) {
             return;
         }
@@ -895,7 +970,7 @@ document.querySelectorAll(".shop-memo-swipe-row").forEach((row) => {
     row.addEventListener("touchcancel", () => {
         cancelLongPress();
         gesture = null;
-        resetSwipePosition(card);
+        resetSwipePosition(card, row);
     }, {passive: true});
     row.addEventListener("click", (event) => {
         if (Date.now() < suppressClickUntil) {

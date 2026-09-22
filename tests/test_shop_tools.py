@@ -131,6 +131,60 @@ def test_future_tools_are_explicit_read_only_placeholders(
     assert "準備中" in document.get_text()
     assert document.select_one("main form") is None
 
+    header_icon = document.select_one(
+        '.shop-tools-header svg[data-icon="list-todo"]'
+    )
+    placeholder_icon = document.select_one(
+        '.shop-tools-placeholder-icon svg[data-icon="list-todo"]'
+    )
+    orders_link = document.select_one(".shop-tools-placeholder-link")
+    assert header_icon is not None
+    assert placeholder_icon is not None
+    assert orders_link.select_one(
+        'svg[data-icon="shopping-cart"]'
+    ) is not None
+    assert orders_link.get_text(" ", strip=True) == "発注リストを開く"
+    assert "✅" not in document.select_one(
+        ".shop-tools-placeholder"
+    ).get_text()
+    assert "🛒" not in orders_link.get_text()
+
+
+@pytest.mark.parametrize(
+    ("route", "first_content_selector"),
+    [
+        ("/shop-tools/memo/trash", ".shop-memo-back-link"),
+        ("/material-orders", ".material-order-create-section"),
+        ("/shop-tools/tasks", ".shop-tools-placeholder"),
+    ],
+)
+def test_secondary_shop_tools_hide_duplicate_header_only_on_mobile(
+    authenticated_client,
+    admin_dataset,
+    route,
+    first_content_selector,
+):
+    response = authenticated_client.get(route)
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    header = document.select_one(".shop-tools-header")
+    main = document.select_one(".shop-tools-content")
+
+    assert response.status_code == 200
+    assert header is not None
+    assert "shop-tools-header-mobile-hidden" in header.get("class", [])
+    assert main.select_one(f":scope > {first_content_selector}") is not None
+
+    css_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+    assert ".shop-tools-header-mobile-hidden" in css_source
+    assert "display: none;" in css_source
+    assert (
+        ".shop-tools-header-mobile-hidden ~ .shop-tools-content"
+        in css_source
+    )
+    assert "padding-top: 16px;" in css_source
+
 
 def test_material_orders_shell_keeps_visible_form_and_plus_only_accessible_fab(
     authenticated_client,
