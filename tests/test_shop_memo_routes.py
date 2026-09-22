@@ -1558,7 +1558,7 @@ def test_shop_memo_input_is_html_escaped_and_sources_avoid_inner_html(
         assert "innerHTML" not in source
 
 
-def test_shop_memo_linkifies_http_urls_and_preserves_text_and_line_breaks(
+def test_shop_memo_list_keeps_http_urls_as_plain_text(
     authenticated_client,
     admin_dataset,
 ):
@@ -1571,23 +1571,13 @@ def test_shop_memo_linkifies_http_urls_and_preserves_text_and_line_breaks(
     response = authenticated_client.get("/shop-tools/memo?q=order")
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
     body_element = document.select_one(".shop-memo-body")
-    links = body_element.select("a")
 
     assert response.status_code == 200
     assert body_element.get_text() == body
-    assert [link.get("href") for link in links] == [
-        "https://example.com/order",
-        "http://example.net/backup",
-    ]
-    assert all(link.get("target") == "_blank" for link in links)
-    assert all(
-        set(link.get("rel", [])) == {"noopener", "noreferrer"}
-        for link in links
-    )
-    assert all(link.find_parent("button") is None for link in links)
+    assert body_element.select("a") == []
 
 
-def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
+def test_shop_memo_trash_linkifies_url_but_restored_list_is_plain_text(
     authenticated_client,
     admin_dataset,
     csrf_token,
@@ -1614,10 +1604,11 @@ def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
         f'article:has(form[action$="/{deleted_memo.id}/restore"]) '
         ".shop-memo-body a"
     )
-    assert active_link is not None
+    assert active_link is None
     assert trash_link is not None
-    assert active_link.attrs == trash_link.attrs
-    assert active_link.get_text() == trash_link.get_text()
+    assert trash_link.get("href") == "https://example.com/shared"
+    assert trash_link.get("target") == "_blank"
+    assert set(trash_link.get("rel", [])) == {"noopener", "noreferrer"}
 
     restore_response = _post_with_csrf(
         authenticated_client,
@@ -1630,10 +1621,15 @@ def test_shop_memo_linkify_is_identical_in_active_trash_and_after_restore(
     )
 
     assert restore_response.status_code == 303
-    restored_links = restored_document.select(
-        '.shop-memo-body a[href="https://example.com/shared"]'
+    restored_bodies = restored_document.select(
+        ".shop-memo-body"
     )
-    assert len(restored_links) == 2
+    assert len(restored_bodies) == 2
+    assert all(body_element.select("a") == [] for body_element in restored_bodies)
+    assert all(
+        body_element.get_text() == body
+        for body_element in restored_bodies
+    )
 
 
 def test_shop_memo_linkify_escapes_html_and_rejects_unsafe_schemes(
@@ -1647,9 +1643,9 @@ def test_shop_memo_linkify_escapes_html_and_rejects_unsafe_schemes(
         "javascript:alert(3) data:text/html,<svg/onload=alert(4)>\n"
         "file:///tmp/memo mailto:test@example.com www.example.com https://"
     )
-    _create_memo(admin_dataset, body=body)
+    _create_memo(admin_dataset, body=body, deleted=True)
 
-    response = authenticated_client.get("/shop-tools/memo")
+    response = authenticated_client.get("/shop-tools/memo/trash")
     html = response.get_data(as_text=True)
     document = BeautifulSoup(html, "html.parser")
     body_element = document.select_one(".shop-memo-body")
@@ -1676,9 +1672,9 @@ def test_shop_memo_linkify_handles_punctuation_and_attribute_injection(
         "https://example.com/japanese。 "
         'https://example.com/\" onclick=\"alert(1)'
     )
-    _create_memo(admin_dataset, body=body)
+    _create_memo(admin_dataset, body=body, deleted=True)
 
-    response = authenticated_client.get("/shop-tools/memo")
+    response = authenticated_client.get("/shop-tools/memo/trash")
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
     body_element = document.select_one(".shop-memo-body")
     links = body_element.select("a")
@@ -1854,45 +1850,75 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     )
     assert card.get("data-pinned") == "false"
     assert card.select_one(".shop-memo-menu-button") is not None
+    swipe_row = card.find_parent(class_="shop-memo-swipe-row")
+    swipe_actions = swipe_row.select(".shop-memo-swipe-action")
+    assert len(swipe_actions) == 1
+    swipe_action = swipe_actions[0]
+    assert swipe_action.get("data-swipe-action-layer") == "true"
+    assert swipe_action.select_one('svg[data-swipe-icon="pin"]') is not None
+    assert swipe_action.select_one('svg[data-swipe-icon="trash"]') is not None
+    assert "📌" not in swipe_action.get_text()
+    assert "🗑️" not in swipe_action.get_text()
 
     edit_dialog = document.select_one(f"#shop-memo-edit-dialog-{memo.id}")
-    edit_back = edit_dialog.select_one(".shop-memo-mobile-editor-back")
+    edit_mobile_header = edit_dialog.select_one(
+        ".shop-memo-mobile-dialog-header"
+    )
+    assert edit_mobile_header is not None
+    assert edit_mobile_header.get("data-scroll-state") == "no-scroll"
+    edit_back = edit_mobile_header.select_one(".shop-memo-mobile-editor-back")
     assert edit_back is not None
     assert edit_back.get("aria-label") == "メモ一覧に戻る"
     assert edit_back.get_text(strip=True) == "←"
-    edit_close = edit_dialog.select_one(
-        ".shop-memo-dialog-close.shop-memo-desktop-only"
+    assert edit_mobile_header.select_one(".shop-memo-dialog-close") is None
+    edit_desktop_header = edit_dialog.select_one(
+        ".shop-memo-desktop-dialog-header"
     )
+    assert edit_desktop_header is not None
+    edit_close = edit_desktop_header.select_one(".shop-memo-dialog-close")
     assert edit_close is not None
     assert edit_close.get_text(strip=True) == "×"
     edit_toolbar = edit_dialog.select_one(
         ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
     )
     assert edit_toolbar is not None
-    assert edit_toolbar.get("data-scroll-state") == "end"
+    assert edit_toolbar.get("data-scroll-state") == "no-scroll"
     assert edit_toolbar.get("aria-hidden") == "true"
     assert edit_toolbar.get_text(strip=True) == ""
     assert edit_toolbar.select_one("button") is None
     assert edit_dialog.select_one('textarea[name="body"]') is not None
+    assert edit_dialog.get("data-editor-mode") == "edit"
     assert edit_dialog.get("data-duplicate-url") is None
 
     create_dialog = document.select_one("#shop-memo-create-dialog")
     assert create_dialog.get("data-autosave-url") == (
         "/shop-tools/memo/autosave"
     )
-    create_back = create_dialog.select_one(".shop-memo-mobile-editor-back")
+    assert create_dialog.get("data-editor-mode") == "create"
+    create_mobile_header = create_dialog.select_one(
+        ".shop-memo-mobile-dialog-header"
+    )
+    assert create_mobile_header is not None
+    assert create_mobile_header.get("data-scroll-state") == "no-scroll"
+    create_back = create_mobile_header.select_one(
+        ".shop-memo-mobile-editor-back"
+    )
     assert create_back is not None
     assert create_back.get("aria-label") == "メモ一覧に戻る"
     assert create_back.get_text(strip=True) == "←"
-    create_close = create_dialog.select_one(
-        ".shop-memo-create-close.shop-memo-desktop-only"
+    assert create_mobile_header.select_one(".shop-memo-create-close") is None
+    create_desktop_header = create_dialog.select_one(
+        ".shop-memo-desktop-dialog-header"
     )
+    assert create_desktop_header is not None
+    create_close = create_desktop_header.select_one(".shop-memo-create-close")
     assert create_close is not None
     assert create_close.get_text(strip=True) == "×"
     create_toolbar = create_dialog.select_one(
         ".shop-memo-mobile-editor-toolbar[data-scroll-state]"
     )
     assert create_toolbar is not None
+    assert create_toolbar.get("data-scroll-state") == "no-scroll"
     assert not create_toolbar.has_attr("hidden")
     assert create_toolbar.get("aria-hidden") == "true"
     assert create_toolbar.get_text(strip=True) == ""
@@ -1900,15 +1926,36 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
 
     action_sheet = document.select_one("#shop-memo-mobile-actions")
     assert action_sheet is not None
-    assert action_sheet.select_one('[data-mobile-action="pin"]') is not None
+    assert action_sheet.select_one(
+        ".shop-memo-mobile-actions-handle[aria-hidden='true']"
+    ) is not None
+    assert action_sheet.select_one(
+        ".shop-memo-mobile-actions-preview"
+    ) is not None
+    pin_action = action_sheet.select_one('[data-mobile-action="pin"]')
+    assert pin_action is not None
+    assert pin_action.select_one('svg[data-mobile-action-icon="pin"]')
+    assert pin_action.select_one(
+        '[data-mobile-action-label="pin"]'
+    ).get_text(strip=True) == "ピン留め"
     copy_action = action_sheet.select_one('[data-mobile-action="copy"]')
     assert copy_action is not None
     assert copy_action.get("type") == "button"
-    assert copy_action.get_text(" ", strip=True) == "📋 コピー"
+    assert copy_action.select_one('svg[data-mobile-action-icon="copy"]')
+    assert copy_action.get_text(" ", strip=True) == "コピー"
     assert action_sheet.select_one(
         '[data-mobile-action="duplicate"]'
     ) is None
-    assert action_sheet.select_one('[data-mobile-action="trash"]') is not None
+    trash_action = action_sheet.select_one('[data-mobile-action="trash"]')
+    assert trash_action is not None
+    assert trash_action.select_one('svg[data-mobile-action-icon="trash"]')
+    assert trash_action.get_text(" ", strip=True) == "削除"
+    action_list = action_sheet.select_one(".shop-memo-mobile-actions-list")
+    assert "📌" not in action_list.get_text()
+    assert "📋" not in action_list.get_text()
+    assert "🗑️" not in action_list.get_text()
+    cancel_action = action_sheet.select_one(".shop-memo-mobile-actions-close")
+    assert cancel_action.get_text(strip=True) == "キャンセル"
 
     snackbar = document.select_one("#shop-memo-snackbar")
     assert snackbar is not None
@@ -1920,15 +1967,27 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     assert "LONG_PRESS_MS: 500" in script_source
     assert "MOVE_CANCEL_PX: 10" in script_source
     assert "DELETE_DISTANCE_RATIO: 0.7" in script_source
+    assert "PIN_DISTANCE_RATIO: 0.45" in script_source
     assert "FAST_SWIPE_MIN_RATIO: 0.25" in script_source
+    assert "FAST_SWIPE_VELOCITY: 0.65" in script_source
     assert "AUTOSAVE_DELAY_MS: 750" in script_source
     assert "SCROLL_END_TOLERANCE_PX:" in script_source
     assert "scrollHeight" in script_source
     assert "clientHeight" in script_source
     assert "scrollTop" in script_source
+    assert '"no-scroll"' in script_source
+    assert '"at-top"' in script_source
+    assert '"middle"' in script_source
+    assert '"at-bottom"' in script_source
+    assert "header.dataset.scrollState = scrollState" in script_source
     assert "resizeMobileEditorTextarea" in script_source
+    assert 'dialog.dataset.editorMode === "create"' in script_source
+    assert "--shop-memo-swipe-progress" in script_source
+    assert "row.dataset.swipeDirection" in script_source
     assert "navigator.clipboard.writeText" in script_source
     assert 'document.execCommand("copy")' in script_source
+    assert "mobilePinActionLabel.textContent" in script_source
+    assert "mobilePinAction.textContent" not in script_source
     assert '"コピーしました"' in script_source
     assert "postMemoJson(context.duplicateUrl)" not in script_source
     assert "innerHTML" not in script_source
@@ -1936,17 +1995,52 @@ def test_mobile_memo_ui_exposes_autosave_gesture_and_action_controls(
     style_source = (
         Path(app_module.app.root_path) / "static" / "style.css"
     ).read_text()
-    assert '.shop-memo-mobile-editor-toolbar[data-scroll-state="more"]' in (
+    assert '.shop-memo-mobile-dialog-header[data-scroll-state="middle"]' in (
         style_source
     )
-    assert '.shop-memo-mobile-editor-toolbar[data-scroll-state="end"]' in (
+    assert '.shop-memo-mobile-editor-toolbar[data-scroll-state="at-top"]' in (
         style_source
     )
     assert "overflow-y: auto" in style_source
     assert ".shop-memo-mobile-editor-back:focus-visible" in style_source
+    assert "-webkit-appearance: none" in style_source
+    assert "appearance: none" in style_source
+
+    mobile_back_rule = style_source.split(
+        ".shop-memo-mobile-editor-back {",
+        1,
+    )[1].split("}", 1)[0]
+    assert "width: 48px;" in mobile_back_rule
+    assert "min-width: 48px;" in mobile_back_rule
+    assert "height: 48px;" in mobile_back_rule
+    assert "min-height: 48px;" in mobile_back_rule
+    assert "flex: 0 0 48px;" in mobile_back_rule
+    assert "border-radius: 50%;" in mobile_back_rule
+    assert "-webkit-tap-highlight-color: transparent;" in mobile_back_rule
+    assert "touch-action: manipulation;" in mobile_back_rule
+    assert "background: transparent;" in mobile_back_rule
+    assert "52px" not in mobile_back_rule
+
+    mobile_back_circle_rule = style_source.split(
+        '.shop-memo-mobile-editor-back span[aria-hidden="true"] {',
+        1,
+    )[1].split("}", 1)[0]
+    assert "display: inline-flex;" in mobile_back_circle_rule
+    assert "width: 45px;" in mobile_back_circle_rule
+    assert "height: 45px;" in mobile_back_circle_rule
+    assert "background: #edf1ee;" in mobile_back_circle_rule
+    assert "border-radius: 50%;" in mobile_back_circle_rule
+    assert (
+        '.shop-memo-mobile-editor-back:active '
+        'span[aria-hidden="true"]'
+    ) in style_source
+    assert (
+        '.shop-memo-mobile-editor-back:focus-visible '
+        'span[aria-hidden="true"]'
+    ) in style_source
 
 
-def test_mobile_memo_header_has_compact_trash_link_and_count(
+def test_memo_list_removes_duplicate_header_and_keeps_svg_trash_link(
     authenticated_client,
     admin_dataset,
 ):
@@ -1960,22 +2054,25 @@ def test_mobile_memo_header_has_compact_trash_link_and_count(
         "html.parser",
     )
 
-    mobile_trash_link = document.select_one(
-        ".shop-tools-header .shop-memo-mobile-trash-link"
-    )
-    assert mobile_trash_link is not None
-    assert mobile_trash_link.get("href") == "/shop-tools/memo/trash"
-    assert mobile_trash_link.get("aria-label") == "ゴミ箱を開く（1件）"
-    assert mobile_trash_link.get_text(" ", strip=True) == "🗑️ 1"
-    assert mobile_trash_link.select_one(
-        ".shop-memo-mobile-trash-count"
-    ) is not None
+    assert document.select_one(".shop-tools-header") is None
 
-    desktop_trash_link = document.select_one(
-        ".shop-memo-list-heading-main .shop-memo-trash-link"
-    )
-    assert desktop_trash_link is not None
-    assert "ゴミ箱 1件" in desktop_trash_link.get_text(" ", strip=True)
+    heading_row = document.select_one(".shop-memo-list-heading-row")
+    controls = heading_row.select_one(".shop-memo-list-controls")
+    assert controls is not None
+    direct_controls = controls.find_all(recursive=False)
+    assert [element.get("class", [None])[0] for element in direct_controls] == [
+        "shop-memo-sort-link",
+        "shop-memo-trash-link",
+    ]
+
+    trash_link = controls.select_one(".shop-memo-trash-link")
+    assert trash_link is not None
+    assert trash_link.get("href") == "/shop-tools/memo/trash"
+    assert trash_link.get("aria-label") == "ゴミ箱を開く（1件）"
+    assert trash_link.get_text(strip=True) == "ゴミ箱"
+    trash_icon = trash_link.select_one('svg[data-icon="trash-2"]')
+    assert trash_icon is not None
+    assert trash_icon.get("aria-hidden") == "true"
     assert document.select_one(".shop-memo-count-desktop").get_text(
         strip=True
     ) == "4件のメモ"
@@ -1983,3 +2080,60 @@ def test_mobile_memo_header_has_compact_trash_link_and_count(
         strip=True
     ) == "(4件)"
     assert _memo_snapshot() == before
+
+
+def test_mobile_css_disables_webkit_tap_highlight_globally():
+    style_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+
+    assert (
+        "@media (max-width: 900px) {\n"
+        "    body,\n"
+        "    body * {\n"
+        "        -webkit-tap-highlight-color: transparent;\n"
+        "    }"
+    ) in style_source
+    assert ":hover" in style_source
+    assert ":active" in style_source
+    assert ":focus-visible" in style_source
+
+
+def test_memo_search_and_shared_navigation_use_accessible_svg_icons(
+    authenticated_client,
+    admin_dataset,
+):
+    document = BeautifulSoup(
+        authenticated_client.get("/shop-tools/memo").get_data(as_text=True),
+        "html.parser",
+    )
+
+    search_button = document.select_one(".shop-memo-search-icon-button")
+    assert search_button.get("aria-label") == "検索"
+    assert search_button.get_text(strip=True) == ""
+    search_icon = search_button.select_one('svg[data-icon="search"]')
+    assert search_icon is not None
+    assert search_icon.get("aria-hidden") == "true"
+
+    expected_icons = {
+        "orders": "shopping-cart",
+        "memo": "notebook-pen",
+        "tasks": "list-todo",
+    }
+    navigations = document.select(
+        'nav[aria-label="店舗メモツールのメニュー"]'
+    )
+    assert len(navigations) == 2
+    for navigation in navigations:
+        for tool, icon_name in expected_icons.items():
+            link = navigation.select_one(f'a[data-tool="{tool}"]')
+            icon = link.select_one(f'svg[data-icon="{icon_name}"]')
+            assert icon is not None
+            assert icon.get("aria-hidden") == "true"
+        navigation_text = navigation.get_text(" ", strip=True)
+        assert "発注" in navigation_text
+        assert "メモ" in navigation_text
+        assert "タスク" in navigation_text
+        assert "🛒" not in navigation_text
+        assert "📝" not in navigation_text
+        assert "✅" not in navigation_text

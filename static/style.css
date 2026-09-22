@@ -452,6 +452,21 @@ select {
     font-size: 24px;
 }
 
+.shop-tools-heading-icon {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    vertical-align: text-bottom;
+}
+
+.shop-tools-heading-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
 .shop-tools-session-actions {
     justify-content: space-between;
     margin: 14px 0 0;
@@ -497,8 +512,17 @@ select {
 }
 
 .shop-tools-nav-icon {
-    font-size: 20px;
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
+}
+
+.shop-tools-nav-icon svg {
+    width: 24px;
+    height: 24px;
 }
 
 .shop-tools-nav-link-current {
@@ -565,6 +589,8 @@ select {
     font-size: 36px;
     line-height: 1;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .shop-tools-placeholder {
@@ -576,8 +602,18 @@ select {
 }
 
 .shop-tools-placeholder-icon {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 10px;
-    font-size: 38px;
+    color: #527f66;
+}
+
+.shop-tools-placeholder-icon svg {
+    width: 34px;
+    height: 34px;
 }
 
 .shop-tools-placeholder h2 {
@@ -596,6 +632,7 @@ select {
     min-height: 48px;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     padding: 10px 18px;
     box-sizing: border-box;
     color: #ffffff;
@@ -603,6 +640,19 @@ select {
     border-radius: 9px;
     font-weight: bold;
     text-decoration: none;
+}
+
+.shop-tools-placeholder-link-icon {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.shop-tools-placeholder-link-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 /* ========================================
@@ -1107,6 +1157,29 @@ select {
     .shop-tools-fab-group {
         right: 14px;
         bottom: calc(94px + env(safe-area-inset-bottom));
+    }
+
+    .shop-tools-placeholder {
+        padding: 28px 20px;
+    }
+
+    .shop-tools-placeholder-icon {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 8px;
+    }
+
+    .shop-tools-placeholder-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .shop-tools-placeholder h2 {
+        margin-bottom: 10px;
+    }
+
+    .shop-tools-placeholder p {
+        margin-bottom: 18px;
     }
 
     .material-order-create-section,
@@ -2309,6 +2382,19 @@ body.app-shell-page {
 }
 
 @media (max-width: 900px) {
+    body,
+    body * {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .shop-tools-header-mobile-hidden {
+        display: none;
+    }
+
+    .shop-tools-header-mobile-hidden ~ .shop-tools-content {
+        padding-top: 16px;
+    }
+
     body.app-shell-page {
         padding: 72px 10px 24px;
     }
@@ -2338,6 +2424,8 @@ body.app-shell-page {
         font-size: 24px;
         font-weight: bold;
         line-height: 1;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
         cursor: pointer;
     }
 
@@ -2363,9 +2451,13 @@ body.app-shell-page {
         color: #5f4630;
         background: #f6ede0;
         border: 1px solid #ddcdb7;
-        border-radius: 10px;
+        border-radius: 50%;
         font-size: 28px;
         cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        appearance: none;
+        -webkit-appearance: none;
     }
 
     .app-navigation-overlay:not([hidden]) {
@@ -2464,57 +2556,17 @@ body.app-shell-page {
    📱 店舗メモ：スマホ版UI微調整
    ======================================== */
 
-.shop-memo-mobile-trash-link,
 .shop-memo-count-mobile,
 .shop-memo-mobile-editor-toolbar {
     display: none;
 }
 
 @media (max-width: 700px) {
-    .shop-tools-header {
-        position: relative;
-    }
-
-    .shop-tools-header h1 {
-        padding-right: 58px;
-    }
-
-    .shop-memo-mobile-trash-link {
-        position: absolute;
-        right: 14px;
-        bottom: 10px;
-        display: inline-flex;
-        min-width: 48px;
-        height: 48px;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        box-sizing: border-box;
-        padding: 0 7px;
-        color: #405b49;
-        background: transparent;
-        border: 0;
-        border-radius: 50%;
-        font-weight: 700;
-        text-decoration: none;
-    }
-
-    .shop-memo-mobile-trash-link:hover,
-    .shop-memo-mobile-trash-link:active {
-        background: #e8eee9;
-    }
-
-    .shop-memo-mobile-trash-link:focus-visible {
-        outline: 3px solid #174b2a;
-        outline-offset: 2px;
-    }
-
     .shop-memo-list-heading-main {
         align-items: center;
         flex-direction: row;
     }
 
-    .shop-memo-list-heading-main .shop-memo-trash-link,
     .shop-memo-count-desktop {
         display: none;
     }
@@ -2529,8 +2581,9 @@ body.app-shell-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .shop-memo-mobile-dialog-header,
     .shop-memo-mobile-editor-toolbar {
-        transition: none;
+        transition: none !important;
     }
 }
 
@@ -2551,6 +2604,9 @@ body.app-shell-page {
 }
 
 .shop-memo-swipe-row {
+    --shop-memo-swipe-progress: 0;
+    --shop-memo-swipe-icon-offset: 0px;
+    --shop-memo-swipe-icon-scale: 0.82;
     position: relative;
     overflow: hidden;
 }
@@ -2566,35 +2622,63 @@ body.app-shell-page {
 
 @media (max-width: 700px) {
     .shop-memo-swipe-row {
-        background: linear-gradient(
-            90deg,
-            #527f66 0 50%,
-            #b64b48 50% 100%
-        );
+        background: #ffffff;
     }
 
     .shop-memo-swipe-action {
         position: absolute;
         z-index: 1;
-        top: 0;
-        bottom: 0;
+        inset: 0;
         display: flex;
-        width: 50%;
         align-items: center;
         padding: 0 22px;
         box-sizing: border-box;
         color: #ffffff;
-        font-size: 24px;
+        pointer-events: none;
+        opacity: 0;
+        transition:
+            background-color 0.12s ease,
+            opacity 0.12s ease;
     }
 
-    .shop-memo-swipe-pin {
-        left: 0;
+    .shop-memo-swipe-row[data-swipe-direction="pin"]
+    .shop-memo-swipe-action {
         justify-content: flex-start;
+        background: #d6a300;
+        opacity: 1;
     }
 
-    .shop-memo-swipe-trash {
-        right: 0;
+    .shop-memo-swipe-row[data-swipe-direction="delete"]
+    .shop-memo-swipe-action {
         justify-content: flex-end;
+        background: #b43f3f;
+        opacity: 1;
+    }
+
+    .shop-memo-swipe-icon {
+        display: none;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 26px;
+        opacity: var(--shop-memo-swipe-progress);
+        transform:
+            translateX(var(--shop-memo-swipe-icon-offset))
+            scale(var(--shop-memo-swipe-icon-scale));
+        transition:
+            opacity 0.04s linear,
+            transform 0.04s linear;
+    }
+
+    .shop-memo-swipe-row[data-swipe-direction="pin"]
+    .shop-memo-swipe-icon-pin,
+    .shop-memo-swipe-row[data-swipe-direction="delete"]
+    .shop-memo-swipe-icon-trash {
+        display: block;
+    }
+
+    .shop-memo-swipe-row.is-swipe-threshold-crossed
+    .shop-memo-swipe-icon {
+        animation: shop-memo-swipe-threshold-feedback 0.18s ease-out;
     }
 
     .shop-memo-card:not(.shop-memo-card-trashed) {
@@ -2629,9 +2713,18 @@ body.app-shell-page {
     }
 
     .shop-memo-pin-indicator:not([hidden]) {
-        display: inline-block;
+        display: inline-flex;
+        width: 18px;
+        height: 18px;
+        align-items: center;
+        justify-content: center;
         margin-right: 5px;
-        font-size: 0.9rem;
+        vertical-align: text-bottom;
+    }
+
+    .shop-memo-pin-indicator svg {
+        width: 16px;
+        height: 16px;
     }
 
     .shop-memo-autosave-error:not([hidden]) {
@@ -2682,20 +2775,28 @@ body.app-shell-page {
     }
 
     .shop-memo-mobile-actions-content {
-        padding: 18px 14px max(14px, env(safe-area-inset-bottom));
+        padding: 10px 0 max(10px, env(safe-area-inset-bottom));
         background: #ffffff;
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -8px 26px rgba(24, 35, 28, 0.2);
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -6px 20px rgba(24, 35, 28, 0.16);
+    }
+
+    .shop-memo-mobile-actions-handle {
+        width: 36px;
+        height: 4px;
+        margin: 0 auto 10px;
+        background: #c7ceca;
+        border-radius: 999px;
     }
 
     .shop-memo-mobile-actions-preview {
-        max-height: 130px;
-        margin-bottom: 12px;
-        padding: 12px;
+        max-height: 68px;
+        margin: 0 16px 8px;
+        padding: 9px 12px;
         overflow: hidden;
         color: #405047;
-        background: #f3f7f4;
-        border-radius: 10px;
+        background: #f5f7f5;
+        border-radius: 8px;
     }
 
     .shop-memo-mobile-actions-preview strong,
@@ -2708,38 +2809,92 @@ body.app-shell-page {
     }
 
     .shop-memo-mobile-actions-preview p {
-        margin-top: 5px;
+        margin-top: 3px;
         color: #66736a;
+        font-size: 0.92rem;
     }
 
     .shop-memo-mobile-actions-list {
-        display: grid;
-        gap: 6px;
+        display: block;
     }
 
     .shop-memo-mobile-actions-list button,
     .shop-memo-mobile-actions-close {
         width: 100%;
-        min-height: 52px;
-        padding: 10px 14px;
+        min-height: 54px;
+        box-sizing: border-box;
+        padding: 8px 18px;
         color: #314a39;
         background: #ffffff;
-        border: 1px solid #d7e2d9;
-        border-radius: 10px;
+        border: 0;
+        border-radius: 0;
         font: inherit;
         font-weight: 700;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .shop-memo-mobile-actions-list button {
+        display: flex;
+        align-items: center;
+        gap: 14px;
         text-align: left;
+    }
+
+    .shop-memo-mobile-actions-list button + button {
+        border-top: 1px solid #edf0ee;
+    }
+
+    .shop-memo-mobile-actions-list button:hover,
+    .shop-memo-mobile-actions-list button:active,
+    .shop-memo-mobile-actions-close:hover,
+    .shop-memo-mobile-actions-close:active {
+        background: #f5f7f5;
+    }
+
+    .shop-memo-mobile-actions-list button:focus-visible,
+    .shop-memo-mobile-actions-close:focus-visible {
+        outline: 3px solid #174b2a;
+        outline-offset: -3px;
+    }
+
+    .shop-memo-mobile-action-icon {
+        display: inline-flex;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        align-items: center;
+        justify-content: center;
+        color: #526158;
+        background: #eef2ef;
+        border-radius: 10px;
+    }
+
+    .shop-memo-mobile-action-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .shop-memo-mobile-action-pin .shop-memo-mobile-action-icon {
+        color: #d6a300;
+        background: #fff8d8;
     }
 
     .shop-memo-mobile-actions-list .shop-memo-mobile-action-trash {
         color: #9b3434;
-        border-color: #e8c3c3;
+    }
+
+    .shop-memo-mobile-action-trash .shop-memo-mobile-action-icon {
+        color: #b43f3f;
+        background: #fff0f0;
     }
 
     .shop-memo-mobile-actions-close {
-        margin-top: 12px;
+        margin-top: 6px;
         color: #526158;
-        background: #edf1ee;
+        background: #ffffff;
+        border-top: 1px solid #dfe4e0;
         text-align: center;
     }
 
@@ -2773,9 +2928,24 @@ body.app-shell-page {
     }
 }
 
+@keyframes shop-memo-swipe-threshold-feedback {
+    50% {
+        transform:
+            translateX(var(--shop-memo-swipe-icon-offset))
+            scale(1.1);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .shop-memo-card {
+    .shop-memo-card,
+    .shop-memo-swipe-action,
+    .shop-memo-swipe-icon {
         transition: none !important;
+    }
+
+    .shop-memo-swipe-row.is-swipe-threshold-crossed
+    .shop-memo-swipe-icon {
+        animation: none;
     }
 }
 
@@ -2906,6 +3076,10 @@ body.app-shell-page {
     margin-bottom: 18px;
 }
 
+.shop-memo-mobile-dialog-header {
+    display: none;
+}
+
 .shop-memo-create-dialog-header h2 {
     margin: 0;
 }
@@ -3010,8 +3184,12 @@ body.app-shell-page {
     background: transparent;
     border: 0;
     border-radius: 50%;
-    font-size: 18px;
     cursor: pointer;
+}
+
+.shop-memo-search-icon-button svg {
+    width: 21px;
+    height: 21px;
 }
 
 .shop-memo-search-icon-button:hover {
@@ -3038,8 +3216,39 @@ body.app-shell-page {
 .shop-memo-list-heading-main {
     display: flex;
     min-width: 0;
+    flex: 1 1 auto;
     align-items: center;
     gap: 14px;
+}
+
+.shop-memo-list-controls {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+}
+
+.shop-memo-trash-link {
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+
+.shop-memo-trash-link:hover {
+    background: #e9efea;
+}
+
+.shop-memo-trash-link svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
 }
 
 .shop-memo-sort-link {
@@ -3139,9 +3348,9 @@ body.app-shell-page {
     }
 
     .shop-memo-list-heading-main {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 2px;
+        align-items: center;
+        flex-direction: row;
+        gap: 8px;
     }
 
     .shop-memo-card-main {
@@ -3150,6 +3359,18 @@ body.app-shell-page {
 
     .shop-memo-date {
         font-size: 0.76rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .shop-memo-trash-link {
+        width: 44px;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .shop-memo-trash-label {
+        display: none;
     }
 }
 
@@ -3240,6 +3461,13 @@ body.app-shell-page {
     font-weight: 600;
     text-align: left;
     cursor: pointer;
+}
+
+.shop-memo-action-menu-button svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    margin-right: 8px;
 }
 
 .shop-memo-action-menu-button:hover {
@@ -3403,7 +3631,10 @@ body.app-shell-page {
         box-sizing: border-box;
         margin: 0;
         padding:
-            var(--shop-memo-mobile-top-padding)
+            calc(
+                var(--shop-memo-mobile-top-padding)
+                + var(--shop-memo-mobile-header-height)
+            )
             12px
             var(--shop-memo-mobile-toolbar-height);
         overflow-x: hidden;
@@ -3422,18 +3653,52 @@ body.app-shell-page {
         margin: 0;
     }
 
-    .shop-memo-create-dialog-header h2,
-    .shop-memo-desktop-only {
+    .shop-memo-mobile-dialog-header {
+        position: fixed;
+        z-index: 205;
+        top: 0;
+        right: 0;
+        left: 0;
+        display: flex;
+        height: calc(
+            var(--shop-memo-mobile-top-padding)
+            + var(--shop-memo-mobile-header-height)
+        );
+        box-sizing: border-box;
+        padding:
+            var(--shop-memo-mobile-top-padding)
+            12px
+            0;
+        background: #ffffff;
+        border-bottom: 0;
+        transition:
+            background-color 0.16s ease,
+            border-color 0.16s ease;
+    }
+
+    .shop-memo-mobile-dialog-header[data-scroll-state="middle"],
+    .shop-memo-mobile-dialog-header[data-scroll-state="at-bottom"] {
+        background: #f1f3f2;
+        border-bottom-color: transparent;
+    }
+
+    .shop-memo-mobile-dialog-header[data-scroll-state="no-scroll"],
+    .shop-memo-mobile-dialog-header[data-scroll-state="at-top"] {
+        background: #ffffff;
+        border-bottom-color: transparent;
+    }
+
+    .shop-memo-desktop-dialog-header {
         display: none;
     }
 
     .shop-memo-mobile-editor-back {
         display: inline-flex;
-        width: 52px;
-        min-width: 52px;
-        height: 52px;
-        min-height: 52px;
-        flex: 0 0 52px;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        min-height: 48px;
+        flex: 0 0 48px;
         align-items: center;
         justify-content: center;
         gap: 0;
@@ -3445,20 +3710,29 @@ body.app-shell-page {
         font: inherit;
         font-weight: 700;
         cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
 
     .shop-memo-mobile-editor-back span[aria-hidden="true"] {
+        display: inline-flex;
+        width: 45px;
+        height: 45px;
+        align-items: center;
+        justify-content: center;
+        background: #edf1ee;
+        border-radius: 50%;
         font-size: 26px;
         line-height: 1;
     }
 
-    .shop-memo-mobile-editor-back:hover,
-    .shop-memo-mobile-editor-back:active {
-        background: #e7ece8;
+    .shop-memo-mobile-editor-back:hover span[aria-hidden="true"],
+    .shop-memo-mobile-editor-back:active span[aria-hidden="true"],
+    .shop-memo-mobile-editor-back:focus-visible span[aria-hidden="true"] {
+        background: #dfe6e1;
     }
 
     .shop-memo-mobile-editor-back:focus-visible {
-        background: #e7ece8;
         outline: 3px solid #174b2a;
         outline-offset: 2px;
     }
@@ -3508,6 +3782,8 @@ body.app-shell-page {
         border-radius: 0;
         outline: 0;
         box-shadow: none;
+        appearance: none;
+        -webkit-appearance: none;
         font-size: 1.05rem;
         line-height: 1.65;
         overflow-wrap: anywhere;
@@ -3516,15 +3792,13 @@ body.app-shell-page {
     }
 
     .shop-memo-field textarea:focus,
-    .shop-memo-field textarea:focus-visible {
+    .shop-memo-field textarea:focus-visible,
+    .shop-memo-field textarea:active {
+        background: #ffffff;
         border: 0;
         outline: 0;
         box-shadow: none;
         caret-color: #174b2a;
-    }
-
-    .shop-memo-field textarea:focus-visible {
-        background: #fbfdfb;
     }
 
     .shop-memo-mobile-editor-toolbar:not([hidden]) {
@@ -3539,18 +3813,20 @@ body.app-shell-page {
         padding-bottom: max(12px, env(safe-area-inset-bottom));
         pointer-events: none;
         background: #ffffff;
-        border-top: 1px solid transparent;
+        border-top: 0;
         transition:
             background-color 0.16s ease,
             border-color 0.16s ease;
     }
 
-    .shop-memo-mobile-editor-toolbar[data-scroll-state="more"] {
-        background: #e3e7e4;
-        border-top-color: #cfd6d1;
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="at-top"],
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="middle"] {
+        background: #f1f3f2;
+        border-top-color: transparent;
     }
 
-    .shop-memo-mobile-editor-toolbar[data-scroll-state="end"] {
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="no-scroll"],
+    .shop-memo-mobile-editor-toolbar[data-scroll-state="at-bottom"] {
         background: #ffffff;
         border-top-color: transparent;
     }
