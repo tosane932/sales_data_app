@@ -109,6 +109,12 @@
         const overlay = document.querySelector(".app-navigation-overlay");
         const sidebar = document.getElementById("app-sidebar");
         const mobileViewport = window.matchMedia("(max-width: 900px)");
+        const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        );
+        const tapBubbleSelector = ".app-navigation-open-button, .shop-tools-fab";
+        const tapBubbleClass = "is-tap-bubbling";
+        const tapBubbleAnimationName = "shop-tool-button-bubble";
 
         if (!openButton || !closeButton || !overlay || !sidebar) {
             return;
@@ -153,6 +159,43 @@
                 overlay.hidden = true;
             }
         }
+
+        document.addEventListener("pointerdown", event => {
+            if (
+                !mobileViewport.matches
+                || reducedMotion.matches
+                || !event.isPrimary
+                || (event.pointerType === "mouse" && event.button !== 0)
+            ) {
+                return;
+            }
+
+            const eventTarget = event.target;
+            if (!(eventTarget instanceof Element)) {
+                return;
+            }
+
+            const tapBubbleButton = eventTarget.closest(tapBubbleSelector);
+            if (!tapBubbleButton) {
+                return;
+            }
+
+            tapBubbleButton.classList.remove(tapBubbleClass);
+            void tapBubbleButton.offsetWidth;
+            tapBubbleButton.classList.add(tapBubbleClass);
+        });
+
+        document.addEventListener("animationend", event => {
+            if (
+                event.animationName !== tapBubbleAnimationName
+                || !(event.target instanceof Element)
+                || !event.target.matches(tapBubbleSelector)
+            ) {
+                return;
+            }
+
+            event.target.classList.remove(tapBubbleClass);
+        });
 
         openButton.addEventListener("click", openNavigation);
         closeButton.addEventListener("click", () => closeNavigation(true));

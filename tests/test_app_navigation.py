@@ -168,6 +168,37 @@ def test_app_navigation_supports_escape_and_focus_return_without_inner_html():
     assert "|safe" not in navigation_source
 
 
+def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
+    navigation_source = (
+        Path(app_module.app.root_path) / "templates" / "_app_navigation.html"
+    ).read_text()
+    style_source = (
+        Path(app_module.app.root_path) / "static" / "style.css"
+    ).read_text()
+
+    assert (
+        'const tapBubbleSelector = '
+        '".app-navigation-open-button, .shop-tools-fab";'
+    ) in navigation_source
+    assert 'document.addEventListener("pointerdown"' in navigation_source
+    assert "tapBubbleButton.classList.remove(tapBubbleClass)" in (
+        navigation_source
+    )
+    assert "void tapBubbleButton.offsetWidth" in navigation_source
+    assert "tapBubbleButton.classList.add(tapBubbleClass)" in (
+        navigation_source
+    )
+    assert 'document.addEventListener("animationend"' in navigation_source
+    assert "reducedMotion.matches" in navigation_source
+    assert "setInterval" not in navigation_source
+
+    assert "@keyframes shop-tool-button-bubble" in style_source
+    assert ".app-navigation-open-button::after" in style_source
+    assert ".shop-tools-fab::after" in style_source
+    assert ".is-tap-bubbling::after" in style_source
+    assert "@media (prefers-reduced-motion: reduce)" in style_source
+
+
 def test_material_orders_has_distinct_app_and_shop_tools_navigation(
     authenticated_client,
     admin_dataset,
