@@ -113,6 +113,7 @@ def test_guest_sees_shared_sidebar_with_correct_current_page(
     )
     assert "ゲストを終了する" in logout_button.get_text()
     assert "ログアウト" not in logout_button.get_text()
+    assert "touch-control-no-select" in logout_button.get("class", [])
 
 
 def test_guest_returning_to_login_page_keeps_guest_session(flask_app):
@@ -150,8 +151,10 @@ def test_mobile_navigation_has_accessible_open_and_close_controls(
     assert open_button.get("aria-controls") == "app-sidebar"
     assert open_button.get("aria-expanded") == "false"
     assert open_button.get_text(strip=True) == "☰"
+    assert "touch-control-no-select" in open_button.get("class", [])
     assert close_button is not None
     assert close_button.get("aria-label") == "主要メニューを閉じる"
+    assert "touch-control-no-select" in close_button.get("class", [])
     assert overlay is not None
     assert overlay.has_attr("hidden")
 
@@ -178,7 +181,8 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
 
     assert (
         'const tapBubbleSelector = '
-        '".app-navigation-open-button, .shop-tools-fab";'
+        '".app-navigation-open-button, .app-navigation-close-button, '
+        '.shop-tools-fab";'
     ) in navigation_source
     assert 'document.addEventListener("pointerdown"' in navigation_source
     assert "tapBubbleButton.classList.remove(tapBubbleClass)" in (
@@ -194,9 +198,14 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
 
     assert "@keyframes shop-tool-button-bubble" in style_source
     assert ".app-navigation-open-button::after" in style_source
+    assert ".app-navigation-close-button::after" in style_source
     assert ".shop-tools-fab::after" in style_source
     assert ".is-tap-bubbling::after" in style_source
     assert "@media (prefers-reduced-motion: reduce)" in style_source
+    assert ".touch-control-no-select" in style_source
+    assert "-webkit-user-select: none;" in style_source
+    assert "user-select: none;" in style_source
+    assert "-webkit-touch-callout: none;" in style_source
 
 
 def test_material_orders_has_distinct_app_and_shop_tools_navigation(

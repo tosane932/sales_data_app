@@ -17,7 +17,7 @@
 
 <button
     type="button"
-    class="app-navigation-open-button"
+    class="app-navigation-open-button touch-control-no-select"
     aria-label="主要メニューを開く"
     aria-controls="app-sidebar"
     aria-expanded="false">
@@ -39,7 +39,7 @@
         </a>
         <button
             type="button"
-            class="app-navigation-close-button"
+            class="app-navigation-close-button touch-control-no-select"
             aria-label="主要メニューを閉じる">
             <span aria-hidden="true">×</span>
         </button>
@@ -86,7 +86,9 @@
         </span>
         <form method="POST" action="{{ url_for('logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn app-sidebar-logout-button">
+            <button
+                type="submit"
+                class="btn app-sidebar-logout-button{% if current_user.is_guest %} touch-control-no-select{% endif %}">
                 <span aria-hidden="true">🚪</span>
                 {% if current_user.is_guest %}ゲストを終了する{% else %}ログアウト{% endif %}
             </button>
@@ -112,7 +114,7 @@
         const reducedMotion = window.matchMedia(
             "(prefers-reduced-motion: reduce)"
         );
-        const tapBubbleSelector = ".app-navigation-open-button, .shop-tools-fab";
+        const tapBubbleSelector = ".app-navigation-open-button, .app-navigation-close-button, .shop-tools-fab";
         const tapBubbleClass = "is-tap-bubbling";
         const tapBubbleAnimationName = "shop-tool-button-bubble";
 

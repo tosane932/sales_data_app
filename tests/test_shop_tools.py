@@ -193,6 +193,7 @@ def test_material_orders_shell_keeps_visible_form_and_plus_only_accessible_fab(
     response = authenticated_client.get("/material-orders")
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
     fab = document.select_one("button.shop-tools-fab")
+    add_button = document.select_one("button.material-order-add-button")
 
     assert response.status_code == 200
     assert document.select_one('label[for="material-name"]') is not None
@@ -203,7 +204,25 @@ def test_material_orders_shell_keeps_visible_form_and_plus_only_accessible_fab(
     assert fab.get("aria-label") == "材料を追加"
     assert fab.get("aria-controls") == "material-name"
     assert fab.get_text(strip=True) == "＋"
+    assert "touch-control-no-select" in fab.get("class", [])
+    assert add_button is not None
+    assert "touch-control-no-select" in add_button.get("class", [])
     assert document.select_one(".shop-tools-fab-label") is None
+
+
+@pytest.mark.parametrize("route", ["/material-orders", "/shop-tools/memo"])
+def test_shop_tool_fabs_share_mobile_no_select_control_class(
+    authenticated_client,
+    admin_dataset,
+    route,
+):
+    response = authenticated_client.get(route)
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+    fab = document.select_one("button.shop-tools-fab")
+
+    assert response.status_code == 200
+    assert fab is not None
+    assert "touch-control-no-select" in fab.get("class", [])
 
 
 def test_shop_tools_templates_keep_autoescape_and_safe_dom_updates():

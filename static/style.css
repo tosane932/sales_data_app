@@ -2405,6 +2405,12 @@ body.app-shell-page {
         -webkit-tap-highlight-color: transparent;
     }
 
+    .touch-control-no-select {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
     .shop-tools-header-mobile-hidden {
         display: none;
     }
@@ -2421,13 +2427,17 @@ body.app-shell-page {
         overflow: hidden;
     }
 
-    .app-navigation-open-button {
+    .app-navigation-open-button,
+    .app-navigation-close-button {
         --tap-bubble-color: rgba(255, 248, 238, 0.95);
         --tap-bubble-start-scale: 0.35;
         --tap-bubble-end-scale: 1.4;
         --tap-bubble-opacity: 0.18;
         --tap-bubble-duration: 220ms;
         --tap-press-scale: 0.96;
+    }
+
+    .app-navigation-open-button {
         position: fixed;
         z-index: 32;
         top: 12px;
@@ -2464,12 +2474,14 @@ body.app-shell-page {
     }
 
     .app-navigation-open-button,
+    .app-navigation-close-button,
     .shop-tools-fab {
         isolation: isolate;
         transition: transform 160ms ease-out;
     }
 
     .app-navigation-open-button::after,
+    .app-navigation-close-button::after,
     .shop-tools-fab::after {
         position: absolute;
         z-index: 0;
@@ -2487,18 +2499,21 @@ body.app-shell-page {
     }
 
     .app-navigation-open-button > span,
+    .app-navigation-close-button > span,
     .shop-tools-fab > span {
         position: relative;
         z-index: 1;
     }
 
     .app-navigation-open-button.is-tap-bubbling::after,
+    .app-navigation-close-button.is-tap-bubbling::after,
     .shop-tools-fab.is-tap-bubbling::after {
         animation: shop-tool-button-bubble
             var(--tap-bubble-duration) ease-out;
     }
 
     .app-navigation-open-button:active,
+    .app-navigation-close-button:active,
     .shop-tools-fab:active {
         transform: scale(var(--tap-press-scale));
         transition-duration: 100ms;
@@ -2516,6 +2531,7 @@ body.app-shell-page {
     }
 
     .app-navigation-close-button {
+        position: relative;
         display: inline-flex;
         width: 48px;
         height: 48px;
@@ -2568,16 +2584,19 @@ body.app-shell-page {
     }
 
     .app-navigation-open-button,
+    .app-navigation-close-button,
     .shop-tools-fab {
         transition: none;
     }
 
     .app-navigation-open-button:active,
+    .app-navigation-close-button:active,
     .shop-tools-fab:active {
         transform: none;
     }
 
     .app-navigation-open-button::after,
+    .app-navigation-close-button::after,
     .shop-tools-fab::after {
         animation: none !important;
     }
