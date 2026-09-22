@@ -19,7 +19,7 @@
     <div class="filter-box">
         <form id="filterForm" onsubmit="updateDashboard(event)" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <strong>表示期間：</strong>
-            <select name="year" id="selectYear">
+            <select name="year" id="selectYear" class="touch-control-no-select">
                 <option value="" {% if year is none %}selected{% endif %}>
                     全年度
                 </option>
@@ -27,7 +27,7 @@
                 <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}年</option>
                 {% endfor %}
             </select>
-            <select name="month" id="selectMonth" {% if year is none %}disabled{% endif %}>
+            <select name="month" id="selectMonth" class="touch-control-no-select" {% if year is none %}disabled{% endif %}>
                 <option value="" {% if month is none %}selected{% endif %}>全月</option>
                 {% for m in range(1, 13) %}
                 <option value="{{ m }}" {% if month == m %}selected{% endif %}>
@@ -35,7 +35,7 @@
                 </option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn-submit">🔍 データを抽出</button>
+            <button type="submit" class="btn-submit touch-control-no-select">🔍 データを抽出</button>
         </form>
         <small>※年を選ぶと、売上データがある月に✅が付きます。</small>
     </div>
@@ -75,7 +75,7 @@
         <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px; white-space: pre-line;">{{ ai_advice }}</p>
         <button
             type="button"
-            class="btn-ai-advice"
+            class="btn-ai-advice touch-control-no-select"
             id="aiAdviceButton"
             onclick="loadAiAdvice()">
             🤖 詳しいアドバイスを聞く
@@ -85,14 +85,14 @@
     <div class="dashboard-actions">
         <a
             href="{{ url_for('input_sales') }}"
-            class="dashboard-action dashboard-input-link"
+            class="dashboard-action dashboard-input-link touch-control-no-select"
         >
             📝 日次売上を入力する
         </a>
 
         <a
             href="{{ url_for('index') }}"
-            class="dashboard-action dashboard-home-link"
+            class="dashboard-action dashboard-home-link touch-control-no-select"
         >
             🍞 トップページに戻る
         </a>

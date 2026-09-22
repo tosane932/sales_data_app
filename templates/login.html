@@ -45,7 +45,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button
                     id="guest-demo-start"
-                    class="btn btn-submit guest-demo-button"
+                    class="btn btn-submit guest-demo-button touch-control-no-select"
                     type="submit"
                     {% if guest_capacity.disabled %}
                     disabled
@@ -91,7 +91,7 @@
                     >
                 </div>
 
-                <button type="submit">ログイン</button>
+                <button type="submit" class="touch-control-no-select">ログイン</button>
             </form>
         </section>
     </main>

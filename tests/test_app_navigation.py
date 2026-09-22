@@ -208,6 +208,66 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
     assert "-webkit-touch-callout: none;" in style_source
 
 
+@pytest.mark.parametrize(
+    ("route", "control_selectors", "content_selectors"),
+    [
+        (
+            "/",
+            [
+                "#year-select",
+                "#month-select",
+                ".btn-del",
+                ".btn-add",
+                ".btn-menu-register",
+            ],
+            [".input-name", ".input-price", ".section-title"],
+        ),
+        (
+            "/dashboard",
+            [
+                "#selectYear",
+                "#selectMonth",
+                ".btn-submit",
+                ".btn-ai-advice",
+                ".dashboard-action",
+            ],
+            ["#aiAdviceText", ".dashboard-filter-guidance"],
+        ),
+        (
+            "/input",
+            [".btn-greeting", ".input-home-link"],
+            ["#greetingText", ".sales-input-guidance"],
+        ),
+    ],
+)
+def test_app_action_controls_disable_selection_without_covering_content(
+    authenticated_client,
+    admin_dataset,
+    route,
+    control_selectors,
+    content_selectors,
+):
+    response = authenticated_client.get(route)
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    assert response.status_code == 200
+    for selector in control_selectors:
+        controls = document.select(selector)
+        assert controls
+        assert all(
+            "touch-control-no-select" in control.get("class", [])
+            for control in controls
+        )
+
+    for selector in content_selectors:
+        content_elements = document.select(selector)
+        assert content_elements
+        assert all(
+            "touch-control-no-select" not in element.get("class", [])
+            for element in content_elements
+        )
+
+
 def test_material_orders_has_distinct_app_and_shop_tools_navigation(
     authenticated_client,
     admin_dataset,
