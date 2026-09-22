@@ -177,7 +177,12 @@ def test_sales_quantity_input_keeps_current_value_and_selects_on_focus(
         == str(sales_records.existing_product_id)
     )
     quantity_input = product_row.select_one('input[name="quantity"]')
-    page_title = document.find("h1", string="📝 日次売上入力")
+    page_title = document.find("h1")
+    assert page_title is not None
+    assert page_title.get_text(" ", strip=True) == "日次売上入力"
+    assert page_title.select_one(
+        'svg[data-icon="clipboard-pen-line"]'
+    ) is not None
     input_guidance = page_title.find_next_sibling("p")
     script_text = "\n".join(
         script.get_text()

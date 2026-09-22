@@ -1249,37 +1249,6 @@ def logout():
     return redirect(url_for("login"))
 
 
-def _get_product_year_options(
-    current_dataset,
-    current_year,
-    selected_year=None,
-):
-    """商品画面に必要な年だけを、現在のDatasetに限定して返す。"""
-    year_options = {
-        current_year - 1,
-        current_year,
-        current_year + 1,
-    }
-
-    if current_dataset is not None:
-        existing_years = (
-            db.session.query(Product.year)
-            .filter(Product.dataset_id == current_dataset.id)
-            .distinct()
-            .all()
-        )
-        year_options.update(row[0] for row in existing_years)
-
-    if selected_year is not None:
-        year_options.add(selected_year)
-
-    return sorted(
-        year
-        for year in year_options
-        if PRODUCT_YEAR_MIN <= year <= PRODUCT_YEAR_MAX
-    )
-
-
 @app.route("/", methods=["GET", "POST"])
 @admin_or_guest_required
 def index():
@@ -1406,11 +1375,7 @@ def index():
                 selected_year=year,
                 selected_month=month,
                 registered_months=registered_months,
-                year_options=_get_product_year_options(
-                    current_dataset,
-                    today.year,
-                    year,
-                ),
+                current_year=today.year,
             )
 
         # 💡既存商品の価格更新と新商品の追加をログに残す
@@ -1504,11 +1469,8 @@ def index():
         return render_template("success.html", year=year, month=month)
 
 
-    year = request.args.get("year", type=int)
+    year = today.year
     month = request.args.get("month", type=int)
-
-    if year is None:
-        year = today.year
 
     if month is None:
         month = today.month
@@ -1542,11 +1504,7 @@ def index():
         selected_year=year,
         selected_month=month,
         registered_months=registered_months,
-        year_options=_get_product_year_options(
-            current_dataset,
-            today.year,
-            year,
-        ),
+        current_year=today.year,
     )
 
 def _get_optional_integer_query_parameter(name):

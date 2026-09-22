@@ -31,11 +31,20 @@ def _sales_snapshot():
     ]
 
 
-def _product_year_select(response):
+def _product_registration_year(response):
     document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
-    year_select = document.select_one("#year-select")
-    assert year_select is not None
-    return year_select
+
+    assert document.select_one("#year-select") is None
+
+    year_input = document.select_one(
+        'input[type="hidden"][name="year"]'
+    )
+    year_label = document.select_one(".registration-year")
+
+    assert year_input is not None
+    assert year_label is not None
+
+    return document, year_input, year_label
 
 
 def _create_guest_dataset():
@@ -208,7 +217,7 @@ def _create_products(
     return products
 
 
-def test_product_year_options_include_current_and_next_year_at_year_end(
+def test_product_registration_uses_current_year_at_year_end(
     authenticated_client,
     admin_dataset,
     monkeypatch,
@@ -220,20 +229,18 @@ def test_product_year_options_include_current_and_next_year_at_year_end(
     )
 
     response = authenticated_client.get("/")
-    year_select = _product_year_select(response)
-    year_options = [
-        int(option["value"])
-        for option in year_select.select("option")
-    ]
-    selected_option = year_select.select_one("option[selected]")
+    document, year_input, year_label = _product_registration_year(response)
 
     assert response.status_code == 200
-    assert year_options == [2025, 2026, 2027]
-    assert selected_option is not None
-    assert selected_option["value"] == "2026"
+    assert year_input["value"] == "2026"
+    assert year_label.get_text(" ", strip=True) == "2026年"
+    assert (
+        "① メニューを登録する月を選択してください"
+        in document.get_text(" ", strip=True)
+    )
 
 
-def test_product_year_options_roll_forward_at_jst_new_year(
+def test_product_registration_year_rolls_forward_at_jst_new_year(
     authenticated_client,
     admin_dataset,
     monkeypatch,
@@ -245,20 +252,14 @@ def test_product_year_options_roll_forward_at_jst_new_year(
     )
 
     response = authenticated_client.get("/")
-    year_select = _product_year_select(response)
-    year_options = [
-        int(option["value"])
-        for option in year_select.select("option")
-    ]
-    selected_option = year_select.select_one("option[selected]")
+    _, year_input, year_label = _product_registration_year(response)
 
     assert response.status_code == 200
-    assert year_options == [2026, 2027, 2028]
-    assert selected_option is not None
-    assert selected_option["value"] == "2027"
+    assert year_input["value"] == "2027"
+    assert year_label.get_text(" ", strip=True) == "2027年"
 
 
-def test_product_year_options_include_only_current_dataset_product_years(
+def test_product_registration_ignores_past_year_query(
     authenticated_client,
     admin_dataset,
     monkeypatch,
@@ -268,7 +269,9 @@ def test_product_year_options_include_only_current_dataset_product_years(
         "business_today",
         lambda: datetime.date(2026, 6, 1),
     )
+
     guest_dataset = _create_guest_dataset()
+
     db.session.add_all([
         Product(
             dataset=admin_dataset,
@@ -276,6 +279,13 @@ def test_product_year_options_include_only_current_dataset_product_years(
             month=4,
             name="管理者の過年度商品",
             price=200,
+        ),
+        Product(
+            dataset=admin_dataset,
+            year=2026,
+            month=4,
+            name="管理者の今年の商品",
+            price=250,
         ),
         Product(
             dataset=guest_dataset,
@@ -288,23 +298,24 @@ def test_product_year_options_include_only_current_dataset_product_years(
     db.session.commit()
 
     response = authenticated_client.get("/?year=2023&month=4")
-    year_select = _product_year_select(response)
-    year_options = [
-        int(option["value"])
-        for option in year_select.select("option")
-    ]
-    selected_option = year_select.select_one("option[selected]")
+    document, year_input, year_label = _product_registration_year(response)
+    response_text = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert year_options == [2023, 2025, 2026, 2027]
-    assert 2022 not in year_options
-    assert selected_option is not None
-    assert selected_option["value"] == "2023"
-    assert "管理者の過年度商品" in response.get_data(as_text=True)
-    assert "別Datasetの過年度商品" not in response.get_data(as_text=True)
+    assert year_input["value"] == "2026"
+    assert year_label.get_text(" ", strip=True) == "2026年"
+
+    assert "管理者の今年の商品" in response_text
+    assert "管理者の過年度商品" not in response_text
+    assert "別Datasetの過年度商品" not in response_text
+
+    selected_month = document.select_one(
+        '#month-select option[value="4"][selected]'
+    )
+    assert selected_month is not None
 
 
-def test_product_year_selection_survives_validation_error_redisplay(
+def test_product_registration_keeps_current_year_after_validation_error(
     authenticated_client,
     admin_dataset,
     csrf_post,
@@ -320,22 +331,28 @@ def test_product_year_selection_survives_validation_error_redisplay(
         authenticated_client,
         "/",
         {
-            "year": "2024",
+            "year": "2027",
             "month": "11",
             "product_id": [],
             "prod_name": [],
             "prod_price": [],
         },
     )
-    year_select = _product_year_select(response)
-    selected_option = year_select.select_one("option[selected]")
+
+    document, year_input, year_label = _product_registration_year(response)
 
     assert response.status_code == 200
     assert "商品を1つ以上入力してください。" in response.get_data(
         as_text=True
     )
-    assert selected_option is not None
-    assert selected_option["value"] == "2024"
+
+    assert year_input["value"] == "2027"
+    assert year_label.get_text(" ", strip=True) == "2027年"
+
+    selected_month = document.select_one(
+        '#month-select option[value="11"][selected]'
+    )
+    assert selected_month is not None
 
 
 def test_product_form_exposes_name_and_price_limits(

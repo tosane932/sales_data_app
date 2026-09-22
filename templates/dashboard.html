@@ -11,15 +11,27 @@
 {% include "_app_navigation.html" %}
 
 <div class="container">
-    <h1>📊 お店の健康診断書（売上データ分析）</h1>
+    <h1>
+        <svg class="ui-icon ui-icon-page-heading" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+            <path d="M18 17V9"></path>
+            <path d="M13 17V5"></path>
+            <path d="M8 17v-3"></path>
+        </svg>
+        <span>売上データ分析</span>
+    </h1>
     <p class="dashboard-filter-guidance">
-        ※表示期間を変更した後は、【🔍 データを抽出】ボタンを押してください。
+        ※表示期間を変更した後は、【データを抽出】ボタンを押してください。
     </p>
 
     <div class="filter-box">
-        <form id="filterForm" onsubmit="updateDashboard(event)" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <strong>表示期間：</strong>
-            <select name="year" id="selectYear" class="touch-control-no-select">
+        <form id="filterForm" class="dashboard-filter-form" onsubmit="updateDashboard(event)">
+            <strong class="dashboard-filter-label">表示期間：</strong>
+            <select
+                name="year"
+                id="selectYear"
+                class="touch-control-no-select"
+                aria-label="年度">
                 <option value="" {% if year is none %}selected{% endif %}>
                     全年度
                 </option>
@@ -27,22 +39,57 @@
                 <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}年</option>
                 {% endfor %}
             </select>
-            <select name="month" id="selectMonth" class="touch-control-no-select" {% if year is none %}disabled{% endif %}>
+            <select
+                name="month"
+                id="selectMonth"
+                class="touch-control-no-select"
+                aria-label="月"
+                {% if year is none %}disabled{% endif %}>
                 <option value="" {% if month is none %}selected{% endif %}>全月</option>
                 {% for m in range(1, 13) %}
                 <option value="{{ m }}" {% if month == m %}selected{% endif %}>
-                    {{ m }}月{% if m in sales_months %} ✅{% endif %}
+                    {{ m }}月{% if m in sales_months %}（登録済み）{% endif %}
                 </option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn-submit touch-control-no-select">🔍 データを抽出</button>
+            <button type="submit" class="btn-submit touch-control-no-select">
+                <svg class="ui-icon ui-icon-control" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <path d="m21 21-4.34-4.34"></path>
+                    <circle cx="11" cy="11" r="8"></circle>
+                </svg>
+                <span>データを抽出</span>
+            </button>
         </form>
-        <small>※年を選ぶと、売上データがある月に✅が付きます。</small>
+        <small>※年を選ぶと、メニュー登録済みの月に「登録済み」と表示されます。</small>
     </div>
 
-    <p>📅 表示中の期間：<strong id="periodTitle">{{ period_text }}</strong></p>
+    <p class="dashboard-period ui-icon-layout">
+        <svg class="ui-icon ui-icon-status" data-icon="calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M8 2v3"></path>
+            <path d="M16 2v3"></path>
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M3 9h18"></path>
+            <path d="M8 13h.01"></path>
+            <path d="M12 13h.01"></path>
+            <path d="M16 13h.01"></path>
+            <path d="M8 17h.01"></path>
+            <path d="M12 17h.01"></path>
+            <path d="M16 17h.01"></path>
+        </svg>
+        <span>表示期間：<strong id="periodTitle">{{ period_text }}</strong></span>
+    </p>
 
-    <h2>🏆 売上数量ランキング</h2>
+    <h2 id="ranking-heading" class="ui-icon-layout">
+        <svg class="ui-icon ui-icon-section-heading" data-icon="trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"></path>
+            <path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"></path>
+            <path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"></path>
+            <path d="M4 22h16"></path>
+            <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"></path>
+            <path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"></path>
+        </svg>
+        <span>売れ筋ランキング</span>
+    </h2>
 
     <div class="ranking-container" id="rankingContainer">
         {% if ranked_sales %}
@@ -63,22 +110,60 @@
         {% endif %}
     </div>
 
-    <h2>📊 商品別 売上数量グラフ</h2>
+    <h2 id="sales-chart-heading" class="ui-icon-layout">
+        <svg class="ui-icon ui-icon-section-heading" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+            <path d="M18 17V9"></path>
+            <path d="M13 17V5"></path>
+            <path d="M8 17v-3"></path>
+        </svg>
+        <span>商品ごとの売上</span>
+    </h2>
     <div style="background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #f5edd6; margin-bottom: 30px;">
         <canvas id="salesChart"></canvas>
     </div>
 
-    <h2>🤖 ベーカリーAI経営アシスタント（AIアドバイス）</h2>
-    <div style="background: #fff9e6; padding: 25px; border-radius: 12px; border: 1px solid #f3d9b1; margin-bottom: 30px; line-height: 1.8; position: relative; overflow: hidden;">
-        <div style="position: absolute; right: 10px; bottom: -10px; font-size: 70px; opacity: 0.05; user-select: none;">🍞</div>
+    <h2 id="ai-advice-heading" class="ui-icon-layout">
+        <svg class="ui-icon ui-icon-section-heading" data-icon="bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M12 8V4H8"></path>
+            <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+            <path d="M2 14h2"></path>
+            <path d="M20 14h2"></path>
+            <path d="M15 13v2"></path>
+            <path d="M9 13v2"></path>
+        </svg>
+        <span>AIアドバイス</span>
+    </h2>
+    <div class="dashboard-ai-card">
+        <svg class="dashboard-ai-watermark" data-icon="bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M12 8V4H8"></path>
+            <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+            <path d="M2 14h2"></path>
+            <path d="M20 14h2"></path>
+            <path d="M15 13v2"></path>
+            <path d="M9 13v2"></path>
+        </svg>
 
-        <p id="aiAdviceText" style="margin: 0; font-weight: bold; color: #4a3c31; font-size: 16px; white-space: pre-line;">{{ ai_advice }}</p>
+        <div class="dashboard-ai-response">
+            <svg id="aiAdviceLoadingIcon" class="ui-icon ui-icon-status" data-icon="loader-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" hidden>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+            </svg>
+            <svg id="aiAdviceErrorIcon" class="ui-icon ui-icon-status" data-icon="triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" hidden>
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+                <path d="M12 9v4"></path>
+                <path d="M12 17h.01"></path>
+            </svg>
+            <p id="aiAdviceText">{{ ai_advice }}</p>
+        </div>
         <button
             type="button"
             class="btn-ai-advice touch-control-no-select"
             id="aiAdviceButton"
             onclick="loadAiAdvice()">
-            🤖 詳しいアドバイスを聞く
+            <svg class="ui-icon ui-icon-control" data-icon="message-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path>
+            </svg>
+            <span data-ai-advice-button-label>詳しいアドバイスを聞く</span>
         </button>
     </div>
 
@@ -87,14 +172,25 @@
             href="{{ url_for('input_sales') }}"
             class="dashboard-action dashboard-input-link touch-control-no-select"
         >
-            📝 日次売上を入力する
+            <svg class="ui-icon ui-icon-control" data-icon="clipboard-pen-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <rect width="8" height="4" x="8" y="2" rx="1"></rect>
+                <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-.5"></path>
+                <path d="M16 4h2a2 2 0 0 1 1.73 1"></path>
+                <path d="M8 18h1"></path>
+                <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path>
+            </svg>
+            <span>日次売上を入力する</span>
         </a>
 
         <a
             href="{{ url_for('index') }}"
             class="dashboard-action dashboard-home-link touch-control-no-select"
         >
-            🍞 トップページに戻る
+            <svg class="ui-icon ui-icon-control" data-icon="house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+                <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            <span>トップページに戻る</span>
         </a>
     </div>
 </div>
@@ -110,6 +206,13 @@
         element.innerText = String(value ?? '');
     }
 
+    function setAiAdviceStatus(status) {
+        document.getElementById('aiAdviceLoadingIcon').hidden =
+            status !== 'loading';
+        document.getElementById('aiAdviceErrorIcon').hidden =
+            status !== 'error';
+    }
+
     function updateSalesMonthIndicators(salesMonths) {
         const availableMonths = new Set(salesMonths.map(Number));
         const monthOptions = document.querySelectorAll(
@@ -123,7 +226,7 @@
 
             const month = Number(option.value);
             option.textContent =
-                `${month}月${availableMonths.has(month) ? ' ✅' : ''}`;
+                `${month}月${availableMonths.has(month) ? '（登録済み）' : ''}`;
         });
     }
 
@@ -147,6 +250,28 @@
     const initialLabels = {{ chart_labels | tojson if chart_labels else [] }};
     const initialValues = {{ chart_values | tojson if chart_values else [] }};
 
+    const chartBackgroundColors = [
+        'rgba(188, 72, 72, 0.72)',
+        'rgba(154, 100, 31, 0.72)',
+        'rgba(71, 123, 89, 0.72)',
+        'rgba(72, 115, 156, 0.72)',
+        'rgba(214, 163, 0, 0.72)',
+    ];
+
+    const chartBorderColors = [
+        '#bc4848',
+        '#9a641f',
+        '#477b59',
+        '#48739c',
+        '#d6a300',
+    ];
+
+    function buildChartColors(labels, palette) {
+        return labels.map(
+            (_, index) => palette[index % palette.length]
+        );
+    }
+
     const ctx = document.getElementById('salesChart').getContext('2d');
     const salesChart = new Chart(ctx, {
         type: 'bar',
@@ -155,8 +280,14 @@
             datasets: [{
                 label: '売上数量（個）',
                 data: initialValues,
-                backgroundColor: 'rgba(139, 92, 26, 0.6)',
-                borderColor: 'rgba(139, 92, 26, 1)',
+                backgroundColor: buildChartColors(
+                    initialLabels,
+                    chartBackgroundColors
+                ),
+                borderColor: buildChartColors(
+                    initialLabels,
+                    chartBorderColors
+                ),
                 borderWidth: 1,
                 borderRadius: 6
             }]
@@ -179,7 +310,8 @@
         const periodTitle = document.getElementById('periodTitle');
 
         // 通信中の状態をユーザーに明示
-        aiText.textContent = "🌀 AIアシスタントが売上データを分析中...（15秒ほどかかる場合があります）";
+        setAiAdviceStatus('loading');
+        aiText.textContent = "AIアシスタントが売上データを分析中...（15秒ほどかかる場合があります）";
 
         // バックエンドの非同期データ取得APIエンドポイントへリクエストを送信
         fetch(`/api/dashboard-data?year=${year}&month=${month}`)
@@ -256,14 +388,26 @@
                 // 3. Chart.jsのデータ更新およびアニメーション再描画
                 salesChart.data.labels = data.chart_labels;
                 salesChart.data.datasets[0].data = data.chart_values;
+                salesChart.data.datasets[0].backgroundColor =
+                    buildChartColors(
+                        data.chart_labels,
+                        chartBackgroundColors
+                    );
+                salesChart.data.datasets[0].borderColor =
+                    buildChartColors(
+                        data.chart_labels,
+                        chartBorderColors
+                    );
                 salesChart.update();
 
                 // 4. AI経営アドバイスのテキストを改行を考慮して反映
+                setAiAdviceStatus(null);
                 setTextWithLineBreaks(aiText, data.ai_advice);
             })
             .catch(error => {
                 console.error("データ取得エラー:", error);
-                aiText.textContent = "🚨 データの取得に失敗しました。お手数ですが時間を置いて再度お試しいただくか、システムの稼働状態を確認してください。";
+                setAiAdviceStatus('error');
+                aiText.textContent = "データの取得に失敗しました。お手数ですが時間を置いて再度お試しいただくか、システムの稼働状態を確認してください。";
             });
     }
     function loadAiAdvice() {
@@ -271,12 +415,16 @@
         const month = activeMonth ?? '';
         const aiText = document.getElementById('aiAdviceText');
         const aiButton = document.getElementById('aiAdviceButton');
+        const aiButtonLabel = aiButton.querySelector(
+            '[data-ai-advice-button-label]'
+        );
 
+        setAiAdviceStatus('loading');
         aiText.textContent =
-            '🌀 AIアシスタントが詳しい改善案を考えています...';
+            'AIアシスタントが詳しい改善案を考えています...';
 
         aiButton.disabled = true;
-        aiButton.textContent = '分析中...';
+        aiButtonLabel.textContent = '分析中...';
 
         fetch(`/api/ai-advice?year=${year}&month=${month}`, {
             method: 'POST',
@@ -292,18 +440,20 @@
                 return response.json();
             })
             .then(data => {
+                setAiAdviceStatus(null);
                 setTextWithLineBreaks(aiText, data.ai_advice);
             })
             .catch(error => {
                 console.error('AIアドバイス取得エラー:', error);
 
+                setAiAdviceStatus('error');
                 aiText.textContent =
-                    '🚨 AIアドバイスの取得に失敗しました。'
+                    'AIアドバイスの取得に失敗しました。'
                     + '時間を置いてから、もう一度お試しください。';
             })
             .finally(() => {
                 aiButton.disabled = false;
-                aiButton.textContent = '🤖 もう一度詳しいアドバイスを聞く';
+                aiButtonLabel.textContent = 'もう一度詳しいアドバイスを聞く';
             });
     }
 </script>

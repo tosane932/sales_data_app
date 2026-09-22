@@ -594,9 +594,9 @@ def test_dashboard_marks_only_selected_year_current_dataset_sales_months(
     assert document.select_one("#periodTitle").get_text(
         " ", strip=True
     ) == "2026年・全月"
-    assert month_labels[3] == "3月 ✅"
-    assert month_labels[7] == "7月 ✅"
-    assert month_labels[8] == "8月 ✅"
+    assert month_labels[3] == "3月（登録済み）"
+    assert month_labels[7] == "7月（登録済み）"
+    assert month_labels[8] == "8月（登録済み）"
     assert month_labels[9] == "9月"
     assert month_labels[10] == "10月"
     assert month_labels[11] == "11月"

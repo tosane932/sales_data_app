@@ -18,14 +18,39 @@
      }
      </script>
 </head>
-<body class="app-shell-page">
+<body class="product-page app-shell-page">
 {% include "_app_navigation.html" %}
 
 <div class="container">
-    <h1>🍞 ベーカリー売上管理システム</h1>
+    <h1>
+        <svg
+            class="ui-icon ui-icon-page-heading"
+            data-icon="package-plus"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            focusable="false"
+            aria-hidden="true">
+            <path d="M12 22V12"></path>
+            <path d="M16 17h6"></path>
+            <path d="M19 14v6"></path>
+            <path d="M21 10.535V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.675-.955"></path>
+            <path d="M3.29 7 12 12l8.71-5"></path>
+            <path d="m7.5 4.27 8.997 5.148"></path>
+        </svg>
+        <span>商品・メニュー登録</span>
+    </h1>
     {% if error %}
-    <div style="background-color: #fff0f0; color: #c0392b; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
-        ⚠️ {{ error }}
+    <div class="ui-icon-layout" style="background-color: #fff0f0; color: #c0392b; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+        <svg class="ui-icon ui-icon-status" data-icon="triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+            <path d="M12 9v4"></path>
+            <path d="M12 17h.01"></path>
+        </svg>
+        <span>{{ error }}</span>
     </div>
     {% endif %}
     
@@ -33,52 +58,53 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="section">
-            <div class="section-title">① 作成する年月を選択してください</div>
+            <div class="section-title">① メニューを登録する月を選択してください</div>
             <div class="select-group">
-                <select name="year" id="year-select" class="touch-control-no-select">
-                    {% for year_option in year_options %}
-                    <option value="{{ year_option }}"
-                        {% if selected_year == year_option %}selected{% endif %}>
-                        {{ year_option }}年
-                    </option>
-                    {% endfor %}
-                </select>
+                <input
+                    type="hidden"
+                    name="year"
+                    value="{{ current_year }}">
+                <span
+                    class="registration-year"
+                    aria-label="登録年">
+                    {{ current_year }}年
+                </span>
                 <select name="month" id="month-select" class="touch-control-no-select">
                     <option value="1" {% if selected_month == 1 %}selected{% endif %}>
-                        1月{% if 1 in registered_months %} ✅{% endif %}
+                        1月{% if 1 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="2" {% if selected_month == 2 %}selected{% endif %}>
-                        2月{% if 2 in registered_months %} ✅{% endif %}
+                        2月{% if 2 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="3" {% if selected_month == 3 %}selected{% endif %}>
-                        3月{% if 3 in registered_months %} ✅{% endif %}
+                        3月{% if 3 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="4" {% if selected_month == 4 %}selected{% endif %}>
-                        4月{% if 4 in registered_months %} ✅{% endif %}
+                        4月{% if 4 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="5" {% if selected_month == 5 %}selected{% endif %}>
-                        5月{% if 5 in registered_months %} ✅{% endif %}
+                        5月{% if 5 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="6" {% if selected_month == 6 %}selected{% endif %}>
-                        6月{% if 6 in registered_months %} ✅{% endif %}
+                        6月{% if 6 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="7" {% if selected_month == 7 %}selected{% endif %}>
-                        7月{% if 7 in registered_months %} ✅{% endif %}
+                        7月{% if 7 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="8" {% if selected_month == 8 %}selected{% endif %}>
-                        8月{% if 8 in registered_months %} ✅{% endif %}
+                        8月{% if 8 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="9" {% if selected_month == 9 %}selected{% endif %}>
-                        9月{% if 9 in registered_months %} ✅{% endif %}
+                        9月{% if 9 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="10" {% if selected_month == 10 %}selected{% endif %}>
-                        10月{% if 10 in registered_months %} ✅{% endif %}
+                        10月{% if 10 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="11" {% if selected_month == 11 %}selected{% endif %}>
-                        11月{% if 11 in registered_months %} ✅{% endif %}
+                        11月{% if 11 in registered_months %}（登録済み）{% endif %}
                     </option>
                     <option value="12" {% if selected_month == 12 %}selected{% endif %}>
-                        12月{% if 12 in registered_months %} ✅{% endif %}
+                        12月{% if 12 in registered_months %}（登録済み）{% endif %}
                     </option>
                 </select>
             </div>
@@ -117,8 +143,15 @@
                     <button
                         type="button"
                         class="btn btn-del touch-control-no-select"
-                        onclick="removeRow(this)">
-                        ✖
+                        onclick="removeRow(this)"
+                        aria-label="{{ p.name }}を削除">
+                        <svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                        </svg>
                     </button>
                 </div>
                 {% endfor %}
@@ -129,38 +162,51 @@
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="食パン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="200" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="食パンを削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="メロンパン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="140" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="メロンパンを削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="クロワッサン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="120" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="クロワッサンを削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="コロネ" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="150" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="コロネを削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="ホットドッグ" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="220" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="ホットドッグを削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
                 </div>
             {% endif %}
             </div>
-            <button type="button" class="btn btn-add touch-control-no-select" onclick="addRow()">＋ 新メニューを追加する</button>
+            <button type="button" class="btn btn-add touch-control-no-select" onclick="addRow()">
+                <svg class="ui-icon ui-icon-control" data-icon="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                </svg>
+                <span>新メニューを追加する</span>
+            </button>
         </div>
 
-        <button type="submit" class="btn btn-submit btn-menu-register touch-control-no-select">🚀 この内容で今月のメニューを登録する</button>
+        <button type="submit" class="btn btn-submit btn-menu-register touch-control-no-select">
+            <svg class="ui-icon ui-icon-control" data-icon="save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path>
+                <path d="M7 3v4a1 1 0 0 0 1 1h7"></path>
+            </svg>
+            <span>この内容で今月のメニューを登録する</span>
+        </button>
     </form>
 </div>
 
@@ -174,7 +220,7 @@
             <input type="hidden" name="product_id" value="">
             <input type="text" name="prod_name" class="input-name" placeholder="新商品名" maxlength="100" required>
             <input type="number" name="prod_price" class="input-price" placeholder="単価" min="0" max="1000000" required>
-            <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
+            <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)" aria-label="この商品行を削除"><svg class="ui-icon ui-icon-control" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
         `;
         container.appendChild(div);
     }
@@ -184,19 +230,15 @@
         row.parentElement.removeChild(row);
     }
 
-    const yearSelect = document.getElementById("year-select");
     const monthSelect = document.getElementById("month-select");
 
     function loadMaster() {
-
-        const year = yearSelect.value;
         const month = monthSelect.value;
 
         window.location.href =
-            `/?year=${year}&month=${month}`;
+            `/?month=${month}`;
     }
 
-    yearSelect.addEventListener("change", loadMaster);
     monthSelect.addEventListener("change", loadMaster);
 
 </script>

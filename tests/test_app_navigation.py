@@ -113,7 +113,7 @@ def _assert_app_navigation(document, active_page, user_label):
     assert user_label in sidebar.get_text()
     brand = sidebar.select_one("a.app-sidebar-brand")
     assert brand is not None
-    assert brand.get_text(" ", strip=True) == "sales_data_app"
+    assert brand.get_text(" ", strip=True) == "Bakery Hub"
     assert "🍞" not in brand.get_text()
     assert "touch-control-no-select" in brand.get("class", [])
     _assert_inline_icon(brand, "wheat")
@@ -311,7 +311,8 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
     assert (
         'const tapBubbleSelector = '
         '".app-navigation-open-button, .app-navigation-close-button, '
-        '.shop-tools-fab";'
+        '.shop-tools-fab, .app-sidebar-link, .app-sidebar-brand, '
+        '.app-sidebar-logout-button, .app-sidebar-login-link";'
     ) in navigation_source
     assert 'document.addEventListener("pointerdown"' in navigation_source
     assert "tapBubbleButton.classList.remove(tapBubbleClass)" in (
@@ -326,6 +327,9 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
     assert "setInterval" not in navigation_source
 
     assert "@keyframes shop-tool-button-bubble" in style_source
+    assert "@keyframes app-sidebar-link-shimmer" in style_source
+    assert ".app-sidebar-link.is-tap-bubbling::after" in style_source
+    assert "--tap-bubble-color: rgba(111, 77, 40, 0.9);" in style_source
     assert ".app-navigation-open-button::after" in style_source
     assert ".app-navigation-close-button::after" in style_source
     assert ".shop-tools-fab::after" in style_source
@@ -343,7 +347,6 @@ def test_mobile_primary_buttons_use_replayable_tap_bubble_animation():
         (
             "/",
             [
-                "#year-select",
                 "#month-select",
                 ".btn-del",
                 ".btn-add",

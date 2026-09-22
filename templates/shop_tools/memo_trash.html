@@ -5,12 +5,26 @@
 {% block tool_header_class %} shop-tools-header-mobile-hidden{% endblock %}
 
 {% block tool_heading %}
-<span aria-hidden="true">🗑️</span> メモのゴミ箱
+<svg class="ui-icon ui-icon-page-heading" data-icon="trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<path d="M3 6h18"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+</svg>
+<span>メモのゴミ箱</span>
 {% endblock %}
 
 {% block content %}
     {% if error %}
-    <div class="shop-memos-error" role="alert">⚠️ {{ error }}</div>
+    <div class="shop-memos-error ui-icon-layout" role="alert">
+        <svg class="ui-icon ui-icon-status" data-icon="triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+            <path d="M12 9v4"></path>
+            <path d="M12 17h.01"></path>
+</svg>
+        <span>{{ error }}</span>
+    </div>
     {% endif %}
 
     {% with messages = get_flashed_messages(category_filter=['success']) %}
