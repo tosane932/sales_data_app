@@ -26,14 +26,14 @@
 
 <button
     type="button"
-    class="app-navigation-overlay"
+    class="app-navigation-overlay touch-control-no-select"
     aria-label="主要メニューを閉じる"
     hidden>
 </button>
 
 <aside id="app-sidebar" class="app-sidebar" aria-label="アプリメニュー">
     <div class="app-sidebar-header">
-        <a href="{{ url_for('index') }}" class="app-sidebar-brand">
+        <a href="{{ url_for('index') }}" class="app-sidebar-brand touch-control-no-select">
             <span aria-hidden="true">🍞</span>
             <span>sales_data_app</span>
         </a>
@@ -49,7 +49,7 @@
         <a
             href="{{ url_for('index') }}"
             data-page="products"
-            class="app-sidebar-link app-sidebar-link-products{% if active_app_page == 'products' %} app-sidebar-link-current{% endif %}"
+            class="app-sidebar-link app-sidebar-link-products touch-control-no-select{% if active_app_page == 'products' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'products' %}aria-current="page"{% endif %}>
             <span class="app-sidebar-icon" aria-hidden="true">🥐</span>
             <span>商品・メニュー登録</span>
@@ -57,7 +57,7 @@
         <a
             href="{{ url_for('input_sales') }}"
             data-page="sales"
-            class="app-sidebar-link app-sidebar-link-sales{% if active_app_page == 'sales' %} app-sidebar-link-current{% endif %}"
+            class="app-sidebar-link app-sidebar-link-sales touch-control-no-select{% if active_app_page == 'sales' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'sales' %}aria-current="page"{% endif %}>
             <span class="app-sidebar-icon" aria-hidden="true">📝</span>
             <span>日次売上入力</span>
@@ -65,7 +65,7 @@
         <a
             href="{{ url_for('dashboard') }}"
             data-page="dashboard"
-            class="app-sidebar-link app-sidebar-link-dashboard{% if active_app_page == 'dashboard' %} app-sidebar-link-current{% endif %}"
+            class="app-sidebar-link app-sidebar-link-dashboard touch-control-no-select{% if active_app_page == 'dashboard' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'dashboard' %}aria-current="page"{% endif %}>
             <span class="app-sidebar-icon" aria-hidden="true">📊</span>
             <span>売上データ分析</span>
@@ -73,7 +73,7 @@
         <a
             href="{{ url_for('material_orders.list_items') }}"
             data-page="shop-tools"
-            class="app-sidebar-link app-sidebar-link-shop-tools{% if active_app_page == 'shop-tools' %} app-sidebar-link-current{% endif %}"
+            class="app-sidebar-link app-sidebar-link-shop-tools touch-control-no-select{% if active_app_page == 'shop-tools' %} app-sidebar-link-current{% endif %}"
             {% if active_app_page == 'shop-tools' %}aria-current="page"{% endif %}>
             <span class="app-sidebar-icon" aria-hidden="true">🧰</span>
             <span>店舗メモツール</span>
@@ -88,13 +88,13 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button
                 type="submit"
-                class="btn app-sidebar-logout-button{% if current_user.is_guest %} touch-control-no-select{% endif %}">
+                class="btn app-sidebar-logout-button touch-control-no-select">
                 <span aria-hidden="true">🚪</span>
                 {% if current_user.is_guest %}ゲストを終了する{% else %}ログアウト{% endif %}
             </button>
         </form>
         {% if current_user.is_guest %}
-        <a href="{{ url_for('login') }}" class="app-sidebar-login-link">
+        <a href="{{ url_for('login') }}" class="app-sidebar-login-link touch-control-no-select">
             <span class="app-sidebar-login-title">
                 <span aria-hidden="true">🔐</span> ログイン画面に戻る
             </span>

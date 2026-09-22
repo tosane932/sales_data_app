@@ -7,7 +7,7 @@
     <div class="shop-memo-search-input-wrap">
         <button
             type="submit"
-            class="shop-memo-search-icon-button"
+            class="shop-memo-search-icon-button touch-control-no-select"
             aria-label="検索">
             <svg
                 data-icon="search"
@@ -36,7 +36,7 @@
         <button
             id="memo-search-clear"
             type="button"
-            class="shop-memo-search-clear"
+            class="shop-memo-search-clear touch-control-no-select"
             aria-label="検索文字をすべて消す"
             data-clear-url="{{ clear_url }}"
             {% if not search_query %}hidden{% endif %}>

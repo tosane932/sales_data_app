@@ -32,7 +32,7 @@
 
         <button
             type="button"
-            class="btn-greeting"
+            class="btn-greeting touch-control-no-select"
             id="greetingButton"
             onclick="loadGreeting()"
         >
@@ -95,13 +95,13 @@
                 {% endfor %}
             </div>
 
-            <button type="submit" class="btn-submit">
+            <button type="submit" class="btn-submit touch-control-no-select">
                 💾 本日の売上個数を更新する
             </button>
 
             <a
                 href="{{ url_for('dashboard') }}"
-                class="btn-submit btn-dashboard-link"
+                class="btn-submit btn-dashboard-link touch-control-no-select"
             >
                 📊 お店の健康診断書（売上分析・ランキング）を見る
             </a>
@@ -117,7 +117,7 @@
 
     <a
         href="{{ url_for('index') }}"
-        class="input-home-link"
+        class="input-home-link touch-control-no-select"
     >
         🍞 トップページに戻る
     </a>

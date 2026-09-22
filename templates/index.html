@@ -35,7 +35,7 @@
         <div class="section">
             <div class="section-title">① 作成する年月を選択してください</div>
             <div class="select-group">
-                <select name="year" id="year-select">
+                <select name="year" id="year-select" class="touch-control-no-select">
                     {% for year_option in year_options %}
                     <option value="{{ year_option }}"
                         {% if selected_year == year_option %}selected{% endif %}>
@@ -43,7 +43,7 @@
                     </option>
                     {% endfor %}
                 </select>
-                <select name="month" id="month-select">
+                <select name="month" id="month-select" class="touch-control-no-select">
                     <option value="1" {% if selected_month == 1 %}selected{% endif %}>
                         1月{% if 1 in registered_months %} ✅{% endif %}
                     </option>
@@ -116,7 +116,7 @@
 
                     <button
                         type="button"
-                        class="btn btn-del"
+                        class="btn btn-del touch-control-no-select"
                         onclick="removeRow(this)">
                         ✖
                     </button>
@@ -129,38 +129,38 @@
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="食パン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="200" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="メロンパン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="140" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="クロワッサン" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="120" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="コロネ" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="150" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
                 </div>
                 <div class="menu-row">
                     <input type="hidden" name="product_id" value="">
                     <input type="text" name="prod_name" class="input-name" value="ホットドッグ" placeholder="商品名" maxlength="100" required>
                     <input type="number" name="prod_price" class="input-price" value="220" placeholder="単価" min="0" max="1000000" required>
-                    <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+                    <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
                 </div>
             {% endif %}
             </div>
-            <button type="button" class="btn btn-add" onclick="addRow()">＋ 新メニューを追加する</button>
+            <button type="button" class="btn btn-add touch-control-no-select" onclick="addRow()">＋ 新メニューを追加する</button>
         </div>
 
-        <button type="submit" class="btn btn-submit btn-menu-register">🚀 この内容で今月のメニューを登録する</button>
+        <button type="submit" class="btn btn-submit btn-menu-register touch-control-no-select">🚀 この内容で今月のメニューを登録する</button>
     </form>
 </div>
 
@@ -174,7 +174,7 @@
             <input type="hidden" name="product_id" value="">
             <input type="text" name="prod_name" class="input-name" placeholder="新商品名" maxlength="100" required>
             <input type="number" name="prod_price" class="input-price" placeholder="単価" min="0" max="1000000" required>
-            <button type="button" class="btn btn-del" onclick="removeRow(this)">✖</button>
+            <button type="button" class="btn btn-del touch-control-no-select" onclick="removeRow(this)">✖</button>
         `;
         container.appendChild(div);
     }

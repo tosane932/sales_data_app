@@ -225,6 +225,78 @@ def test_shop_tool_fabs_share_mobile_no_select_control_class(
     assert "touch-control-no-select" in fab.get("class", [])
 
 
+@pytest.mark.parametrize(
+    ("route", "control_selectors", "content_selectors"),
+    [
+        (
+            "/material-orders",
+            [
+                ".shop-tools-nav-link",
+                ".material-order-add-button",
+                ".shop-tools-fab",
+            ],
+            [
+                ".material-order-field input",
+                ".material-order-field textarea",
+                ".material-order-empty",
+            ],
+        ),
+        (
+            "/shop-tools/memo",
+            [
+                ".shop-tools-nav-link",
+                ".shop-memo-search-icon-button",
+                ".shop-memo-search-clear",
+                ".shop-memo-sort-link",
+                ".shop-memo-trash-link",
+                ".shop-tools-fab",
+            ],
+            [
+                ".shop-memo-field input",
+                ".shop-memo-field textarea",
+                ".shop-memo-empty",
+            ],
+        ),
+        (
+            "/shop-tools/memo/trash",
+            [
+                ".shop-tools-nav-link",
+                ".shop-memo-back-link",
+                ".shop-memo-search-icon-button",
+                ".shop-memo-search-clear",
+            ],
+            [".shop-memo-empty"],
+        ),
+    ],
+)
+def test_shop_tool_actions_disable_selection_without_covering_content(
+    authenticated_client,
+    admin_dataset,
+    route,
+    control_selectors,
+    content_selectors,
+):
+    response = authenticated_client.get(route)
+    document = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+
+    assert response.status_code == 200
+    for selector in control_selectors:
+        controls = document.select(selector)
+        assert controls
+        assert all(
+            "touch-control-no-select" in control.get("class", [])
+            for control in controls
+        )
+
+    for selector in content_selectors:
+        content_elements = document.select(selector)
+        assert content_elements
+        assert all(
+            "touch-control-no-select" not in element.get("class", [])
+            for element in content_elements
+        )
+
+
 def test_shop_tools_templates_keep_autoescape_and_safe_dom_updates():
     template_root = Path(app_module.app.root_path) / "templates"
     template_paths = [

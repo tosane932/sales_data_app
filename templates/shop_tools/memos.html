@@ -37,14 +37,14 @@
             <div class="shop-memo-list-controls">
                 {% set next_sort = 'created' if sort_by == 'updated' else 'updated' %}
                 <a
-                    class="shop-memo-sort-link"
+                    class="shop-memo-sort-link touch-control-no-select"
                     href="{{ url_for('shop_memos.list_memos', sort=next_sort, q=search_query) if search_query else url_for('shop_memos.list_memos', sort=next_sort) }}">
                     {{ '更新日' if sort_by == 'updated' else '作成日' }}
                     <span aria-hidden="true">↓</span>
                 </a>
                 <a
                     href="{{ url_for('shop_memos.list_trash') }}"
-                    class="shop-memo-trash-link"
+                    class="shop-memo-trash-link touch-control-no-select"
                     aria-label="ゴミ箱を開く（{{ trash_count }}件）">
                     <svg
                         data-icon="trash-2"
@@ -120,7 +120,7 @@
                     data-pinned="{{ 'true' if memo.pinned_at else 'false' }}">
                     <button
                         type="button"
-                        class="shop-memo-card-open"
+                        class="shop-memo-card-open touch-control-no-select"
                         data-dialog-id="shop-memo-edit-dialog-{{ memo.id }}"
                         aria-label="「{{ memo.title }}」を編集"
                         aria-haspopup="dialog"
@@ -160,7 +160,7 @@
 
                             <button
                                 type="button"
-                                class="shop-memo-menu-button"
+                                class="shop-memo-menu-button touch-control-no-select"
                                 aria-label="「{{ memo.title }}」の操作"
                                 aria-haspopup="menu"
                                 aria-controls="shop-memo-action-menu"
@@ -193,7 +193,7 @@
                         data-scroll-state="no-scroll">
                         <button
                             type="button"
-                            class="shop-memo-mobile-editor-back"
+                            class="shop-memo-mobile-editor-back touch-control-no-select"
                             aria-label="メモ一覧に戻る">
                             <span aria-hidden="true">←</span>
                         </button>
@@ -203,7 +203,7 @@
                         <h2 id="shop-memo-edit-heading-{{ memo.id }}">メモを編集</h2>
                         <button
                             type="button"
-                            class="shop-memo-dialog-close"
+                            class="shop-memo-dialog-close touch-control-no-select"
                             aria-label="閉じる">×</button>
                     </div>
 
@@ -229,14 +229,14 @@
                                 required>{% if edit_form and edit_form.id == memo.id %}{{ edit_form.body }}{% else %}{{ memo.body }}{% endif %}</textarea>
                         </div>
 
-                        <button type="submit" class="btn shop-memo-save-button">
+                        <button type="submit" class="btn shop-memo-save-button touch-control-no-select">
                             変更を保存
                         </button>
                     </form>
 
                     <div class="shop-memo-autosave-error" role="alert" hidden>
                         <span data-autosave-error-message>保存できませんでした。</span>
-                        <button type="button" class="shop-memo-autosave-retry">
+                        <button type="button" class="shop-memo-autosave-retry touch-control-no-select">
                             再試行
                         </button>
                     </div>
@@ -258,7 +258,7 @@
                 <button
                     type="button"
                     id="shop-memo-menu-edit"
-                    class="shop-memo-action-menu-button"
+                    class="shop-memo-action-menu-button touch-control-no-select"
                     role="menuitem">
                     ✏️ 編集
                 </button>
@@ -270,7 +270,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button
                         type="submit"
-                        class="shop-memo-action-menu-button shop-memo-action-menu-trash"
+                        class="shop-memo-action-menu-button shop-memo-action-menu-trash touch-control-no-select"
                         role="menuitem">
                         <svg
                             data-icon="trash-2"
@@ -315,7 +315,7 @@
                 data-scroll-state="no-scroll">
                 <button
                     type="button"
-                    class="shop-memo-mobile-editor-back"
+                    class="shop-memo-mobile-editor-back touch-control-no-select"
                     aria-label="メモ一覧に戻る">
                     <span aria-hidden="true">←</span>
                 </button>
@@ -326,7 +326,7 @@
                 <button
                     type="button"
                     id="shop-memo-create-close"
-                    class="shop-memo-create-close"
+                    class="shop-memo-create-close touch-control-no-select"
                     aria-label="閉じる">×</button>
             </div>
 
@@ -356,14 +356,14 @@
                         required>{{ form_value }}</textarea>
                 </div>
 
-                <button type="submit" class="btn shop-memo-add-button">
+                <button type="submit" class="btn shop-memo-add-button touch-control-no-select">
                     メモを追加
                 </button>
             </form>
 
             <div class="shop-memo-autosave-error" role="alert" hidden>
                 <span data-autosave-error-message>保存できませんでした。</span>
-                <button type="button" class="shop-memo-autosave-retry">
+                <button type="button" class="shop-memo-autosave-retry touch-control-no-select">
                     再試行
                 </button>
             </div>
@@ -395,7 +395,7 @@
             <div class="shop-memo-mobile-actions-list">
                 <button
                     type="button"
-                    class="shop-memo-mobile-action-pin"
+                    class="shop-memo-mobile-action-pin touch-control-no-select"
                     data-mobile-action="pin">
                     <span class="shop-memo-mobile-action-icon" aria-hidden="true">
                         <svg
@@ -416,7 +416,7 @@
                     </span>
                     <span data-mobile-action-label="pin">ピン留め</span>
                 </button>
-                <button type="button" data-mobile-action="copy">
+                <button type="button" class="touch-control-no-select" data-mobile-action="copy">
                     <span class="shop-memo-mobile-action-icon" aria-hidden="true">
                         <svg
                             data-mobile-action-icon="copy"
@@ -436,7 +436,7 @@
                 </button>
                 <button
                     type="button"
-                    class="shop-memo-mobile-action-trash"
+                    class="shop-memo-mobile-action-trash touch-control-no-select"
                     data-mobile-action="trash">
                     <span class="shop-memo-mobile-action-icon" aria-hidden="true">
                         <svg
@@ -461,7 +461,7 @@
             </div>
             <button
                 type="button"
-                class="shop-memo-mobile-actions-close"
+                class="shop-memo-mobile-actions-close touch-control-no-select"
                 aria-label="操作メニューを閉じる">
                 キャンセル
             </button>
@@ -470,7 +470,7 @@
 
     <div id="shop-memo-snackbar" class="shop-memo-snackbar" role="status" hidden>
         <span id="shop-memo-snackbar-message"></span>
-        <button type="button" id="shop-memo-snackbar-undo">
+        <button type="button" id="shop-memo-snackbar-undo" class="touch-control-no-select">
             元に戻す
         </button>
     </div>

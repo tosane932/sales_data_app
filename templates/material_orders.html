@@ -78,16 +78,16 @@
                     <form method="POST" action="{{ url_for('material_orders.set_completion', item_id=item.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="completed" value="1">
-                        <button type="submit" class="btn material-order-complete-button">
+                        <button type="submit" class="btn material-order-complete-button touch-control-no-select">
                             完了にする
                         </button>
                     </form>
                     <details class="material-order-delete-confirmation">
-                        <summary>削除</summary>
+                        <summary class="touch-control-no-select">削除</summary>
                         <p>この材料を削除しますか？</p>
                         <form method="POST" action="{{ url_for('material_orders.delete_item', item_id=item.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn material-order-delete-button">
+                            <button type="submit" class="btn material-order-delete-button touch-control-no-select">
                                 本当に削除する
                             </button>
                         </form>
@@ -120,16 +120,16 @@
                     <form method="POST" action="{{ url_for('material_orders.set_completion', item_id=item.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="completed" value="0">
-                        <button type="submit" class="btn material-order-reopen-button">
+                        <button type="submit" class="btn material-order-reopen-button touch-control-no-select">
                             未完了に戻す
                         </button>
                     </form>
                     <details class="material-order-delete-confirmation">
-                        <summary>削除</summary>
+                        <summary class="touch-control-no-select">削除</summary>
                         <p>この材料を削除しますか？</p>
                         <form method="POST" action="{{ url_for('material_orders.delete_item', item_id=item.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn material-order-delete-button">
+                            <button type="submit" class="btn material-order-delete-button touch-control-no-select">
                                 本当に削除する
                             </button>
                         </form>
