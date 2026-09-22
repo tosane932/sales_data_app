@@ -11,7 +11,12 @@
 {% include "_app_navigation.html" %}
 
 <div class="container">
-    <div class="icon">✅</div>
+    <div class="icon">
+        <svg class="ui-icon ui-icon-status" data-icon="circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<circle cx="12" cy="12" r="10"></circle>
+                <path d="m16 9-5.5 5.5L8 12"></path>
+</svg>
+    </div>
     <h1>今月のメニュー登録が完了しました</h1>
 
     <div class="info-box">
@@ -21,15 +26,32 @@
 
     <div class="actions">
         <a href="{{ url_for('index') }}" class="btn btn-home touch-control-no-select">
-            🍞 トップページに戻る
+            <svg class="ui-icon ui-icon-control" data-icon="house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+</svg>
+            <span>トップページに戻る</span>
         </a>
 
         <a href="{{ url_for('input_sales') }}" class="btn btn-input touch-control-no-select">
-            📝 日次売上を入力する
+            <svg class="ui-icon ui-icon-control" data-icon="clipboard-pen-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<rect width="8" height="4" x="8" y="2" rx="1"></rect>
+                    <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-.5"></path>
+                    <path d="M16 4h2a2 2 0 0 1 1.73 1"></path>
+                    <path d="M8 18h1"></path>
+                    <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path>
+</svg>
+            <span>日次売上を入力する</span>
         </a>
 
         <a href="{{ url_for('dashboard') }}" class="btn btn-dashboard touch-control-no-select">
-            📊 お店の健康診断書を見る
+            <svg class="ui-icon ui-icon-control" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+                    <path d="M18 17V9"></path>
+                    <path d="M13 17V5"></path>
+                    <path d="M8 17v-3"></path>
+</svg>
+            <span>お店の健康診断書を見る</span>
         </a>
     </div>
 </div>

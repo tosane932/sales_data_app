@@ -51,6 +51,20 @@ def _guest_csrf_token(client):
     return csrf_input["value"]
 
 
+def _admin_login_csrf_token(client):
+    response = client.get("/login")
+    assert response.status_code == 200
+
+    document = _document(response)
+    csrf_input = document.select_one(
+        'form#admin-login-form input[name="csrf_token"]'
+    )
+
+    assert csrf_input is not None
+    assert csrf_input.get("value")
+    return csrf_input["value"]
+
+
 def _tamper_csrf_token(token):
     replacement = "A" if token[0] != "A" else "B"
     return replacement + token[1:]
@@ -74,6 +88,37 @@ def test_login_page_contains_separate_csrf_protected_guest_start_form(client):
     assert admin_form.find_parent("form") is None
     assert guest_form.find_parent("form") is None
     assert document.select("form form") == []
+
+
+def test_logged_in_guest_sees_return_link_instead_of_new_guest_start(
+    flask_app,
+):
+    dataset = _create_guest_dataset(active=True)
+    db.session.commit()
+
+    guest_client = flask_app.test_client()
+    with guest_client.session_transaction() as session_data:
+        session_data["_user_id"] = f"guest:{dataset.id}"
+        session_data["_fresh"] = True
+
+    response = guest_client.get("/login")
+    document = _document(response)
+
+    return_link = document.select_one("#guest-demo-return")
+
+    assert response.status_code == 200
+    assert return_link is not None
+    assert return_link.get("href") == "/"
+    assert return_link.get_text(strip=True) == "ゲストデモに戻る"
+    assert "ゲストデモを利用中です。" in document.get_text(
+        " ", strip=True
+    )
+
+    assert document.select_one("#guest-demo-form") is None
+    assert document.select_one("#guest-demo-start") is None
+
+    # 管理者へ切り替える導線は残す
+    assert document.select_one("#admin-login-form") is not None
 
 
 def test_login_capacity_counts_only_active_guest_and_enables_start_button(
@@ -428,7 +473,7 @@ def test_authenticated_guest_cannot_replace_identity_or_consume_rate(client):
     with client.session_transaction() as session_data:
         session_data["_user_id"] = f"guest:{guest_dataset.id}"
         session_data["_fresh"] = True
-    csrf_token = _guest_csrf_token(client)
+    csrf_token = _admin_login_csrf_token(client)
 
     response = client.post(
         "/guest/start",

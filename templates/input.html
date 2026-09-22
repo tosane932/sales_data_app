@@ -10,7 +10,16 @@
 <body class="input-page app-shell-page">
 {% include "_app_navigation.html" %}
 <div class="container">
-    <h1>📝 日次売上入力</h1>
+    <h1>
+        <svg class="ui-icon ui-icon-page-heading" data-icon="clipboard-pen-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <rect width="8" height="4" x="8" y="2" rx="1"></rect>
+            <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-.5"></path>
+            <path d="M16 4h2a2 2 0 0 1 1.73 1"></path>
+            <path d="M8 18h1"></path>
+            <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path>
+        </svg>
+        <span>日次売上入力</span>
+    </h1>
     <p
         class="sales-input-guidance"
         style="margin: -12px 0 20px; color: #786b60; font-size: 14px; line-height: 1.6;"
@@ -18,16 +27,43 @@
         ※本日の累計販売数を入力してください。入力済みの数値は上書きされます。
     </p>
 
-    <div class="date-display">
-        📅 {{ today.month }}月{{ today.day }}日（{{ ['月','火','水','木','金','土','日'][today.weekday()] }}曜日）
+    <div class="date-display ui-icon-layout">
+        <svg class="ui-icon ui-icon-status" data-icon="calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M8 2v3"></path>
+            <path d="M16 2v3"></path>
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M3 9h18"></path>
+            <path d="M8 13h.01"></path>
+            <path d="M12 13h.01"></path>
+            <path d="M16 13h.01"></path>
+            <path d="M8 17h.01"></path>
+            <path d="M12 17h.01"></path>
+            <path d="M16 17h.01"></path>
+        </svg>
+        <span>{{ today.month }}月{{ today.day }}日（{{ ['月','火','水','木','金','土','日'][today.weekday()] }}曜日）</span>
     </div>
 
     <div class="ai-greeting">
-        <div class="ai-greeting-label">🤖 AIアシスタントより</div>
+        <div class="ai-greeting-label ui-icon-layout">
+            <svg class="ui-icon ui-icon-status" data-icon="bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M12 8V4H8"></path>
+                <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                <path d="M2 14h2"></path>
+                <path d="M20 14h2"></path>
+                <path d="M15 13v2"></path>
+                <path d="M9 13v2"></path>
+            </svg>
+            <span>AIアシスタントより</span>
+        </div>
 
-        <div class="ai-greeting-text" id="greetingText">
-            今日も売上入力お疲れさまです。
-            季節に合わせた一言を聞きたい場合は、下のボタンを押してください。
+        <div class="ai-greeting-response">
+            <svg id="greetingStatusIcon" class="ui-icon ui-icon-status" data-icon="loader-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" hidden>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+            </svg>
+            <div class="ai-greeting-text" id="greetingText">
+                今日も売上入力お疲れさまです。
+                季節に合わせた一言を聞きたい場合は、下のボタンを押してください。
+            </div>
         </div>
 
         <button
@@ -36,13 +72,20 @@
             id="greetingButton"
             onclick="loadGreeting()"
         >
-            💬 今日のひとことを聞く
+            <svg class="ui-icon ui-icon-control" data-icon="message-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path>
+            </svg>
+            <span data-greeting-button-label>今日のひとことを聞く</span>
         </button>
     </div>
 
     {% if success %}
-        <div class="success-msg">
-            ✅ 本日の売上個数を更新しました！
+        <div class="success-msg ui-icon-layout">
+            <svg class="ui-icon ui-icon-status" data-icon="circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m16 9-5.5 5.5L8 12"></path>
+            </svg>
+            <span>本日の売上個数を更新しました！</span>
         </div>
     {% endif %}
 
@@ -73,7 +116,8 @@
                             </span>
 
                             <span class="registered-quantity">
-                                🟢 現在の販売数：
+                                <span class="status-dot" aria-hidden="true"></span>
+                                現在の販売数：
                                 {{ today_sales.get(product.id, 0) }}個
                             </span>
                         </div>
@@ -96,14 +140,25 @@
             </div>
 
             <button type="submit" class="btn-submit touch-control-no-select">
-                💾 本日の売上個数を更新する
+                <svg class="ui-icon ui-icon-control" data-icon="save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                    <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path>
+                    <path d="M7 3v4a1 1 0 0 0 1 1h7"></path>
+                </svg>
+                <span>本日の売上個数を更新する</span>
             </button>
 
             <a
                 href="{{ url_for('dashboard') }}"
                 class="btn-submit btn-dashboard-link touch-control-no-select"
             >
-                📊 お店の健康診断書（売上分析・ランキング）を見る
+                <svg class="ui-icon ui-icon-control" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+                    <path d="M18 17V9"></path>
+                    <path d="M13 17V5"></path>
+                    <path d="M8 17v-3"></path>
+                </svg>
+                <span>お店の健康診断書（売上分析・ランキング）を見る</span>
             </a>
         </form>
     {% else %}
@@ -119,7 +174,11 @@
         href="{{ url_for('index') }}"
         class="input-home-link touch-control-no-select"
     >
-        🍞 トップページに戻る
+        <svg class="ui-icon ui-icon-control" data-icon="house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        </svg>
+        <span>トップページに戻る</span>
     </a>
 </div>
 
@@ -137,10 +196,17 @@
     function loadGreeting() {
         const greetingText = document.getElementById('greetingText');
         const greetingButton = document.getElementById('greetingButton');
+        const greetingButtonLabel = greetingButton.querySelector(
+            '[data-greeting-button-label]'
+        );
+        const greetingStatusIcon = document.getElementById(
+            'greetingStatusIcon'
+        );
 
-        greetingText.textContent = '🌀 今日のひとことを考え中です...';
+        greetingText.textContent = '今日のひとことを考え中です...';
+        greetingStatusIcon.hidden = false;
         greetingButton.disabled = true;
-        greetingButton.textContent = '考え中...';
+        greetingButtonLabel.textContent = '考え中...';
 
         fetch('/api/greeting', {
             method: 'POST',
@@ -164,8 +230,9 @@
                     '今日はAIアシスタントが休憩中です。本日もお疲れさまです！';
             })
             .finally(() => {
+                greetingStatusIcon.hidden = true;
                 greetingButton.disabled = false;
-                greetingButton.textContent = '💬 もう一度ひとことを聞く';
+                greetingButtonLabel.textContent = 'もう一度ひとことを聞く';
             });
     }
 </script>

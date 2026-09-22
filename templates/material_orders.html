@@ -5,14 +5,24 @@
 {% block tool_header_class %} shop-tools-header-mobile-hidden{% endblock %}
 
 {% block tool_heading %}
-<span aria-hidden="true">🛒</span> 材料発注リスト
+<svg class="ui-icon ui-icon-page-heading" data-icon="shopping-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<circle cx="8" cy="21" r="1"></circle>
+                <circle cx="19" cy="21" r="1"></circle>
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h8.78a2 2 0 0 0 1.95-1.57L21 8H5.12"></path>
+</svg>
+<span>材料発注リスト</span>
 {% endblock %}
 
 {% block content %}
 
     {% if error %}
-    <div class="material-orders-error" role="alert">
-        ⚠️ {{ error }}
+    <div class="material-orders-error ui-icon-layout" role="alert">
+        <svg class="ui-icon ui-icon-status" data-icon="triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+            <path d="M12 9v4"></path>
+            <path d="M12 17h.01"></path>
+</svg>
+        <span>{{ error }}</span>
     </div>
     {% endif %}
 
@@ -107,7 +117,13 @@
         <div class="material-order-list">
             {% for item in completed_items %}
             <article class="material-order-card material-order-card-completed">
-                <div class="material-order-state">☑ 完了済み</div>
+                <div class="material-order-state ui-icon-layout">
+                    <svg class="ui-icon ui-icon-status" data-icon="circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+<circle cx="12" cy="12" r="10"></circle>
+                <path d="m16 9-5.5 5.5L8 12"></path>
+</svg>
+                    <span>完了済み</span>
+                </div>
                 <h3>{{ item.name }}</h3>
                 {% if item.quantity_text %}
                 <p class="material-order-quantity">数量・単位：{{ item.quantity_text }}</p>

@@ -2246,6 +2246,7 @@ body.app-shell-page {
 .app-sidebar-nav {
     display: flex;
     min-height: 0;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 10px;
     overflow-y: auto;
@@ -2309,6 +2310,7 @@ body.app-shell-page {
 
 .app-sidebar-session {
     display: flex;
+    flex: 0 0 auto;
     align-items: stretch;
     flex-direction: column;
     gap: 10px;
@@ -4014,4 +4016,529 @@ body.app-shell-page {
         height: 40px;
         font-size: 20px;
     }
+}
+
+
+/* ===== 共通 Lucide UI icons ===== */
+
+.ui-icon {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.15em;
+    pointer-events: none;
+}
+
+.ui-icon[hidden] {
+    display: none;
+}
+
+.ui-icon-layout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ui-icon-page-heading {
+    width: 1.15em;
+    height: 1.15em;
+}
+
+.ui-icon-section-heading {
+    width: 1.1em;
+    height: 1.1em;
+}
+
+.ui-icon-control {
+    width: 1.15em;
+    height: 1.15em;
+}
+
+.ui-icon-status {
+    width: 1.1em;
+    height: 1.1em;
+}
+
+.status-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    background: #477b59;
+    border-radius: 50%;
+}
+
+.input-page .ai-greeting-response,
+.dashboard-ai-response {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.dashboard-ai-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 30px;
+    padding: 25px;
+    background: #fff9e6;
+    border: 1px solid #f3d9b1;
+    border-radius: 12px;
+    line-height: 1.8;
+}
+
+.dashboard-ai-watermark {
+    position: absolute;
+    right: 10px;
+    bottom: -10px;
+    width: 70px;
+    height: 70px;
+    opacity: 0.05;
+    pointer-events: none;
+    user-select: none;
+}
+
+.dashboard-ai-card #aiAdviceText {
+    margin: 0;
+    color: #4a3c31;
+    font-size: 16px;
+    font-weight: bold;
+    white-space: pre-line;
+}
+
+.success-page .icon .ui-icon {
+    width: 1em;
+    height: 1em;
+}
+
+.login-page .login-edition-title > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.shop-tools-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+/* ===== ページタイトル category accent ===== */
+
+.app-shell-page.product-page {
+    --page-title-accent: #9a641f;
+    --page-title-soft: #f6efe6;
+}
+
+.app-shell-page.input-page {
+    --page-title-accent: #477b59;
+    --page-title-soft: #edf4ef;
+}
+
+.app-shell-page.dashboard-page {
+    --page-title-accent: #bc4848;
+    --page-title-soft: #faeded;
+}
+
+.app-shell-page.product-page .container > h1,
+.app-shell-page.input-page .container > h1,
+.app-shell-page.dashboard-page .container > h1 {
+    margin-bottom: 26px;
+    padding: 16px 18px;
+
+    background: var(--page-title-soft);
+    color: var(--page-title-accent);
+
+    border-bottom: 0;
+    border-radius: 12px;
+}
+
+
+/* ===== sidebar main / tools divider ===== */
+
+.app-sidebar-nav-divider {
+    height: 1px;
+    margin: 10px 8px 12px;
+
+    background: #e6e1da;
+}
+
+
+/* ===== semantic SVG accent colors ===== */
+
+/* ランキングだけ、視線の目印になる落ち着いた金色 */
+.dashboard-page svg[data-icon="trophy"] {
+    color: #d6a300;
+}
+
+/* AIを示すBotは、🤖に近いニュートラルなグレー */
+.input-page svg[data-icon="bot"],
+.dashboard-page svg[data-icon="bot"] {
+    color: #6f7478;
+}
+
+
+/* ===== dashboard compact filter / chart accent ===== */
+
+/* 商品グラフはDashboardカテゴリのいちご色 */
+.dashboard-page #sales-chart-heading svg[data-icon="chart-column"] {
+    color: #bc4848;
+}
+
+.dashboard-page .dashboard-filter-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-page .dashboard-period {
+    margin: 18px 0 22px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-page .filter-box {
+        margin-bottom: 18px;
+        padding: 12px;
+    }
+
+    .dashboard-page .dashboard-filter-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .dashboard-page .dashboard-filter-label {
+        display: none;
+    }
+
+    .dashboard-page .dashboard-filter-form select {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .dashboard-page .dashboard-filter-form .btn-submit {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .dashboard-page .filter-box small {
+        display: block;
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .dashboard-page .dashboard-period {
+        gap: 6px;
+        margin: 14px 0 18px;
+        font-size: 14px;
+    }
+}
+
+
+/* ===== product current year display ===== */
+
+.product-page .registration-year {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0 4px;
+
+    color: #6e543c;
+
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+
+/* ===== navigation touch light polish ===== */
+
+/* 商品登録：月選択は画面幅を取りすぎない */
+.product-page #month-select {
+    width: 50%;
+    max-width: 180px;
+    min-width: 0;
+}
+
+
+/* サイドメニューを流れる白い光 */
+@keyframes app-sidebar-link-shimmer {
+    0% {
+        opacity: 0;
+        transform: translateX(-160%) skewX(-18deg);
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(420%) skewX(-18deg);
+    }
+}
+
+
+@media (max-width: 900px) {
+
+    /*
+     * 閉じるボタンは明るい背景なので、
+     * 白ではなく茶色のやわらかい波紋を使う
+     */
+    .app-navigation-close-button {
+        --tap-bubble-color: rgba(111, 77, 40, 0.9);
+        --tap-bubble-start-scale: 0.25;
+        --tap-bubble-end-scale: 1.5;
+        --tap-bubble-opacity: 0.22;
+        --tap-bubble-duration: 280ms;
+    }
+
+    /*
+     * カテゴリボタンは現在の右移動を残し、
+     * タッチ時だけ白い光を左から右へ流す
+     */
+    .app-sidebar-link {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+    }
+
+    .app-sidebar-link::after {
+        position: absolute;
+        z-index: 0;
+        top: -30%;
+        bottom: -30%;
+        left: -40%;
+        width: 32%;
+
+        content: "";
+        pointer-events: none;
+
+        background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0.48),
+            rgba(255, 255, 255, 0)
+        );
+
+        opacity: 0;
+        transform: translateX(-160%) skewX(-18deg);
+    }
+
+    .app-sidebar-link > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .app-sidebar-link.is-tap-bubbling::after {
+        animation: app-sidebar-link-shimmer 360ms ease-out;
+    }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    .app-sidebar-link::after {
+        animation: none !important;
+    }
+}
+
+
+/* ===== compact keep-like sidebar polish ===== */
+
+/* ブランドの麦は既存のゴールドを使用 */
+.app-sidebar-brand-icon svg {
+    color: #d6a300;
+}
+
+
+/* ブランド・ログアウト・ログインにもタッチ感を与える */
+.app-sidebar-brand,
+.app-sidebar-logout-button,
+.app-sidebar-login-link {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.app-sidebar-brand > *,
+.app-sidebar-logout-button > *,
+.app-sidebar-login-link > * {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* 明るい背景向け：薄い茶色の光 */
+.app-sidebar-brand::after,
+.app-sidebar-login-link::after {
+    position: absolute;
+    z-index: 0;
+    top: -35%;
+    bottom: -35%;
+    left: -45%;
+    width: 34%;
+
+    content: "";
+    pointer-events: none;
+
+    background: linear-gradient(
+        90deg,
+        rgba(111, 77, 40, 0),
+        rgba(111, 77, 40, 0.16),
+        rgba(111, 77, 40, 0)
+    );
+
+    opacity: 0;
+    transform: translateX(-160%) skewX(-18deg);
+}
+
+
+/* 暗いログアウトボタン向け：白い光 */
+.app-sidebar-logout-button::after {
+    position: absolute;
+    z-index: 0;
+    top: -35%;
+    bottom: -35%;
+    left: -45%;
+    width: 34%;
+
+    content: "";
+    pointer-events: none;
+
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.42),
+        rgba(255, 255, 255, 0)
+    );
+
+    opacity: 0;
+    transform: translateX(-160%) skewX(-18deg);
+}
+
+
+.app-sidebar-brand.is-tap-bubbling::after,
+.app-sidebar-login-link.is-tap-bubbling::after,
+.app-sidebar-logout-button.is-tap-bubbling::after {
+    animation: app-sidebar-link-shimmer 360ms ease-out;
+}
+
+
+@media (max-width: 900px) {
+
+    /*
+     * Keepのように、少し細めのパネルを
+     * ゆっくり滑らせて出す
+     */
+    .app-sidebar {
+        width: min(286px, 78vw);
+        padding: 16px;
+
+        transition:
+            transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /*
+     * メニューを少しコンパクト化。
+     * 右移動4pxの余白は残す。
+     */
+    .app-sidebar-nav {
+        gap: 8px;
+        padding-right: 10px;
+    }
+
+    .app-sidebar-link {
+        min-height: 46px;
+        gap: 9px;
+        padding: 8px 10px;
+
+        font-size: 14px;
+    }
+
+    .app-sidebar-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .app-sidebar-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /*
+     * 上部ブランドも少し詰めて、
+     * メニュー全体を軽く見せる
+     */
+    .app-sidebar-header {
+        margin-bottom: 18px;
+    }
+
+    .app-sidebar-brand {
+        min-height: 44px;
+        padding: 0 5px;
+
+        border-radius: 8px;
+
+        transition:
+            background-color 140ms ease,
+            transform 140ms ease;
+    }
+
+    .app-sidebar-brand:active {
+        background: rgba(154, 100, 31, 0.08);
+    }
+
+    .app-sidebar-logout-button:active,
+    .app-sidebar-login-link:active {
+        transform: scale(0.98);
+    }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    .app-sidebar {
+        transition: none;
+    }
+
+    .app-sidebar-brand::after,
+    .app-sidebar-login-link::after,
+    .app-sidebar-logout-button::after {
+        animation: none !important;
+    }
+}
+
+
+/* ===== active guest return link ===== */
+
+.login-page .guest-demo-active-message {
+    margin-bottom: 6px;
+    color: #8c7e72;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.login-page .guest-demo-return-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    text-decoration: none;
+}
+
+.login-page .guest-demo-return-link:active {
+    transform: scale(0.98);
+}
+
+
+/* ===== Bakery Hub branding ===== */
+
+.login-page .login-edition-label {
+    font-size: 20px;
+    font-weight: 700;
 }

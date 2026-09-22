@@ -70,7 +70,7 @@
                     <path d="M19.47 9.47 21 11l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L13 11l1.53-1.53a3.5 3.5 0 0 1 4.94 0Z"></path>
                 </svg>
             </span>
-            <span>sales_data_app</span>
+            <span>Bakery Hub</span>
         </a>
         <button
             type="button"
@@ -170,6 +170,9 @@
             </span>
             <span>売上データ分析</span>
         </a>
+
+        <div class="app-sidebar-nav-divider" aria-hidden="true"></div>
+
         <a
             href="{{ url_for('material_orders.list_items') }}"
             data-page="shop-tools"
@@ -258,9 +261,12 @@
         const reducedMotion = window.matchMedia(
             "(prefers-reduced-motion: reduce)"
         );
-        const tapBubbleSelector = ".app-navigation-open-button, .app-navigation-close-button, .shop-tools-fab";
+        const tapBubbleSelector = ".app-navigation-open-button, .app-navigation-close-button, .shop-tools-fab, .app-sidebar-link, .app-sidebar-brand, .app-sidebar-logout-button, .app-sidebar-login-link";
         const tapBubbleClass = "is-tap-bubbling";
-        const tapBubbleAnimationName = "shop-tool-button-bubble";
+        const tapBubbleAnimationNames = new Set([
+            "shop-tool-button-bubble",
+            "app-sidebar-link-shimmer",
+        ]);
 
         if (!openButton || !closeButton || !overlay || !sidebar) {
             return;
@@ -333,7 +339,7 @@
 
         document.addEventListener("animationend", event => {
             if (
-                event.animationName !== tapBubbleAnimationName
+                !tapBubbleAnimationNames.has(event.animationName)
                 || !(event.target instanceof Element)
                 || !event.target.matches(tapBubbleSelector)
             ) {
