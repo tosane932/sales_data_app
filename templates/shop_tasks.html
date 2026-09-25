@@ -1,0 +1,295 @@
+{% extends "shop_tools/base.html" %}
+
+{% block title %}タスク | 店舗メモツール{% endblock %}
+
+{% block tool_header_class %} shop-tools-header-mobile-hidden{% endblock %}
+
+{% block tool_heading %}
+<span class="shop-tools-heading-icon" aria-hidden="true">
+    <svg data-icon="list-todo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+        <rect x="3" y="5" width="6" height="6" rx="1"></rect>
+        <path d="m3 17 2 2 4-4"></path>
+        <path d="M13 6h8"></path>
+        <path d="M13 12h8"></path>
+        <path d="M13 18h8"></path>
+    </svg>
+</span>
+<span>タスク</span>
+{% endblock %}
+
+{% macro task_card(task) %}
+<article
+    class="shop-task-card{% if task.is_completed %} shop-task-card-completed{% endif %}"
+    data-task-id="{{ task.id }}"
+    data-task-title="{{ task.title }}"
+    data-task-completed="{{ 'true' if task.is_completed else 'false' }}"
+    data-task-starred="{{ 'true' if task.is_starred else 'false' }}"
+    data-task-position="{{ task.position }}"
+    data-completion-url="{{ url_for('shop_tasks.set_completion', task_id=task.id) }}"
+    data-edit-url="{{ url_for('shop_tasks.edit_task', task_id=task.id) }}"
+    data-favorite-url="{{ url_for('shop_tasks.set_favorite', task_id=task.id) }}">
+    <span
+        class="shop-task-reorder-handle"
+        aria-hidden="true">
+        <svg
+            data-icon="menu"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            focusable="false"
+            aria-hidden="true">
+            <path d="M5 7h14"></path>
+            <path d="M5 12h14"></path>
+            <path d="M5 17h14"></path>
+        </svg>
+    </span>
+
+    <form class="shop-task-completion-form" method="POST" action="{{ url_for('shop_tasks.set_completion', task_id=task.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="completed" value="{{ '0' if task.is_completed else '1' }}">
+        <button
+            type="submit"
+            class="shop-task-toggle touch-control-no-select"
+            aria-label="「{{ task.title }}」を{{ '未完了に戻す' if task.is_completed else '完了にする' }}"
+            aria-pressed="{{ 'true' if task.is_completed else 'false' }}">
+            <svg class="shop-task-icon-incomplete" data-icon="square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"{% if task.is_completed %} hidden{% endif %}>
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+            </svg>
+            <svg class="shop-task-icon-completed" data-icon="square-check-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"{% if not task.is_completed %} hidden{% endif %}>
+                <path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"></path>
+                <path d="m9 11 3 3L22 4"></path>
+            </svg>
+        </button>
+    </form>
+
+    <div
+        class="shop-task-edit-trigger"
+        role="button"
+        tabindex="0"
+        aria-label="「{{ task.title }}」を編集">
+        <span
+            class="shop-task-title"
+            contenteditable="false"
+            spellcheck="false">{{ task.title }}</span>
+    </div>
+    <form class="shop-task-inline-edit" method="POST" action="{{ url_for('shop_tasks.edit_task', task_id=task.id) }}" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="visually-hidden" for="shop-task-edit-{{ task.id }}">タスク名</label>
+        <input id="shop-task-edit-{{ task.id }}" name="title" type="text" value="{{ task.title }}" maxlength="100" required>
+        <button type="submit" class="shop-task-edit-save touch-control-no-select" aria-label="編集内容を保存">保存</button>
+        <button type="button" class="shop-task-edit-cancel touch-control-no-select">キャンセル</button>
+    </form>
+
+    <form class="shop-task-favorite-form" method="POST" action="{{ url_for('shop_tasks.set_favorite', task_id=task.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="starred" value="{{ '0' if task.is_starred else '1' }}">
+        <button
+            type="submit"
+            class="shop-task-star touch-control-no-select{% if task.is_starred %} is-starred{% endif %}"
+            aria-label="「{{ task.title }}」を{{ 'お気に入りから外す' if task.is_starred else 'お気に入りにする' }}"
+            aria-pressed="{{ 'true' if task.is_starred else 'false' }}">
+            <svg data-icon="star" viewBox="0 0 24 24" fill="{% if task.is_starred %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.164.75a.53.53 0 0 1 .294.904l-3.736 3.64a2.12 2.12 0 0 0-.61 1.878l.882 5.142a.53.53 0 0 1-.769.559l-4.618-2.428a2.12 2.12 0 0 0-1.974 0l-4.618 2.428a.53.53 0 0 1-.77-.559l.883-5.142a2.12 2.12 0 0 0-.61-1.878l-3.736-3.64a.53.53 0 0 1 .294-.904l5.164-.75a2.12 2.12 0 0 0 1.595-1.16z"></path>
+            </svg>
+        </button>
+    </form>
+
+    <button
+        type="button"
+        class="shop-task-selection-control touch-control-no-select"
+        aria-label="「{{ task.title }}」を選択"
+        aria-pressed="false"
+        hidden>
+        <svg class="shop-task-selection-off" data-icon="circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" focusable="false" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+        </svg>
+        <svg class="shop-task-selection-on" data-icon="circle-check-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" hidden>
+            <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+            <path d="m9 11 3 3L22 4"></path>
+        </svg>
+    </button>
+</article>
+{% endmacro %}
+
+{% block content %}
+{% if error %}
+<div class="shop-tasks-error" role="alert">
+    <svg data-icon="triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+        <path d="M12 9v4"></path>
+        <path d="M12 17h.01"></path>
+    </svg>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<noscript>
+<section class="shop-task-create-section" aria-labelledby="task-create-heading">
+    <h2 id="task-create-heading">タスクを追加</h2>
+    <form method="POST" action="{{ url_for('shop_tasks.create_task') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="shop-task-title">タスク名</label>
+        <div class="shop-task-create-row">
+            <input id="shop-task-title" name="title" type="text" value="{{ title_value }}" maxlength="100" autocomplete="off" required>
+            <button type="submit" class="btn shop-task-add-button touch-control-no-select">
+                <svg data-icon="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                </svg>
+                <span>追加</span>
+            </button>
+        </div>
+    </form>
+</section>
+</noscript>
+
+<div
+    class="shop-task-list-root"
+    data-task-list-root
+    data-create-url="{{ url_for('shop_tasks.create_task') }}"
+    data-csrf-token="{{ csrf_token() }}"
+    data-reorder-url="{{ url_for('shop_tasks.reorder_tasks') }}"
+    data-bulk-delete-url="{{ url_for('shop_tasks.bulk_delete_tasks') }}">
+    <div class="shop-task-list-toolbar">
+        <span class="shop-task-mobile-title">タスク</span>
+        <span data-task-total-count>{{ incomplete_tasks|length + completed_tasks|length }}件</span>
+        <details class="shop-task-more-menu">
+            <summary class="touch-control-no-select" aria-label="タスクメニュー" aria-haspopup="menu">
+                <svg data-icon="ellipsis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1"></circle>
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="19" cy="12" r="1"></circle>
+                </svg>
+            </summary>
+            <div class="shop-task-more-panel" role="menu">
+                <button type="button" class="touch-control-no-select" data-task-start-selection role="menuitem">タスクを選択</button>
+                <form method="POST" action="{{ url_for('shop_tasks.delete_completed_tasks') }}" data-task-clear-completed>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="touch-control-no-select" role="menuitem"{% if not completed_tasks %} disabled{% endif %}>完了済みをすべて削除</button>
+                </form>
+            </div>
+        </details>
+    </div>
+
+    <div class="shop-task-selection-toolbar" data-task-selection-toolbar hidden>
+        <button
+            type="button"
+            class="shop-task-selection-cancel touch-control-no-select"
+            data-task-selection-cancel
+            aria-label="選択をキャンセル">
+            <svg
+                data-icon="x"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+            </svg>
+        </button>
+
+        <strong data-task-selection-count>アイテムを選択</strong>
+
+        <button
+            type="button"
+            class="shop-task-select-all touch-control-no-select"
+            data-task-select-all
+            aria-label="すべて選択"
+            aria-pressed="false">
+            <svg
+                data-icon="list-checks"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <path d="m3 6 1 1 2-2"></path>
+                <path d="m3 12 1 1 2-2"></path>
+                <path d="m3 18 1 1 2-2"></path>
+                <path d="M9 6h12"></path>
+                <path d="M9 12h12"></path>
+                <path d="M9 18h12"></path>
+            </svg>
+        </button>
+
+        <button
+            type="button"
+            class="shop-task-bulk-delete touch-control-no-select"
+            data-task-bulk-delete
+            aria-label="選択したタスクを削除"
+            disabled>
+            <svg
+                data-icon="trash-2"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                focusable="false"
+                aria-hidden="true">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+            </svg>
+        </button>
+    </div>
+
+    <section class="shop-task-list-section" aria-labelledby="incomplete-tasks-heading">
+        <h2 id="incomplete-tasks-heading">未完了 <span data-task-incomplete-count>{{ incomplete_tasks|length }}</span>件</h2>
+        <div class="shop-task-list" data-task-list="incomplete">
+            {% for task in incomplete_tasks %}{{ task_card(task) }}{% endfor %}
+        </div>
+        <p class="shop-task-group-empty" data-task-incomplete-empty{% if incomplete_tasks %} hidden{% endif %}>未完了のタスクはありません。</p>
+    </section>
+
+    <details class="shop-task-completed-group" data-task-completed-group open{% if not completed_tasks %} hidden{% endif %}>
+        <summary class="touch-control-no-select">
+            <span>完了 <span data-task-completed-count>{{ completed_tasks|length }}</span></span>
+            <svg data-icon="chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+                <path d="m6 9 6 6 6-6"></path>
+            </svg>
+        </summary>
+        <div class="shop-task-list" data-task-list="completed">
+            {% for task in completed_tasks %}{{ task_card(task) }}{% endfor %}
+        </div>
+        <p class="shop-task-group-empty" data-task-completed-empty{% if completed_tasks %} hidden{% endif %}>完了済みのタスクはありません。</p>
+    </details>
+
+    <div class="shop-task-empty" data-task-empty{% if incomplete_tasks or completed_tasks %} hidden{% endif %}>
+        <strong>タスクはまだありません</strong>
+        <span>追加ボタンから登録できます。</span>
+    </div>
+</div>
+
+<div class="shop-task-snackbar" data-task-snackbar role="status" aria-live="polite" hidden>
+    <span data-task-snackbar-message></span>
+    <button type="button" class="touch-control-no-select" data-task-snackbar-undo hidden>元に戻す</button>
+</div>
+{% endblock %}
+
+{% block floating_action %}
+<div class="shop-tools-fab-group">
+    <button type="button" class="shop-tools-fab touch-control-no-select" aria-label="タスクを追加" aria-controls="shop-task-title">
+        <svg data-icon="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+        </svg>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='shop_tasks.js') }}"></script>
+{% endblock %}

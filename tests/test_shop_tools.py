@@ -119,7 +119,7 @@ def test_anonymous_user_cannot_open_shop_tools(client, route):
     assert response.headers["Location"].startswith("/login?")
 
 
-def test_future_tools_are_explicit_read_only_placeholders(
+def test_tasks_tool_exposes_writable_checklist_ui_with_existing_svg_language(
     authenticated_client,
     admin_dataset,
 ):
@@ -128,26 +128,19 @@ def test_future_tools_are_explicit_read_only_placeholders(
 
     assert response.status_code == 200
     assert document.select_one("h1").get_text(strip=True).endswith("タスク")
-    assert "準備中" in document.get_text()
-    assert document.select_one("main form") is None
+    assert "準備中" not in document.get_text()
+    assert document.select_one(
+        'form[action="/shop-tools/tasks"] input[name="title"]'
+    ) is not None
 
     header_icon = document.select_one(
         '.shop-tools-header svg[data-icon="list-todo"]'
     )
-    placeholder_icon = document.select_one(
-        '.shop-tools-placeholder-icon svg[data-icon="list-todo"]'
-    )
-    orders_link = document.select_one(".shop-tools-placeholder-link")
     assert header_icon is not None
-    assert placeholder_icon is not None
-    assert orders_link.select_one(
-        'svg[data-icon="shopping-cart"]'
-    ) is not None
-    assert orders_link.get_text(" ", strip=True) == "発注リストを開く"
-    assert "✅" not in document.select_one(
-        ".shop-tools-placeholder"
-    ).get_text()
-    assert "🛒" not in orders_link.get_text()
+    add_button = document.select_one(".shop-task-add-button")
+    assert add_button.select_one('svg[data-icon="plus"]') is not None
+    assert add_button.get_text(" ", strip=True) == "追加"
+    assert "✅" not in document.get_text()
 
 
 @pytest.mark.parametrize(
@@ -155,7 +148,7 @@ def test_future_tools_are_explicit_read_only_placeholders(
     [
         ("/shop-tools/memo/trash", ".shop-memo-back-link"),
         ("/material-orders", ".material-order-create-section"),
-        ("/shop-tools/tasks", ".shop-tools-placeholder"),
+        ("/shop-tools/tasks", ".shop-task-list-root"),
     ],
 )
 def test_secondary_shop_tools_hide_duplicate_header_only_on_mobile(
@@ -210,7 +203,10 @@ def test_material_orders_shell_keeps_visible_form_and_plus_only_accessible_fab(
     assert document.select_one(".shop-tools-fab-label") is None
 
 
-@pytest.mark.parametrize("route", ["/material-orders", "/shop-tools/memo"])
+@pytest.mark.parametrize(
+    "route",
+    ["/material-orders", "/shop-tools/memo", "/shop-tools/tasks"],
+)
 def test_shop_tool_fabs_share_mobile_no_select_control_class(
     authenticated_client,
     admin_dataset,
@@ -267,6 +263,18 @@ def test_shop_tool_fabs_share_mobile_no_select_control_class(
             ],
             [".shop-memo-empty"],
         ),
+        (
+            "/shop-tools/tasks",
+            [
+                ".shop-tools-nav-link",
+                ".shop-task-add-button",
+                ".shop-tools-fab",
+            ],
+            [
+                ".shop-task-create-row input",
+                ".shop-task-empty",
+            ],
+        ),
     ],
 )
 def test_shop_tool_actions_disable_selection_without_covering_content(
@@ -305,7 +313,7 @@ def test_shop_tools_templates_keep_autoescape_and_safe_dom_updates():
         template_root / "shop_tools" / "memos.html",
         template_root / "shop_tools" / "memo_trash.html",
         template_root / "shop_tools" / "_memo_search.html",
-        template_root / "shop_tools" / "placeholder.html",
+        template_root / "shop_tasks.html",
     ]
 
     for template_path in template_paths:
@@ -322,4 +330,5 @@ def test_shop_tools_css_preserves_tap_targets_and_keyboard_focus():
     assert ".shop-tools-nav-link" in css_source
     assert "min-height: 48px" in css_source
     assert ".shop-memo-body a:focus-visible" in css_source
+    assert ".shop-task-toggle:focus-visible" in css_source
     assert ":focus-visible" in css_source

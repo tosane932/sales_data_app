@@ -27,7 +27,7 @@
     {% endif %}
 
     <section class="material-order-create-section" aria-labelledby="material-create-heading">
-        <h2 id="material-create-heading">材料をリストに追加</h2>
+        <h2 id="material-create-heading"><span class="material-order-compact-heading">発注材料をリストに追加</span></h2>
         <form method="POST" action="{{ url_for('material_orders.create_item') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 

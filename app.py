@@ -39,6 +39,7 @@ from models import (
     GuestCreationRateLimit,
     MaterialOrderItem,
     ShopMemo,
+    ShopTask,
     Product,
     DailySales,
 )
@@ -46,7 +47,7 @@ from google import genai
 from material_orders import create_material_orders_blueprint
 from prompts import build_sales_prompt
 from shop_memos import create_shop_memos_blueprint
-from shop_tools import create_shop_tools_blueprint
+from shop_tasks import create_shop_tasks_blueprint
 
 
 def _load_direct_run_environment(dotenv_path=None):
@@ -301,6 +302,9 @@ def _cleanup_expired_guest_datasets(*, now=None):
     ShopMemo.query.filter(
         ShopMemo.dataset_id.in_(expired_dataset_ids)
     ).delete(synchronize_session=False)
+    ShopTask.query.filter(
+        ShopTask.dataset_id.in_(expired_dataset_ids)
+    ).delete(synchronize_session=False)
 
     product_ids = [
         row[0]
@@ -478,8 +482,9 @@ app.register_blueprint(
     )
 )
 app.register_blueprint(
-    create_shop_tools_blueprint(
+    create_shop_tasks_blueprint(
         access_required=admin_or_guest_required,
+        resolve_dataset=require_current_dataset,
     )
 )
 

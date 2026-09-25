@@ -538,7 +538,6 @@ select {
 .shop-tools-main-menu-link:focus-visible,
 .shop-tools-nav-link:focus-visible,
 .shop-tools-fab:focus-visible,
-.shop-tools-placeholder-link:focus-visible,
 .shop-memo-search-clear:focus-visible,
 .shop-memo-search-button:focus-visible,
 .shop-memo-trash-link:focus-visible,
@@ -548,6 +547,8 @@ select {
 .shop-memo-actions summary:focus-visible,
 .material-order-actions button:focus-visible,
 .material-order-delete-confirmation summary:focus-visible,
+.shop-task-add-button:focus-visible,
+.shop-task-toggle:focus-visible,
 .shop-tools-header .logout-button:focus-visible {
     outline: 3px solid #174b2a;
     outline-offset: 3px;
@@ -593,66 +594,10 @@ select {
     touch-action: manipulation;
 }
 
-.shop-tools-placeholder {
-    padding: 42px 24px;
-    text-align: center;
-    background: #f8fbf8;
-    border: 1px solid #dfe8df;
-    border-radius: 14px;
-}
-
-.shop-tools-placeholder-icon {
-    display: inline-flex;
-    width: 38px;
-    height: 38px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-    color: #527f66;
-}
-
-.shop-tools-placeholder-icon svg {
-    width: 34px;
-    height: 34px;
-}
-
-.shop-tools-placeholder h2 {
-    margin: 0 0 12px;
-    color: #405b49;
-}
-
-.shop-tools-placeholder p {
-    margin: 0 auto 24px;
-    color: #5f6b62;
-    line-height: 1.7;
-}
-
-.shop-tools-placeholder-link {
-    display: inline-flex;
-    min-height: 48px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 18px;
-    box-sizing: border-box;
-    color: #ffffff;
-    background: #527f66;
-    border-radius: 9px;
-    font-weight: bold;
-    text-decoration: none;
-}
-
-.shop-tools-placeholder-link-icon {
-    display: inline-flex;
-    width: 20px;
-    height: 20px;
-    align-items: center;
-    justify-content: center;
-}
-
-.shop-tools-placeholder-link-icon svg {
-    width: 20px;
-    height: 20px;
+.shop-tools-fab svg {
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
 }
 
 /* ========================================
@@ -835,6 +780,572 @@ select {
 .material-order-empty {
     margin: 0;
     color: #6d746e;
+}
+
+/* ========================================
+   店舗タスク
+======================================== */
+
+.shop-tasks-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 14px;
+    color: #872c2c;
+    background: #fff0f0;
+    border: 1px solid #efb8b8;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.shop-tasks-error svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+}
+
+.shop-task-create-section {
+    margin-bottom: 14px;
+    padding: 16px;
+    background: #fbfdfb;
+    border: 1px solid #dfe8df;
+    border-radius: 12px;
+}
+
+.shop-task-create-section label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+.shop-task-create-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.shop-task-create-row input {
+    min-width: 0;
+    min-height: 48px;
+    flex: 1;
+    box-sizing: border-box;
+    padding: 12px;
+    color: #4a3c31;
+    background: #ffffff;
+    border: 1px solid #aebfb1;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.shop-task-create-row input:focus {
+    border-color: #527f66;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(82, 127, 102, 0.16);
+}
+
+.shop-task-add-button {
+    min-width: 96px;
+    min-height: 48px;
+    color: #ffffff;
+    background: #527f66;
+    font-size: 16px;
+}
+
+.shop-task-add-button svg {
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.shop-task-list-root {
+    margin-bottom: 72px;
+}
+
+.shop-task-list-toolbar,
+.shop-task-selection-toolbar {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.shop-task-list-toolbar {
+    justify-content: space-between;
+    color: #66736a;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.shop-task-more-menu {
+    position: relative;
+}
+
+.shop-task-more-menu summary,
+.shop-task-selection-toolbar button {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    color: #405b49;
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.shop-task-more-menu summary {
+    list-style: none;
+}
+
+.shop-task-more-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.shop-task-more-menu summary:hover,
+.shop-task-more-menu summary:active,
+.shop-task-selection-toolbar button:hover,
+.shop-task-selection-toolbar button:active {
+    background: #edf4ef;
+}
+
+.shop-task-more-menu summary svg {
+    width: 24px;
+    height: 24px;
+}
+
+.shop-task-more-panel {
+    position: absolute;
+    z-index: 8;
+    top: calc(100% + 4px);
+    right: 0;
+    width: max-content;
+    min-width: 210px;
+    padding: 6px;
+    background: #ffffff;
+    border: 1px solid #d7e3d9;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(39, 63, 47, 0.16);
+}
+
+.shop-task-more-panel form {
+    margin: 0;
+}
+
+.shop-task-more-panel button {
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 12px;
+    color: #405b49;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.shop-task-more-panel button:hover,
+.shop-task-more-panel button:active {
+    background: #edf4ef;
+}
+
+.shop-task-more-panel button:disabled {
+    color: #9aa39d;
+    cursor: default;
+}
+
+.shop-task-selection-toolbar {
+    position: sticky;
+    z-index: 7;
+    top: 8px;
+    padding: 6px 8px;
+    background: #f4f8f5;
+    border: 1px solid #cfddd2;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(39, 63, 47, 0.1);
+}
+
+.shop-task-selection-toolbar strong {
+    min-width: 76px;
+    margin-right: auto;
+    color: #2f5a3d;
+    font-size: 14px;
+}
+
+.shop-task-selection-toolbar .shop-task-bulk-delete {
+    color: #8a3030;
+}
+
+.shop-task-selection-toolbar button:disabled {
+    color: #9aa39d;
+    cursor: default;
+}
+
+.shop-task-list-section {
+    margin-bottom: 10px;
+}
+
+.shop-task-list-section h2 {
+    margin: 0 0 6px;
+    font-size: 15px;
+}
+
+.shop-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.shop-task-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 4px;
+    min-height: 50px;
+    padding: 3px 4px;
+    background: #ffffff;
+    border: 1px solid transparent;
+    border-bottom-color: #e1e8e2;
+    border-radius: 8px;
+    transition:
+        transform 120ms ease-out,
+        background-color 120ms ease-out,
+        border-color 120ms ease-out,
+        box-shadow 120ms ease-out;
+    touch-action: pan-y;
+}
+
+.shop-task-card form {
+    margin: 0;
+}
+
+.shop-task-card.is-pressing {
+    transform: scale(0.975);
+}
+
+.shop-task-card.is-reordering {
+    z-index: 3;
+    background: #f6fbf7;
+    border-color: #9bb9a3;
+    box-shadow: 0 5px 14px rgba(39, 63, 47, 0.18);
+    transform: scale(0.985);
+}
+
+.shop-task-card.is-selected {
+    background: #edf6ef;
+    border-color: #94b79c;
+}
+
+.shop-task-toggle {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #527f66;
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.shop-task-toggle:hover,
+.shop-task-toggle:active {
+    background: #edf4ef;
+}
+
+.shop-task-toggle svg {
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+}
+
+.shop-task-edit-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    align-items: center;
+    padding: 5px 4px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.shop-task-edit-trigger:hover,
+.shop-task-edit-trigger:active {
+    background: #f1f6f2;
+}
+
+.shop-task-title {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.shop-task-card-completed {
+    color: #69716b;
+    background: #f5f6f5;
+}
+
+.shop-task-card-completed .shop-task-title {
+    text-decoration: line-through;
+}
+
+.shop-task-star,
+.shop-task-selection-control {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #748078;
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    cursor: pointer;
+}
+
+.shop-task-star:hover,
+.shop-task-star:active,
+.shop-task-selection-control:hover,
+.shop-task-selection-control:active {
+    background: #edf4ef;
+}
+
+.shop-task-star.is-starred {
+    color: #b47a09;
+}
+
+.shop-task-star svg,
+.shop-task-selection-control svg {
+    width: 23px;
+    height: 23px;
+    pointer-events: none;
+}
+
+.shop-task-inline-edit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 5px;
+}
+
+.shop-task-inline-edit[hidden] {
+    display: none;
+}
+
+.shop-task-inline-edit input {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border: 1px solid #91ad98;
+    border-radius: 7px;
+    font: inherit;
+}
+
+.shop-task-inline-edit button {
+    min-height: 40px;
+    padding: 6px 8px;
+    color: #355e43;
+    background: #edf4ef;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.shop-task-completed-group {
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid #dfe8df;
+}
+
+.shop-task-completed-group > summary {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px;
+    color: #5e6b62;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    list-style: none;
+    cursor: pointer;
+}
+
+.shop-task-completed-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.shop-task-completed-group > summary:hover,
+.shop-task-completed-group > summary:active {
+    background: #edf4ef;
+}
+
+.shop-task-completed-group > summary svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 140ms ease-out;
+}
+
+.shop-task-completed-group[open] > summary svg {
+    transform: rotate(180deg);
+}
+
+.shop-task-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 18px;
+    color: #5f6b62;
+    background: #fbfdfb;
+    border: 1px solid #dfe8df;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.shop-task-empty[hidden] {
+    display: none;
+}
+
+.shop-task-group-empty {
+    margin: 6px 4px 0;
+    color: #6d746e;
+    font-size: 14px;
+}
+
+.shop-task-snackbar {
+    position: fixed;
+    z-index: 30;
+    right: 16px;
+    bottom: calc(106px + env(safe-area-inset-bottom));
+    left: 16px;
+    display: flex;
+    width: min(480px, calc(100% - 32px));
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 10px 12px 10px 16px;
+    color: #ffffff;
+    background: #34473b;
+    border-radius: 10px;
+    box-shadow: 0 7px 20px rgba(31, 47, 37, 0.24);
+}
+
+.shop-task-snackbar[hidden] {
+    display: none;
+}
+
+.shop-task-snackbar button {
+    min-height: 40px;
+    padding: 6px 10px;
+    color: #d4f0dc;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.is-selection-mode .shop-task-toggle,
+.is-selection-mode .shop-task-favorite-form {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.is-selection-mode .shop-task-edit-trigger {
+    cursor: default;
+}
+
+.shop-task-more-menu summary:focus-visible,
+.shop-task-more-panel button:focus-visible,
+.shop-task-selection-toolbar button:focus-visible,
+.shop-task-edit-trigger:focus-visible,
+.shop-task-inline-edit input:focus-visible,
+.shop-task-inline-edit button:focus-visible,
+.shop-task-star:focus-visible,
+.shop-task-selection-control:focus-visible,
+.shop-task-completed-group > summary:focus-visible,
+.shop-task-snackbar button:focus-visible {
+    outline: 3px solid #174b2a;
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .shop-task-create-row {
+        align-items: center;
+    }
+
+    .shop-task-add-button {
+        min-width: 84px;
+    }
+
+    .shop-task-create-section {
+        padding: 12px;
+    }
+
+    .shop-task-inline-edit {
+        grid-column: 2 / 4;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .shop-task-inline-edit .shop-task-edit-cancel {
+        grid-column: 1 / 3;
+        min-height: 36px;
+    }
+
+    .shop-task-selection-toolbar {
+        gap: 2px;
+        padding: 4px;
+    }
+
+    .shop-task-selection-toolbar button {
+        padding-right: 7px;
+        padding-left: 7px;
+        font-size: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-task-card,
+    .shop-task-completed-group > summary svg {
+        transition: none;
+    }
+
+    .shop-task-card.is-pressing,
+    .shop-task-card.is-reordering {
+        transform: none;
+    }
 }
 
 /* ========================================
@@ -1159,35 +1670,20 @@ select {
         bottom: calc(94px + env(safe-area-inset-bottom));
     }
 
-    .shop-tools-placeholder {
-        padding: 28px 20px;
-    }
-
-    .shop-tools-placeholder-icon {
-        width: 34px;
-        height: 34px;
-        margin-bottom: 8px;
-    }
-
-    .shop-tools-placeholder-icon svg {
-        width: 32px;
-        height: 32px;
-    }
-
-    .shop-tools-placeholder h2 {
-        margin-bottom: 10px;
-    }
-
-    .shop-tools-placeholder p {
-        margin-bottom: 18px;
-    }
-
     .material-order-create-section,
     .material-order-list-section,
     .shop-memo-search-form,
     .shop-memo-create-section,
     .shop-memo-list-section {
         padding: 16px;
+    }
+
+    .shop-task-create-section {
+        padding: 12px;
+    }
+
+    .shop-task-list-section {
+        padding: 0;
     }
 
     .material-order-card {
@@ -4541,4 +5037,1698 @@ body.app-shell-page {
 .login-page .login-edition-label {
     font-size: 20px;
     font-weight: 700;
+}
+
+/* Task: hidden 属性を author CSS より優先する */
+.shop-task-selection-toolbar[hidden],
+.shop-task-selection-control[hidden],
+.shop-task-selection-control svg[hidden],
+.shop-task-snackbar[hidden],
+.shop-task-inline-edit[hidden] {
+    display: none !important;
+}
+
+/* === Task UI cleanup === */
+
+/* hidden の完了 / 未完了 SVG が同時表示されないよう強制 */
+.shop-task-icon-incomplete[hidden],
+.shop-task-icon-completed[hidden] {
+    display: none !important;
+}
+
+/* 通常一覧ではお気に入り操作を表示しない */
+.shop-task-favorite-form,
+.shop-task-star {
+    display: none !important;
+}
+
+/* 通常時は「チェック + Task本文」だけ */
+.shop-task-card {
+    position: relative;
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-height: 44px;
+    gap: 0;
+    padding: 0 2px;
+    border-radius: 0;
+}
+
+/* 一覧を詰めて、複数Taskを一目で見られるようにする */
+.shop-task-list {
+    gap: 0;
+}
+
+.shop-task-toggle,
+.shop-task-edit-trigger {
+    min-height: 44px;
+}
+
+/* 総件数だけの1行は通常画面では不要 */
+.shop-task-list-toolbar {
+    justify-content: flex-end;
+    min-height: 44px;
+}
+
+[data-task-total-count] {
+    display: none;
+}
+
+/* 選択○は通常時には絶対表示しない */
+.shop-task-selection-control[hidden] {
+    display: none !important;
+}
+
+/* === Task UI cleanup 2 === */
+
+/* 通常時と選択時でカード高さを変えない */
+.shop-task-card {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    min-height: 54px;
+    padding: 3px 4px;
+    border-radius: 8px;
+}
+
+.shop-task-toggle,
+.shop-task-edit-trigger,
+.shop-task-selection-control {
+    min-height: 48px;
+}
+
+/* 選択○は常に右端の同じ列へ */
+.shop-task-selection-control {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+/* === Task UI cleanup 3 === */
+
+/*
+ * 追加フォームは通常画面から消す。
+ * FABを押した時だけ画面下部へコンパクトに表示する。
+ */
+.shop-task-create-section {
+    display: none;
+}
+
+.shop-task-create-section.is-open {
+    position: fixed;
+    z-index: 90;
+    right: 12px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    left: 12px;
+    display: block;
+    margin: 0;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid #cfdcd2;
+    border-radius: 14px;
+    box-shadow: 0 6px 24px rgba(28, 45, 34, 0.22);
+}
+
+/* 「タスクを追加」「タスク名」は表示せず入力だけにする */
+.shop-task-create-section h2,
+.shop-task-create-section > form > label {
+    display: none;
+}
+
+.shop-task-create-section.is-open .shop-task-create-row {
+    gap: 8px;
+}
+
+.shop-task-create-section.is-open .shop-task-create-row input {
+    min-height: 48px;
+}
+
+body.shop-task-composer-open .shop-tools-fab-group {
+    visibility: hidden;
+}
+
+
+/*
+ * 長押し選択バーは通常レイアウトから完全に外す。
+ * 出現してもTask一覧を上下へ動かさない。
+ */
+@media (max-width: 700px) {
+    .shop-task-selection-toolbar:not([hidden]) {
+        position: fixed;
+        z-index: 95;
+        top: 10px;
+        right: 10px;
+        left: 78px;
+        width: auto;
+        margin: 0;
+        min-height: 52px;
+        box-sizing: border-box;
+    }
+}
+
+
+/*
+ * 編集時もカードの高さを変えない。
+ * Task本文だけをその場でinputへ置き換える。
+ */
+.shop-task-card {
+    position: relative;
+}
+
+.shop-task-inline-edit:not([hidden]) {
+    position: absolute;
+    z-index: 5;
+    top: 3px;
+    right: 48px;
+    bottom: 3px;
+    left: 48px;
+    display: block;
+    margin: 0;
+}
+
+.shop-task-inline-edit:not([hidden]) input {
+    width: 100%;
+    height: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    padding: 6px 8px;
+}
+
+/* スマホで「保存」「キャンセル」をカード内に増殖させない */
+.shop-task-inline-edit:not([hidden]) .shop-task-edit-save,
+.shop-task-inline-edit:not([hidden]) .shop-task-edit-cancel {
+    display: none;
+}
+
+/* 選択モードへ移行してもカード寸法は変えない */
+.is-selection-mode .shop-task-card {
+    min-height: 54px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+/* === Task completion checkbox state fix === */
+
+/* 基本は未完了：空のチェックボックス */
+.shop-task-toggle::before {
+    background: transparent !important;
+}
+
+.shop-task-toggle::after {
+    display: none !important;
+}
+
+/* 完了したTaskだけチェック状態 */
+.shop-task-card[data-task-completed="true"] .shop-task-toggle::before {
+    background: #5c8a70 !important;
+}
+
+.shop-task-card[data-task-completed="true"] .shop-task-toggle::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block !important;
+    width: 6px;
+    height: 11px;
+    content: "";
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: translate(-50%, -60%) rotate(45deg);
+}
+
+/* === Task direct text editing === */
+
+.shop-task-mobile-title {
+    margin: 8px 4px 18px;
+    color: #405b49;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* 古い別編集フォームはUIとして使わない */
+.shop-task-inline-edit {
+    display: none !important;
+}
+
+/* 表示時と編集時で位置・大きさを変えない */
+.shop-task-edit-trigger {
+    min-width: 0;
+}
+
+.shop-task-title[contenteditable="true"] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    caret-color: #355e43;
+    cursor: text;
+}
+
+/* 編集中であることは、ごく薄い下線だけで示す */
+.shop-task-title[contenteditable="true"]:focus {
+    box-shadow: inset 0 -1px 0 #8eaa96;
+}
+
+/* === Task motion polish === */
+
+/* 「タスク」と … を同じ1行にする */
+@media (max-width: 700px) {
+    .shop-task-list-toolbar {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between !important;
+        min-height: 42px;
+        margin-bottom: 6px;
+        padding: 0 4px;
+    }
+
+    .shop-task-mobile-title {
+        display: inline-flex !important;
+        margin: 0 !important;
+        padding: 0;
+        color: #405b49;
+        font-size: 15px !important;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .shop-task-more-menu {
+        margin-left: auto;
+    }
+}
+
+
+/*
+ * checkboxは擬似要素ではなく、
+ * HTMLにもともとある square / square-check-big SVG を使う。
+ */
+.shop-task-toggle::before,
+.shop-task-toggle::after {
+    display: none !important;
+    content: none !important;
+}
+
+.shop-task-toggle .shop-task-icon-incomplete,
+.shop-task-toggle .shop-task-icon-completed {
+    display: block !important;
+    width: 24px;
+    height: 24px;
+    color: #5c8a70;
+}
+
+.shop-task-toggle .shop-task-icon-incomplete[hidden],
+.shop-task-toggle .shop-task-icon-completed[hidden] {
+    display: none !important;
+}
+
+
+/* 押した瞬間にチェックが少しだけ“入る”感触 */
+.shop-task-card.is-completion-changing
+.shop-task-toggle svg:not([hidden]) {
+    animation: shop-task-check-pop 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes shop-task-check-pop {
+    0% {
+        transform: scale(0.72);
+        opacity: 0.45;
+    }
+
+    65% {
+        transform: scale(1.10);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-task-card.is-completion-changing
+    .shop-task-toggle svg:not([hidden]) {
+        animation: none;
+    }
+}
+
+/* === Task selection polish === */
+
+
+/* 発注ページの見出しもTaskと同程度の主張へ */
+.material-order-compact-heading {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+
+/* Task名は「…」のすぐ左へ、小さく置く */
+@media (max-width: 700px) {
+    .shop-task-list-toolbar {
+        justify-content: flex-end !important;
+        min-height: 30px !important;
+        gap: 6px;
+        margin-bottom: 2px;
+        padding: 0 4px;
+    }
+
+    .shop-task-mobile-title {
+        display: inline-flex !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 14px !important;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .shop-task-more-menu {
+        margin-left: 0 !important;
+    }
+}
+
+
+/*
+ * チェックを確認する時間は短く。
+ * 「チェックした」→すぐ移動、くらいにする。
+ */
+.shop-task-card.is-completion-changing
+.shop-task-toggle svg:not([hidden]) {
+    animation-duration: 120ms !important;
+}
+
+
+/*
+ * 長押し選択：
+ * カード本体には余計な選択色を付けない。
+ */
+.shop-task-card.is-selected {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+
+/*
+ * 選択状態は右端の○だけで示す。
+ * 未選択 ○
+ * 選択   ⦿
+ */
+.shop-task-selection-control {
+    position: relative;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: inherit !important;
+}
+
+.shop-task-selection-control svg {
+    display: none !important;
+}
+
+.shop-task-selection-control::before {
+    display: block;
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    content: "";
+    border: 2px solid #77847c;
+    border-radius: 50%;
+}
+
+.shop-task-selection-control::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: none;
+    width: 9px;
+    height: 9px;
+    content: "";
+    background: #5c8a70;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.shop-task-selection-control[aria-pressed="true"]::after {
+    display: block;
+}
+
+/* === Task selection final visual fix === */
+
+/* 選択してもカード本体の見た目は変えない */
+.shop-task-list-root.is-selection-mode .shop-task-card.is-selected {
+    background: #ffffff !important;
+    border-color: transparent !important;
+    border-bottom-color: #e1e8e2 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* 完了済みカードを選んでも、完了済み本来の色だけ維持 */
+.shop-task-list-root.is-selection-mode
+.shop-task-card-completed.is-selected {
+    background: #f5f6f5 !important;
+}
+
+/* 長押し中に文字範囲をブラウザ選択させない */
+.shop-task-title[contenteditable="false"],
+.shop-task-edit-trigger:not(.is-editing) {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
+/* 直編集のときだけ文字選択を許可 */
+.shop-task-title[contenteditable="true"] {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+}
+
+/* 右端：通常は○ */
+.shop-task-selection-control::before {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    box-sizing: border-box;
+    content: "" !important;
+    background: transparent !important;
+    border: 2px solid #77847c !important;
+    border-radius: 50% !important;
+}
+
+/* 選択されたTaskだけ○の中央に● */
+.shop-task-selection-control::after {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: none !important;
+    width: 9px !important;
+    height: 9px !important;
+    content: "" !important;
+    background: #5c8a70 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/*
+ * ariaではなく、実際に選択管理へ使っている
+ * is-selected を基準にする
+ */
+.shop-task-card.is-selected
+.shop-task-selection-control::after {
+    display: block !important;
+}
+
+.shop-task-card.is-selected
+.shop-task-selection-control::before {
+    border-color: #5c8a70 !important;
+}
+
+/* === Task interaction polish 2 === */
+
+
+/* ----------------------------------------
+   Task見出し：左、…：右
+---------------------------------------- */
+@media (max-width: 700px) {
+    .shop-task-list-toolbar {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between !important;
+        min-height: 34px !important;
+        gap: 8px;
+        margin-bottom: 4px;
+        padding: 0 4px;
+    }
+
+    .shop-task-mobile-title {
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 14px !important;
+        font-weight: 700;
+    }
+
+    .shop-task-more-menu {
+        margin-left: auto !important;
+    }
+}
+
+
+/* ----------------------------------------
+   長押し時のブラウザ文字選択を防ぐ
+---------------------------------------- */
+.shop-task-mobile-title,
+.shop-task-list-toolbar,
+.shop-task-card:not(.is-editing),
+.shop-task-card:not(.is-editing) .shop-task-edit-trigger {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none;
+}
+
+/* 直編集中だけ文字操作を許可 */
+.shop-task-title[contenteditable="true"] {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default;
+}
+
+
+/* ----------------------------------------
+   選択状態
+
+   未選択：白 + ○
+   選択　：薄緑 + ⦿
+
+   枠線や強い影は付けない
+---------------------------------------- */
+.shop-task-list-root.is-selection-mode
+.shop-task-card:not(.is-selected) {
+    background: #ffffff !important;
+    border-color: transparent !important;
+    border-bottom-color: #e1e8e2 !important;
+    box-shadow: none !important;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-card.is-selected {
+    background: #edf6ef !important;
+    border-color: transparent !important;
+    border-bottom-color: #e1e8e2 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+
+/* ----------------------------------------
+   完了チェック
+
+   SVGの表示状態に依存しない。
+   data-task-completed を唯一の基準にする。
+---------------------------------------- */
+.shop-task-toggle {
+    position: relative;
+}
+
+.shop-task-toggle svg {
+    display: none !important;
+}
+
+/* 未完了：□ */
+.shop-task-card .shop-task-toggle::before {
+    display: block !important;
+    width: 22px !important;
+    height: 22px !important;
+    box-sizing: border-box;
+    content: "" !important;
+    background: transparent !important;
+    border: 2px solid #5c8a70 !important;
+    border-radius: 4px !important;
+}
+
+/* 基本はチェックなし */
+.shop-task-card .shop-task-toggle::after {
+    display: none !important;
+    content: "" !important;
+}
+
+/* 完了：☑ */
+.shop-task-card[data-task-completed="true"]
+.shop-task-toggle::before {
+    background: #5c8a70 !important;
+}
+
+/* 完了時は必ず✓を描画 */
+.shop-task-card[data-task-completed="true"]
+.shop-task-toggle::after {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: block !important;
+    content: "✓" !important;
+    color: #ffffff !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    transform: translate(-50%, -53%) !important;
+}
+
+
+/* チェックした瞬間だけ少し弾む */
+.shop-task-card.is-completion-changing
+.shop-task-toggle::before,
+.shop-task-card.is-completion-changing
+.shop-task-toggle::after {
+    animation: shop-task-check-confirm 180ms
+        cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes shop-task-check-confirm {
+    0% {
+        transform: scale(0.82);
+    }
+
+    70% {
+        transform: scale(1.08);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-task-card.is-completion-changing
+    .shop-task-toggle::before,
+    .shop-task-card.is-completion-changing
+    .shop-task-toggle::after {
+        animation: none;
+    }
+}
+
+/* === Task selection state sync === */
+
+/*
+ * 未選択：
+ * ○ + 白
+ */
+.shop-task-list-root.is-selection-mode
+.shop-task-card:not(.is-selected),
+.shop-task-list-root.is-selection-mode
+.shop-task-card:not(.is-selected) .shop-task-edit-trigger {
+    background: #ffffff !important;
+}
+
+/*
+ * 選択：
+ * ⦿ + 薄緑
+ *
+ * ○を直接押した場合でも、
+ * Task本文を押した場合でも同じ見た目にする。
+ */
+.shop-task-list-root.is-selection-mode
+.shop-task-card.is-selected,
+.shop-task-list-root.is-selection-mode
+.shop-task-card.is-selected .shop-task-edit-trigger {
+    background: #edf6ef !important;
+}
+
+/* 選択色以外の余計な強調は付けない */
+.shop-task-list-root.is-selection-mode
+.shop-task-card {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-card.is-selected {
+    border-color: transparent !important;
+    border-bottom-color: #e1e8e2 !important;
+}
+
+/* checkbox列・選択○列はカードの背景をそのまま見せる */
+.shop-task-list-root.is-selection-mode
+.shop-task-card .shop-task-completion-form,
+.shop-task-list-root.is-selection-mode
+.shop-task-card .shop-task-selection-control {
+    background: transparent !important;
+}
+
+/* === Task long-press color flash fix === */
+
+/*
+ * スマホの長押し開始 / 終了時に、
+ * Task本文だけ :active 色が一瞬出るのを防ぐ。
+ *
+ * 背景色は常にカード側で管理する。
+ * 未選択 = 白
+ * 選択   = 薄緑
+ */
+@media (hover: none), (pointer: coarse) {
+    .shop-task-edit-trigger:hover,
+    .shop-task-edit-trigger:active,
+    .shop-task-card.is-pressing .shop-task-edit-trigger,
+    .shop-task-list-root.is-selection-mode
+    .shop-task-card .shop-task-edit-trigger {
+        background: transparent !important;
+    }
+
+    .shop-task-selection-control:hover,
+    .shop-task-selection-control:active {
+        background: transparent !important;
+    }
+}
+
+/* === Task long-press color flash fix === */
+
+/*
+ * スマホの長押し開始 / 終了時に、
+ * Task本文だけ :active 色が一瞬出るのを防ぐ。
+ *
+ * 背景色は常にカード側で管理する。
+ * 未選択 = 白
+ * 選択   = 薄緑
+ */
+@media (hover: none), (pointer: coarse) {
+    .shop-task-edit-trigger:hover,
+    .shop-task-edit-trigger:active,
+    .shop-task-card.is-pressing .shop-task-edit-trigger,
+    .shop-task-list-root.is-selection-mode
+    .shop-task-card .shop-task-edit-trigger {
+        background: transparent !important;
+    }
+
+    .shop-task-selection-control:hover,
+    .shop-task-selection-control:active {
+        background: transparent !important;
+    }
+}
+
+/* === Task completion checkbox canonical fix === */
+
+/*
+ * 既存TaskはSVG、新規Task直後はspan。
+ * どちらも元アイコンは描画せず、チェック表示は疑似要素に一本化する。
+ */
+.shop-task-toggle .shop-task-icon-incomplete,
+.shop-task-toggle .shop-task-icon-completed {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* ボックスは44pxボタンの中央へ固定 */
+.shop-task-toggle::before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: block !important;
+    width: 22px !important;
+    height: 22px !important;
+    box-sizing: border-box !important;
+    content: "" !important;
+    background: transparent !important;
+    border: 2px solid #5c8a70 !important;
+    border-radius: 4px !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* 未完了はチェックなし */
+.shop-task-toggle::after {
+    display: none !important;
+}
+
+/* 完了時の箱 */
+.shop-task-card[data-task-completed="true"] .shop-task-toggle::before {
+    background: #5c8a70 !important;
+}
+
+/* 完了時のチェックを箱の中央へ固定 */
+.shop-task-card[data-task-completed="true"] .shop-task-toggle::after {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: block !important;
+    width: 6px !important;
+    height: 11px !important;
+    content: "" !important;
+    border-right: 2px solid #ffffff !important;
+    border-bottom: 2px solid #ffffff !important;
+    transform: translate(-50%, -60%) rotate(45deg) !important;
+}
+
+/*
+ * 以前の疑似要素アニメーションはtransformを上書きして
+ * チェック位置をずらすため停止する。
+ * Taskが完了済みへ移動する速度・待ち時間には触れない。
+ */
+.shop-task-card.is-completion-changing .shop-task-toggle::before,
+.shop-task-card.is-completion-changing .shop-task-toggle::after {
+    animation: none !important;
+}
+
+/* === Shop tools category color: sidebar blue === */
+
+.shop-tools-page {
+    --shop-tools-accent: #48739c;
+    --shop-tools-accent-soft: rgba(72, 115, 156, 0.12);
+    --shop-tools-accent-focus: rgba(72, 115, 156, 0.22);
+}
+
+/* 店舗メモツール共通のカテゴリ表現 */
+.shop-tools-brand,
+.shop-tools-content h2,
+.shop-task-mobile-title {
+    color: var(--shop-tools-accent);
+}
+
+/* 下部ナビ */
+.shop-tools-nav-link-current {
+    color: var(--shop-tools-accent);
+    box-shadow: inset 0 -3px 0 var(--shop-tools-accent);
+}
+
+/* FAB */
+.shop-tools-fab {
+    background: var(--shop-tools-accent);
+    box-shadow: 0 6px 16px rgba(72, 115, 156, 0.28);
+}
+
+/* 共通フォーカス */
+.shop-tools-main-menu-link:focus-visible,
+.shop-tools-nav-link:focus-visible,
+.shop-tools-fab:focus-visible,
+.shop-memo-search-clear:focus-visible,
+.shop-memo-search-button:focus-visible,
+.shop-memo-trash-link:focus-visible,
+.shop-memo-back-link:focus-visible,
+.shop-memo-body a:focus-visible,
+.shop-memo-actions button:focus-visible,
+.shop-memo-actions summary:focus-visible,
+.material-order-actions button:focus-visible,
+.material-order-delete-confirmation summary:focus-visible,
+.shop-task-add-button:focus-visible,
+.shop-task-toggle:focus-visible,
+.shop-tools-header .logout-button:focus-visible {
+    outline-color: var(--shop-tools-accent);
+}
+
+/*
+ * Taskの完了チェック・選択状態など、
+ * 状態を意味する緑色は変更しない。
+ */
+
+/* === Shop tools category blue: surfaces and primary controls === */
+
+.shop-tools-page {
+    --shop-tools-border: rgba(72, 115, 156, 0.24);
+    --shop-tools-surface: rgba(72, 115, 156, 0.05);
+    --shop-tools-surface-strong: rgba(72, 115, 156, 0.10);
+
+    background: #f4f7fa;
+}
+
+.shop-tools-shell {
+    border-color: var(--shop-tools-border);
+    box-shadow: 0 8px 24px rgba(72, 115, 156, 0.08);
+}
+
+.shop-tools-header {
+    background: #fbfcfe;
+    border-bottom-color: var(--shop-tools-border);
+}
+
+/* スマホ下部ナビ */
+.shop-tools-bottom-nav {
+    background: #edf3f8;
+    border-color: var(--shop-tools-border);
+    box-shadow: 0 8px 24px rgba(72, 115, 156, 0.16);
+}
+
+/* 発注・メモの通常カード/入力エリア */
+.material-order-create-section,
+.material-order-list-section,
+.shop-memo-search-form,
+.shop-memo-create-section,
+.shop-memo-list-section {
+    background: #fbfcfe;
+    border-color: var(--shop-tools-border);
+}
+
+.material-order-card,
+.shop-memo-card {
+    border-color: var(--shop-tools-border);
+}
+
+/* 入力欄の通常枠 */
+.material-order-field input,
+.material-order-field textarea,
+.shop-memo-search-input-wrap input,
+.shop-memo-field input,
+.shop-memo-field textarea,
+.shop-memo-edit input,
+.shop-memo-edit textarea {
+    border-color: #b8c7d5;
+}
+
+/* 入力中 */
+.material-order-field input:focus,
+.material-order-field textarea:focus,
+.shop-memo-search-input-wrap input:focus,
+.shop-memo-field input:focus,
+.shop-memo-field textarea:focus,
+.shop-memo-edit input:focus,
+.shop-memo-edit textarea:focus {
+    border-color: var(--shop-tools-accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--shop-tools-accent-soft);
+}
+
+/* カテゴリとしての主要操作 */
+.material-order-add-button,
+.shop-memo-search-button,
+.shop-memo-add-button,
+.shop-memo-save-button {
+    background: var(--shop-tools-accent);
+    color: #ffffff;
+}
+
+/*
+ * メモ新規作成・編集画面の←
+ * カテゴリナビゲーションなので青へ統一。
+ */
+@media (max-width: 700px) {
+    .shop-memo-mobile-editor-back {
+        color: var(--shop-tools-accent);
+    }
+
+    .shop-memo-mobile-editor-back span[aria-hidden="true"] {
+        background: var(--shop-tools-accent-soft);
+    }
+
+    .shop-memo-mobile-editor-back:hover span[aria-hidden="true"],
+    .shop-memo-mobile-editor-back:active span[aria-hidden="true"],
+    .shop-memo-mobile-editor-back:focus-visible span[aria-hidden="true"] {
+        background: var(--shop-tools-accent-focus);
+    }
+
+    .shop-memo-mobile-editor-back:focus-visible {
+        outline-color: var(--shop-tools-accent);
+    }
+}
+
+/*
+ * 意味を持つ色は維持：
+ * - Task完了・選択 = 緑
+ * - 発注の完了/再開 = 状態色
+ * - 削除・警告 = 赤
+ * - ピン留め = 金
+ */
+
+/* === Memo blue final polish === */
+
+.shop-memo-back-link {
+    color: var(--shop-tools-accent);
+    text-decoration-color: currentColor;
+}
+
+.shop-memo-back-link:hover,
+.shop-memo-back-link:active {
+    color: #3f6790;
+}
+
+.shop-memo-search-input-wrap {
+    background: #ffffff;
+    border-color: rgba(72, 115, 156, 0.35);
+}
+
+.shop-memo-search-input-wrap:focus-within {
+    border-color: var(--shop-tools-accent);
+    box-shadow: 0 0 0 3px var(--shop-tools-accent-soft);
+}
+
+.shop-memo-search-input-wrap svg {
+    color: var(--shop-tools-accent);
+}
+
+.shop-memo-search-input-wrap input {
+    color: #35506f;
+}
+
+.shop-memo-search-input-wrap input::placeholder {
+    color: rgba(72, 115, 156, 0.72);
+}
+
+.shop-memo-search-clear,
+.shop-memo-search-button {
+    color: var(--shop-tools-accent);
+}
+
+/* === Memo controls: category blue === */
+
+.shop-memo-sort-link,
+.shop-memo-trash-link {
+    color: var(--shop-tools-accent);
+}
+
+.shop-memo-sort-link:hover,
+.shop-memo-sort-link:active,
+.shop-memo-trash-link:hover,
+.shop-memo-trash-link:active {
+    color: #3f6790;
+}
+
+/* === Task selection controls: thumb-friendly placement === */
+
+@media (max-width: 700px) {
+    .shop-task-selection-toolbar {
+        position: fixed !important;
+        z-index: 35 !important;
+        right: 12px !important;
+        bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+        left: 12px !important;
+        top: auto !important;
+
+        display: grid !important;
+        grid-template-columns: auto 1fr 1fr 1fr;
+        align-items: center;
+        gap: 6px;
+
+        margin: 0 !important;
+        padding: 8px 10px !important;
+
+        background: #ffffff !important;
+        border: 1px solid var(--shop-tools-border) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 6px 20px rgba(72, 115, 156, 0.18) !important;
+    }
+
+    .shop-task-selection-toolbar[hidden] {
+        display: none !important;
+    }
+
+    .shop-task-selection-toolbar strong {
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .shop-task-selection-toolbar button {
+        min-height: 42px;
+        padding: 6px 8px;
+    }
+}
+
+/* === Task selection UI === */
+
+@media (max-width: 700px) {
+    /* 選択中は通常の「タスク / …」行と入れ替える */
+    .shop-task-list-root.is-selection-mode .shop-task-list-toolbar {
+        display: none !important;
+    }
+
+    .shop-task-selection-toolbar {
+        position: static !important;
+        z-index: auto !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+
+        display: flex !important;
+        min-height: 44px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+
+        margin: 0 4px 8px !important;
+        padding: 0 4px !important;
+
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .shop-task-selection-toolbar[hidden] {
+        display: none !important;
+    }
+
+    .shop-task-selection-toolbar strong {
+        color: var(--shop-tools-accent);
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    /* 右上は文字なしの全選択アイコン */
+    .shop-task-select-all {
+        display: inline-flex;
+        width: 44px;
+        height: 44px;
+        min-height: 44px !important;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        padding: 0 !important;
+
+        color: #5f6963;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 50%;
+    }
+
+    .shop-task-select-all svg {
+        width: 23px;
+        height: 23px;
+    }
+
+    .shop-task-select-all.is-all-selected {
+        color: var(--shop-tools-accent);
+    }
+
+    /*
+     * 削除は最下部中央のゴミ箱だけ。
+     * 0件では薄く、選択されたら赤く有効化。
+     */
+    .shop-task-bulk-delete {
+        position: fixed !important;
+        z-index: 36;
+        left: 50% !important;
+        bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+
+        display: inline-flex !important;
+        width: 52px !important;
+        height: 52px !important;
+        min-height: 52px !important;
+        align-items: center;
+        justify-content: center;
+
+        padding: 0 !important;
+        transform: translateX(-50%);
+
+        color: #b9bfbb !important;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 50% !important;
+        box-shadow: none !important;
+    }
+
+    .shop-task-bulk-delete svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .shop-task-bulk-delete:not(:disabled) {
+        color: #b43f3f !important;
+        cursor: pointer;
+    }
+
+    .shop-task-bulk-delete:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+}
+
+/* === Task reorder handle === */
+
+.shop-task-reorder-handle {
+    display: none;
+}
+
+/*
+ * 選択中は通常の完了チェック位置を
+ * 並び替えハンドルへ切り替える。
+ */
+.shop-task-list-root.is-selection-mode
+.shop-task-completion-form {
+    display: none !important;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-reorder-handle {
+    display: inline-flex;
+    grid-column: 1;
+    grid-row: 1;
+    width: 44px;
+    min-width: 44px;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    color: #6f7873;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+
+    cursor: grab;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-reorder-handle:active {
+    color: var(--shop-tools-accent);
+    cursor: grabbing;
+}
+
+.shop-task-reorder-handle svg {
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+}
+
+/* === Task drag feedback === */
+
+/* 並び替え可能であることを示す目印 */
+.shop-task-list-root.is-selection-mode
+.shop-task-reorder-handle {
+    color: #78827c;
+}
+
+/* 長押し成立前の軽い押し込み */
+.shop-task-card.is-pressing {
+    transform: scale(0.985);
+    transition: transform 100ms ease;
+}
+
+/*
+ * 元のTaskは場所を確保したまま薄く残す。
+ * 浮いたコピーが指について動く。
+ */
+.shop-task-card.is-reorder-source {
+    opacity: 0.22;
+}
+
+/* 指について動くTask */
+.shop-task-drag-ghost {
+    position: fixed !important;
+    z-index: 1000 !important;
+
+    margin: 0 !important;
+    box-sizing: border-box !important;
+
+    opacity: 0.98;
+    background: #ffffff;
+
+    pointer-events: none !important;
+    user-select: none !important;
+
+    transform: scale(1.025);
+    transform-origin: center;
+
+    box-shadow:
+        0 12px 30px rgba(30, 48, 38, 0.22),
+        0 3px 8px rgba(30, 48, 38, 0.14);
+
+    transition:
+        transform 130ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 130ms ease;
+
+    will-change: top, transform;
+}
+
+/* 浮いたTaskでも左側は並び替えハンドルを表示 */
+.shop-task-drag-ghost .shop-task-completion-form {
+    display: none !important;
+}
+
+.shop-task-drag-ghost .shop-task-reorder-handle {
+    display: inline-flex !important;
+    grid-column: 1;
+    grid-row: 1;
+
+    width: 44px;
+    min-width: 44px;
+    min-height: 48px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    color: var(--shop-tools-accent);
+    background: transparent;
+    border: 0;
+}
+
+/* 長押し時のブラウザ標準選択を防ぐ */
+.shop-task-list-root.is-selection-mode
+.shop-task-card {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* === Task card / completed group Xiaomi polish === */
+
+/* Taskを1件ずつ独立カードとして見せる */
+.shop-task-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px !important;
+}
+
+.shop-task-card,
+.shop-task-card-completed {
+    background: #ffffff !important;
+    border: 1px solid var(--shop-tools-border) !important;
+    border-radius: 12px !important;
+}
+
+/* 選択時だけ従来どおり薄緑 */
+.shop-task-card.is-selected {
+    background: #edf6ef !important;
+}
+
+/* 完了0件はグループごと表示しない */
+.shop-task-completed-group[hidden] {
+    display: none !important;
+}
+
+/*
+ * 閉じている時  ∨
+ * 開いている時  ∧
+ */
+.shop-task-completed-group summary svg {
+    transform: rotate(0deg) !important;
+    transition: transform 140ms ease;
+}
+
+.shop-task-completed-group[open] summary svg {
+    transform: rotate(180deg) !important;
+}
+
+
+/* === Task selection mode header === */
+
+@media (max-width: 700px) {
+    .shop-task-selection-toolbar {
+        display: grid !important;
+        grid-template-columns: 44px minmax(0, 1fr) 44px !important;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .shop-task-selection-toolbar[hidden] {
+        display: none !important;
+    }
+
+    /* 左上：× */
+    .shop-task-selection-cancel {
+        display: inline-flex;
+        width: 44px;
+        height: 44px;
+        min-height: 44px !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0 !important;
+
+        color: #5f6963;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 50%;
+    }
+
+    .shop-task-selection-cancel svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .shop-task-selection-toolbar strong {
+        min-width: 0;
+        text-align: left;
+    }
+
+    /* 右上：全選択アイコン */
+    .shop-task-select-all {
+        grid-column: 3;
+    }
+
+    /*
+     * ゴミ箱は選択ヘッダーのレイアウトには参加させない。
+     * 最下部中央固定は前のXiaomi風CSSをそのまま利用。
+     */
+    .shop-task-bulk-delete {
+        grid-column: auto;
+    }
+}
+
+/* === Task completed summary compact layout === */
+
+.shop-task-completed-group summary {
+    justify-content: flex-start !important;
+    gap: 6px !important;
+}
+
+.shop-task-completed-group summary svg {
+    order: -1;
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+
+/* === Task completed summary compact touch area === */
+
+.shop-task-completed-group > summary {
+    display: inline-flex !important;
+    width: fit-content !important;
+    max-width: 100%;
+    min-height: 44px;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 6px;
+    padding: 4px 8px;
+}
+
+.shop-task-completed-group > summary:hover,
+.shop-task-completed-group > summary:active {
+    border-radius: 8px;
+}
+
+/* === Task completed summary: no touch color === */
+
+.shop-task-completed-group > summary:hover,
+.shop-task-completed-group > summary:active {
+    background: transparent !important;
+}
+
+/* === Task draft: remove editing underline === */
+
+.shop-task-card-draft .shop-task-edit-trigger.is-editing,
+.shop-task-card-draft .shop-task-title.is-editing,
+.shop-task-card-draft .shop-task-title[contenteditable="true"] {
+    border: 0 !important;
+    border-bottom: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    background: transparent !important;
+}
+
+/* === Task reorder: Xiaomi-like handle === */
+
+/* 通常時は並び替えハンドルを見せない */
+.shop-task-reorder-handle {
+    display: none;
+}
+
+/* 選択モード中だけ左端へ表示 */
+.shop-task-list-root.is-selection-mode .shop-task-reorder-handle {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    grid-column: 1;
+    grid-row: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    color: #7d8580;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+
+    cursor: grab;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-reorder-handle:active {
+    cursor: grabbing;
+}
+
+.shop-task-reorder-handle svg {
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+}
+
+/* ドラッグ中の元位置 */
+.shop-task-card.is-reorder-source {
+    opacity: 0.28;
+}
+
+/* 指についてくるカード */
+.shop-task-drag-ghost {
+    position: fixed;
+    z-index: 100;
+    box-sizing: border-box;
+    margin: 0 !important;
+
+    opacity: 0.96;
+    pointer-events: none;
+
+    background: #ffffff;
+    border: 1px solid var(--shop-tools-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(35, 55, 73, 0.22);
+}
+
+/* === Task reorder handle: visual indicator only === */
+
+.shop-task-reorder-handle {
+    display: none;
+    pointer-events: none !important;
+}
+
+.shop-task-list-root.is-selection-mode .shop-task-reorder-handle {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    grid-column: 1;
+    grid-row: 1;
+    align-items: center;
+    justify-content: center;
+
+    color: #7d8580;
+    background: transparent;
+}
+
+.shop-task-reorder-handle svg {
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+}
+
+/* === Material order field labels: shop tools blue === */
+
+.material-order-field label {
+    color: var(--shop-tools-accent);
+}
+
+/* === Task reorder: lock page while card is held === */
+
+html.shop-task-reorder-lock,
+body.shop-task-reorder-lock {
+    overscroll-behavior: none !important;
+}
+
+body.shop-task-reorder-lock {
+    overflow: hidden !important;
+    touch-action: none !important;
+}
+
+/* 並び替え中はブラウザ標準の文字選択なども止める */
+body.shop-task-reorder-lock .shop-task-list-root,
+body.shop-task-reorder-lock .shop-task-card {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
+/* === Task reorder tactile polish === */
+
+/*
+ * 選択モードでも通常Taskの青い外枠を維持。
+ * 選択済みだけ従来どおり緑。
+ */
+.shop-task-list-root.is-selection-mode .shop-task-card {
+    background: #ffffff;
+    border: 1px solid rgba(72, 115, 156, 0.30) !important;
+    border-radius: 12px;
+}
+
+.shop-task-list-root.is-selection-mode .shop-task-card.is-selected {
+    background: #edf6ef !important;
+    border-color: #94b79c !important;
+}
+
+/* 長押し成立前：一度ほんの少し沈む */
+.shop-task-list-root.is-selection-mode .shop-task-card.is-pressing {
+    transform: scale(0.975);
+    box-shadow: 0 1px 3px rgba(35, 55, 73, 0.08);
+    transition:
+        transform 110ms ease,
+        box-shadow 110ms ease;
+}
+
+/*
+ * 長押し成立後：指を乗せている間は浮いた状態。
+ * 指を動かしていなくてもこの状態になる。
+ */
+.shop-task-drag-ghost {
+    transform: scale(1.03);
+    border: 1px solid rgba(72, 115, 156, 0.38) !important;
+    border-radius: 12px;
+
+    box-shadow:
+        0 14px 32px rgba(35, 55, 73, 0.24),
+        0 4px 10px rgba(35, 55, 73, 0.14);
+
+    transition:
+        transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 140ms ease;
+}
+
+/* === Task reorder tactile polish === */
+
+/*
+ * 選択モードでも通常Taskの青い外枠を維持。
+ * 選択済みだけ従来どおり緑。
+ */
+.shop-task-list-root.is-selection-mode .shop-task-card {
+    background: #ffffff;
+    border: 1px solid rgba(72, 115, 156, 0.30) !important;
+    border-radius: 12px;
+}
+
+.shop-task-list-root.is-selection-mode .shop-task-card.is-selected {
+    background: #edf6ef !important;
+    border-color: #94b79c !important;
+}
+
+/* 長押し成立前：一度ほんの少し沈む */
+.shop-task-list-root.is-selection-mode .shop-task-card.is-pressing {
+    transform: scale(0.975);
+    box-shadow: 0 1px 3px rgba(35, 55, 73, 0.08);
+    transition:
+        transform 110ms ease,
+        box-shadow 110ms ease;
+}
+
+/*
+ * 長押し成立後：指を乗せている間は浮いた状態。
+ * 指を動かしていなくてもこの状態になる。
+ */
+.shop-task-drag-ghost {
+    transform: scale(1.03);
+    border: 1px solid rgba(72, 115, 156, 0.38) !important;
+    border-radius: 12px;
+
+    box-shadow:
+        0 14px 32px rgba(35, 55, 73, 0.24),
+        0 4px 10px rgba(35, 55, 73, 0.14);
+
+    transition:
+        transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 140ms ease;
+}
+
+/* === Task reorder: long-press grab outline === */
+
+/*
+ * 長押し成立して浮いた瞬間から、
+ * 移動前でも「掴んでいる」と分かる枠線を出す。
+ */
+.shop-task-drag-ghost {
+    border: 2px solid var(--shop-tools-accent) !important;
+    box-shadow:
+        0 14px 32px rgba(35, 55, 73, 0.24),
+        0 4px 10px rgba(35, 55, 73, 0.14);
+}
+
+/*
+ * 指を離して着地する時は、
+ * 通常カードの薄い青枠へ自然に戻る。
+ */
+.shop-task-card:not(.is-selected) {
+    border-color: rgba(72, 115, 156, 0.30) !important;
+}
+
+.shop-task-card.is-selected {
+    border-color: #94b79c !important;
 }
