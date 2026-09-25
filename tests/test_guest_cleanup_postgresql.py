@@ -16,6 +16,7 @@ from models import (
     MaterialOrderItem,
     Product,
     ShopMemo,
+    ShopTask,
     db,
 )
 from postgresql_test_utils import get_isolated_postgresql_test_url
@@ -356,6 +357,20 @@ def _seed_cleanup_scenario(engine, cleanup_time):
                 )
             ],
         )
+        connection.execute(
+            ShopTask.__table__.insert(),
+            [
+                {
+                    "dataset_id": dataset_id,
+                    "title": title,
+                }
+                for dataset_id, title in (
+                    (expired_guest_id, "削除候補タスク"),
+                    (active_guest_id, "別Guest保護タスク"),
+                    (admin_id, "Admin保護タスク"),
+                )
+            ],
+        )
 
     return expired_guest_id, active_guest_id, admin_id
 
@@ -393,6 +408,13 @@ def _assert_preserved_dataset_counts(engine, expected):
                 connection.execute(
                     text(
                         "SELECT COUNT(*) FROM shop_memos "
+                        "WHERE dataset_id = :id"
+                    ),
+                    {"id": dataset_id},
+                ).scalar_one(),
+                connection.execute(
+                    text(
+                        "SELECT COUNT(*) FROM shop_tasks "
                         "WHERE dataset_id = :id"
                     ),
                     {"id": dataset_id},
@@ -467,9 +489,9 @@ def test_activity_committed_before_cleanup_lock_preserves_guest_data(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (1, 1, 1, 1, 2),
-                active_guest_id: (1, 1, 1, 1, 2),
-                admin_id: (1, 1, 1, 1, 2),
+                expired_guest_id: (1, 1, 1, 1, 2, 1),
+                active_guest_id: (1, 1, 1, 1, 2, 1),
+                admin_id: (1, 1, 1, 1, 2, 1),
             },
         )
     finally:
@@ -549,9 +571,9 @@ def test_cleanup_lock_prevents_late_activity_from_resurrecting_guest(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (0, 0, 0, 0, 0),
-                active_guest_id: (1, 1, 1, 1, 2),
-                admin_id: (1, 1, 1, 1, 2),
+                expired_guest_id: (0, 0, 0, 0, 0, 0),
+                active_guest_id: (1, 1, 1, 1, 2, 1),
+                admin_id: (1, 1, 1, 1, 2, 1),
             },
         )
     finally:
@@ -601,9 +623,9 @@ def test_cleanup_failure_rolls_back_all_guest_data_on_postgresql(tmp_path):
         _assert_preserved_dataset_counts(
             engine,
             {
-                expired_guest_id: (1, 1, 1, 1, 2),
-                active_guest_id: (1, 1, 1, 1, 2),
-                admin_id: (1, 1, 1, 1, 2),
+                expired_guest_id: (1, 1, 1, 1, 2, 1),
+                active_guest_id: (1, 1, 1, 1, 2, 1),
+                admin_id: (1, 1, 1, 1, 2, 1),
             },
         )
     finally:

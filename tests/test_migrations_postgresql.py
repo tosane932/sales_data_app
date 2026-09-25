@@ -172,6 +172,7 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 "guest_creation_rate_limits",
                 "material_order_items",
                 "shop_memos",
+                "shop_tasks",
                 "alembic_version",
             }.issubset(inspector.get_table_names())
             assert db.session.execute(
@@ -281,6 +282,102 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
                 ),
                 {"id": material_order_item_id},
             ).scalar_one() == "既存材料"
+
+            shop_task_columns = {
+                column["name"]: column
+                for column in inspector.get_columns("shop_tasks")
+            }
+            assert set(shop_task_columns) == {
+                "id",
+                "dataset_id",
+                "title",
+                "is_completed",
+                "is_starred",
+                "position",
+                "created_at",
+                "completed_at",
+            }
+            assert isinstance(shop_task_columns["dataset_id"]["type"], sa.Uuid)
+            assert isinstance(shop_task_columns["title"]["type"], sa.String)
+            assert shop_task_columns["title"]["type"].length == 100
+            assert shop_task_columns["dataset_id"]["nullable"] is False
+            assert shop_task_columns["title"]["nullable"] is False
+            assert shop_task_columns["is_completed"]["nullable"] is False
+            assert shop_task_columns["is_starred"]["nullable"] is False
+            assert shop_task_columns["position"]["nullable"] is False
+            assert shop_task_columns["created_at"]["nullable"] is False
+            assert shop_task_columns["completed_at"]["nullable"] is True
+            assert shop_task_columns["created_at"]["type"].timezone is True
+            assert shop_task_columns["completed_at"]["type"].timezone is True
+
+            shop_task_foreign_key = inspector.get_foreign_keys(
+                "shop_tasks"
+            )[0]
+            assert shop_task_foreign_key["name"] == (
+                "fk_shop_tasks_dataset_id_datasets"
+            )
+            assert shop_task_foreign_key["constrained_columns"] == [
+                "dataset_id"
+            ]
+            assert shop_task_foreign_key["referred_table"] == "datasets"
+            assert (
+                shop_task_foreign_key["options"]["ondelete"].upper()
+                == "CASCADE"
+            )
+            assert {
+                constraint["name"]
+                for constraint in inspector.get_check_constraints(
+                    "shop_tasks"
+                )
+            } == {
+                "ck_shop_tasks_title_nonblank",
+                "ck_shop_tasks_title_max_length",
+                "ck_shop_tasks_completion_timestamp",
+                "ck_shop_tasks_position_nonnegative",
+            }
+            assert any(
+                index["name"] == "ix_shop_tasks_dataset_status_position_id"
+                and index["column_names"]
+                == ["dataset_id", "is_completed", "position", "id"]
+                and not index["unique"]
+                for index in inspector.get_indexes("shop_tasks")
+            )
+
+            db.session.execute(
+                text(
+                    "INSERT INTO shop_tasks "
+                    "(dataset_id, title, is_completed, created_at, completed_at) "
+                    "VALUES (:dataset_id, 'PostgreSQLタスク', false, :now, NULL)"
+                ),
+                {"dataset_id": guest_dataset_id, "now": now},
+            )
+            db.session.commit()
+            invalid_task_rows = (
+                {"title": "   ", "completed": False, "completed_at": None},
+                {"title": "タ" * 101, "completed": False, "completed_at": None},
+                {"title": "不整合", "completed": True, "completed_at": None},
+                {
+                    "title": "逆向き不整合",
+                    "completed": False,
+                    "completed_at": now,
+                },
+            )
+            for invalid_task in invalid_task_rows:
+                with pytest.raises((IntegrityError, DataError)):
+                    db.session.execute(
+                        text(
+                            "INSERT INTO shop_tasks "
+                            "(dataset_id, title, is_completed, created_at, completed_at) "
+                            "VALUES (:dataset_id, :title, :completed, :now, :completed_at)"
+                        ),
+                        {
+                            "dataset_id": guest_dataset_id,
+                            "now": now,
+                            **invalid_task,
+                        },
+                    )
+                    db.session.commit()
+                db.session.rollback()
 
             shop_memo_columns = {
                 column["name"]: column
@@ -517,6 +614,13 @@ def test_postgresql_migrations_reach_head_and_preserve_existing_data():
             assert db.session.execute(
                 text(
                     "SELECT COUNT(*) FROM shop_memos "
+                    "WHERE dataset_id = :dataset_id"
+                ),
+                {"dataset_id": guest_dataset_id},
+            ).scalar_one() == 0
+            assert db.session.execute(
+                text(
+                    "SELECT COUNT(*) FROM shop_tasks "
                     "WHERE dataset_id = :dataset_id"
                 ),
                 {"dataset_id": guest_dataset_id},

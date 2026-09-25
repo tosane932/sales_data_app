@@ -89,6 +89,11 @@ class Dataset(db.Model):
         back_populates="dataset",
         passive_deletes="all",
     )
+    shop_tasks = db.relationship(
+        "ShopTask",
+        back_populates="dataset",
+        passive_deletes="all",
+    )
 
 
 class GuestCreationRateLimit(db.Model):
@@ -247,6 +252,81 @@ class ShopMemo(db.Model):
     dataset = db.relationship(
         "Dataset",
         back_populates="shop_memos",
+    )
+
+
+class ShopTask(db.Model):
+    """Datasetごとの日常業務チェックリストを表す。"""
+    __tablename__ = "shop_tasks"
+    __table_args__ = (
+        db.CheckConstraint(
+            "length(trim(title)) >= 1",
+            name="ck_shop_tasks_title_nonblank",
+        ),
+        db.CheckConstraint(
+            "length(title) <= 100",
+            name="ck_shop_tasks_title_max_length",
+        ),
+        db.CheckConstraint(
+            "(is_completed = false AND completed_at IS NULL) OR "
+            "(is_completed = true AND completed_at IS NOT NULL)",
+            name="ck_shop_tasks_completion_timestamp",
+        ),
+        db.CheckConstraint(
+            "position >= 0",
+            name="ck_shop_tasks_position_nonnegative",
+        ),
+        db.Index(
+            "ix_shop_tasks_dataset_status_position_id",
+            "dataset_id",
+            "is_completed",
+            "position",
+            "id",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(
+        db.Uuid(as_uuid=True),
+        db.ForeignKey(
+            "datasets.id",
+            name="fk_shop_tasks_dataset_id_datasets",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    title = db.Column(db.String(100), nullable=False)
+    is_completed = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+    )
+    is_starred = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+    )
+    position = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=db.func.now(),
+    )
+    completed_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )
+    dataset = db.relationship(
+        "Dataset",
+        back_populates="shop_tasks",
     )
 
 

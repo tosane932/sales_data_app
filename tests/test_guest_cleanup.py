@@ -14,6 +14,7 @@ from models import (
     MaterialOrderItem,
     Product,
     ShopMemo,
+    ShopTask,
     db,
 )
 
@@ -113,6 +114,13 @@ def _create_shop_memo(dataset, *, body, deleted=False):
     db.session.add(memo)
     db.session.flush()
     return memo
+
+
+def _create_shop_task(dataset, *, title):
+    task = ShopTask(dataset=dataset, title=title)
+    db.session.add(task)
+    db.session.flush()
+    return task
 
 
 def _run_cleanup():
@@ -366,6 +374,43 @@ def test_cleanup_deletes_all_expired_guest_shop_memos_only(
         db.session.get(ShopMemo, memo_id) is not None
         for memo_id in protected_memo_ids
     )
+
+
+def test_cleanup_deletes_only_expired_guest_shop_tasks(
+    flask_app,
+    admin_dataset,
+):
+    expired_guest = _create_absolute_expired_guest_dataset()
+    active_guest = _create_active_guest_dataset()
+    expired_task = _create_shop_task(
+        expired_guest,
+        title="期限切れGuestタスク",
+    )
+    active_task = _create_shop_task(
+        active_guest,
+        title="有効Guestタスク",
+    )
+    admin_task = _create_shop_task(
+        admin_dataset,
+        title="Adminタスク",
+    )
+    expired_guest_id = expired_guest.id
+    active_guest_id = active_guest.id
+    admin_dataset_id = admin_dataset.id
+    expired_task_id = expired_task.id
+    active_task_id = active_task.id
+    admin_task_id = admin_task.id
+    db.session.commit()
+
+    deleted_count = _run_cleanup()
+
+    assert deleted_count == 1
+    assert db.session.get(Dataset, expired_guest_id) is None
+    assert db.session.get(ShopTask, expired_task_id) is None
+    assert db.session.get(Dataset, active_guest_id) is not None
+    assert db.session.get(ShopTask, active_task_id) is not None
+    assert db.session.get(Dataset, admin_dataset_id) is not None
+    assert db.session.get(ShopTask, admin_task_id) is not None
 
 
 def test_cleanup_removes_expired_guest_ai_usage_with_dataset(flask_app):

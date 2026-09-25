@@ -51,7 +51,7 @@
     </a>
 
     <a
-        href="{{ url_for('shop_tools.tasks_placeholder') }}"
+        href="{{ url_for('shop_tasks.list_tasks') }}"
         data-tool="tasks"
         class="shop-tools-nav-link touch-control-no-select{% if active_tool == 'tasks' %} shop-tools-nav-link-current{% endif %}"
         {% if active_tool == 'tasks' %}aria-current="page"{% endif %}>
