@@ -1,11 +1,13 @@
-# 🍞 Bakery Sales Management System
+# 🍞 Bakery Hub | Bakery Sales Management System
 
 ![トップ画像](https://raw.githubusercontent.com/tosane932/sales_data_app/main/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)
 
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
-ベーカリーの商品登録・日次売上入力・売上分析を一元管理し、  
-Gemini APIによる経営アドバイスまで支援するWebアプリケーションです。
+**Bakery Hub** は、ベーカリーの商品登録・日次売上入力・売上分析に加え、  
+材料発注リストと店舗メモまで一つの画面で扱える業務支援Webアプリケーションです。
+
+必要なときだけGemini APIへ経営アドバイスを依頼できます。
 
 販売・飲食・物流の現場経験とWebデザインの知識をもとに、
 
@@ -17,7 +19,7 @@ Gemini APIによる経営アドバイスまで支援するWebアプリケーシ�
 
 ## 🚀 オンラインデモ
 
-### [👉 ベーカリー売上管理システムを体験する](https://bakery-salesdata.onrender.com/)
+### [👉 Bakery Hubを体験する](https://bakery-salesdata.onrender.com/)
 
 スマートフォン・PCのブラウザからアクセスできます。
 
@@ -41,10 +43,15 @@ Guest Demoでも、
       ↓
 売上ランキング・グラフを見る
       ↓
+材料発注リスト・店舗メモを使う
+      ↓
 Geminiへ経営アドバイスを依頼する
 ```
 
 という実際の業務フローを操作できます。
+
+店舗メモツールでは、現在 **材料発注** と **メモ** を利用できます。  
+`/shop-tools/tasks` のタスク機能は、mainでは準備中画面です。
 
 > [!NOTE]
 > Renderの無料インスタンスを使用しているため、しばらくアクセスがない場合はスリープ状態になります。  
@@ -83,7 +90,8 @@ Guestの商品数
 ## 📸 スクリーンショット
 
 > スクリーンショットは撮影時点の画面です。  
-> 現在の実装では、Guest Demo、Dataset分離、認証、CSRF保護、rate limit、回帰テストなどを追加しています。
+> 現在の実装では、Guest Demo、Dataset分離、認証、CSRF保護、rate limit、回帰テストに加え、材料発注・店舗メモ・Bakery Hubの新UIを追加しています。  
+> そのため、公開中の画面とは一部デザインが異なります。
 
 ### 🍞 商品マスタ登録画面
 
@@ -120,9 +128,24 @@ Guestの商品数
 
 ## 📖 プロジェクト概要
 
-ベーカリー店舗の日々の商品管理・売上入力・分析を一元化するWebアプリケーションです。
+ベーカリー店舗の日々の商品管理・売上入力・分析と、店舗内の小さな業務を一つにまとめるWebアプリケーションです。
 
-現在は、次の2種類の利用者を明確に分けています。
+現在のmainでは、主に次の機能を利用できます。
+
+```text
+売上管理
+├── 商品・メニュー登録
+├── 日次売上入力
+├── 売上分析Dashboard
+└── Geminiによる経営アドバイス
+
+店舗メモツール
+├── 材料発注リスト
+├── 店舗メモ
+└── タスク（準備中）
+```
+
+利用者は、次の2種類を明確に分けています。
 
 ```text
 /login
@@ -150,6 +173,8 @@ AdminとGuestは同じ業務画面を利用できますが、
         ↓
 売上ランキングとグラフを確認する
         ↓
+必要に応じて材料発注リスト・店舗メモを使う
+        ↓
 必要なときだけGeminiへ経営アドバイスを依頼する
 ```
 
@@ -173,6 +198,11 @@ AdminとGuestは同じ業務画面を利用できますが、
 - 有効Guest Dataset最大10件
 - Guestの商品数・POST件数制限
 - PostgreSQL上の並行requestを考慮したlock制御
+- Dataset単位の材料発注リスト（追加・完了・未完了・削除・100件上限）
+- 店舗メモの作成・編集・検索・pin・複製・ゴミ箱・復元・完全削除
+- 店舗メモのautosaveと、スマートフォン向け長押し・swipe・Undo操作
+- HTTP / HTTPS絶対URLだけを安全にlinkifyし、DBにはplain textを保存
+- Bakery Hubブランド、inline SVG、カテゴリカラーによる共通Navigation
 - Flask-LoginによるAdmin認証
 - Session fingerprintによる認証設定変更時のfail-closed
 - Adminログイン失敗5回 / 15分のrate limit
@@ -180,14 +210,15 @@ AdminとGuestは同じ業務画面を利用できますが、
 - XSS対策と回帰テスト
 - Session CookieのSecure / HttpOnly / SameSite設定
 - Security Headers / HSTS
-- GitHub ActionsによるCI
+- GitHub ActionsによるSQLite + PostgreSQL 16の二層CI
 - Falsification / Manual Mutation Testing
 - 月替わり・年替わり事故の回帰テスト
-- 現在のpytest結果：**378 passed / 4 skipped**
+- PR #42時点のfull pytest：**668 passed / 16 skipped**
+- mainのGitHub Actions：`test` / `postgres-integration` ともにGreen
 
 ---
 
-## 📊 3ステップで体験する業務フロー
+## 📊 売上管理の3ステップ
 
 ### 1. 商品メニューと価格を登録する
 
@@ -300,6 +331,21 @@ DailySalesが存在する月
 
 ---
 
+## 🧰 店舗メモツール
+
+売上管理とは別に、店舗内で頻繁に発生する小さな業務をまとめる領域です。
+
+| ツール | 現在のmain |
+|---|---|
+| 材料発注 | 材料名・数量メモ・補足を登録し、完了 / 未完了を切り替え |
+| 店舗メモ | タイトル・本文、検索、pin、複製、autosave、ゴミ箱、復元、完全削除 |
+| タスク | 準備中画面 |
+
+材料発注と店舗メモはProductとは独立したモデルとして保存し、  
+どちらも現在のDatasetに所属するデータだけを参照・更新します。
+
+---
+
 ## ⚙️ 主な機能
 
 | 分類 | 機能 |
@@ -321,12 +367,19 @@ DailySalesが存在する月
 | 日次売上 | 商品別販売数・同日データ上書き |
 | 状態表示 | 現在の登録済み個数を表示 |
 | 売上分析 | 年月別集計・ランキング・グラフ |
+| 材料発注 | Dataset単位の追加・完了 / 未完了・削除・最大100件 |
+| 店舗メモ | 作成・編集・検索・pin・複製・autosave |
+| メモ削除 | ゴミ箱・復元・完全削除 |
+| URL表示 | HTTP / HTTPS絶対URLだけを安全に自動リンク化 |
+| Mobile UI | 長押し・swipe・Undo・FAB・responsive editor |
+| Navigation | Bakery Hubブランド・inline SVG・カテゴリカラー |
+| タスク | mainでは準備中画面 |
 | AI | Gemini APIによる日次支援・経営アドバイス |
 | AI制限 | Guest Dataset単位で合計3回 |
-| DB整合性 | 一意制約・transaction・rollback |
-| XSS対策 | DOM API・Jinja2 autoescape |
+| DB整合性 | 一意制約・CHECK・transaction・rollback・row lock |
+| XSS対策 | DOM API・Jinja2 autoescape・安全なlinkify |
 | Migration | Flask-Migrate / Alembic |
-| CI | GitHub Actions |
+| CI | GitHub Actions（SQLite + PostgreSQL 16） |
 | テスト | pytest・Falsification・Manual Mutation Testing |
 
 ---
@@ -395,6 +448,85 @@ DailySalesが存在する月
 ---
 
 <details>
+<summary><strong>🛒 材料発注リストを見る</strong></summary>
+
+<br>
+
+材料発注は、売上用のProductとは独立した`MaterialOrderItem`として管理します。
+
+主な項目は、
+
+```text
+name           最大100文字
+quantity_text  最大30文字
+memo           最大300文字
+is_completed
+created_at
+completed_at
+```
+
+です。
+
+1 Datasetにつき最大100件とし、新規作成時はDataset rowをlockしてから件数を再確認します。  
+これにより、PostgreSQL上で同時requestが発生した場合でも上限超過を防ぎます。
+
+完了状態の変更と削除も、現在のDatasetに所属するitemだけを取得し、row lockを行ってから更新します。
+
+`is_completed = true` のときだけ `completed_at` を持つようDB CHECK制約でも整合性を確認しています。
+
+DB例外時はrollbackし、別Datasetのitem IDを送られても更新対象にしません。
+
+</details>
+
+---
+
+<details>
+<summary><strong>📝 店舗メモを見る</strong></summary>
+
+<br>
+
+店舗メモは`ShopMemo`としてDataset単位で保存します。
+
+現在の主な仕様は、
+
+```text
+タイトル  最大100文字
+本文      最大2000文字
+検索語    最大100文字
+
+通常 + Trash
+1 Datasetにつき最大100件
+```
+
+です。
+
+主な操作は次のとおりです。
+
+- 新規作成・編集
+- タイトル / 本文検索
+- pin / unpin
+- 複製
+- autosave
+- ゴミ箱移動
+- 復元
+- Trashからの完全削除
+- 削除直後のUndo
+- スマートフォンでの長押しmenu・swipe操作
+
+本文に含まれるURLは、`http://` / `https://` の明確な絶対URLだけを表示時にlinkifyします。  
+DBへHTMLを保存せずplain textを維持し、本文・URL表示文字列・hrefを個別にescapeします。
+
+検索・pin・autosave・削除系routeでも現在のDatasetを条件に含め、  
+Admin / Guest / Guest間の越境を防ぎます。
+
+スマートフォンでは、画面幅・virtual keyboard・touch操作を前提にUIを調整しています。  
+タスク機能はこのREADME更新時点ではmain未実装で、準備中画面を表示します。
+
+</details>
+
+---
+
+<details>
 <summary><strong>🗂 DatasetによるAdmin / Guest分離を見る</strong></summary>
 
 <br>
@@ -409,9 +541,9 @@ Dataset
 └── Guest Dataset C
 ```
 
-Productは所属する`dataset_id`を持ちます。
+Product・MaterialOrderItem・ShopMemoは、それぞれ所属する`dataset_id`を持ちます。
 
-商品・日次売上・Dashboard・AI分析などの処理では、  
+商品・日次売上・Dashboard・AI分析・材料発注・店舗メモなどの処理では、  
 現在認証されている利用者が利用できるDatasetだけを対象にします。
 
 ```text
@@ -501,11 +633,13 @@ Guest Datasetの利用時には期限を確認し、期限切れの場合は業�
 削除順序は、
 
 ```text
-DailySales
-      ↓
-Product
-      ↓
-Dataset
+MaterialOrderItem / ShopMemo
+            ↓
+        DailySales
+            ↓
+          Product
+            ↓
+          Dataset
 ```
 
 です。
@@ -1007,8 +1141,12 @@ Dataset / Guest Demo実装
 ↓
 300件超
 
-現在
-378 passed / 4 skipped
+材料発注・店舗メモ・UI刷新
+↓
+600件超
+
+PR #42時点
+668 passed / 16 skipped
 ```
 
 現在は、
@@ -1016,6 +1154,8 @@ Dataset / Guest Demo実装
 ```text
 Product
 DailySales
+MaterialOrderItem
+ShopMemo
 Dashboard
 AI
 XSS
@@ -1035,6 +1175,13 @@ Guest作成rate limit
 有効Guest数上限
 商品数上限
 並行Product POST
+材料発注100件上限
+材料発注の並行request
+店舗メモ100件上限
+店舗メモのDataset分離
+店舗メモのTrash / restore / permanent delete
+店舗メモのautosave / pin / URL linkify
+Mobile UI / SVG Navigation
 AI prompt制限
 Admin login rate limit
 並行Admin login
@@ -1048,7 +1195,7 @@ HSTS
 
 ### PostgreSQL専用テスト
 
-通常suiteでskipされる4件は、テスト用PostgreSQL環境が必要なintegration testです。
+PR #42時点で通常suiteからskipされる16件は、主にテスト用PostgreSQL環境が必要なintegration testです。
 
 通常のSQLiteテストだけで、
 
@@ -1064,8 +1211,14 @@ PostgreSQL上でも並行性が安全
 - Guest有効数上限
 - Guest商品数上限
 - Admin login rate limit
+- 材料発注100件上限と並行request
+- 店舗メモのDataset分離・100件上限・rollback
+- Alembic migration
 
 などがあります。
+
+GitHub Actionsでは通常pytestに加えてPostgreSQL 16のintegration jobを実行し、  
+最新main（PR #42 merge時点）では両jobがGreenです。
 
 </details>
 
@@ -1464,7 +1617,7 @@ Flask
 
 AdminとGuestでは認証経路が異なります。
 
-Product・DailySales・Dashboard・AIなどの業務データを扱う場合は、  
+Product・DailySales・MaterialOrderItem・ShopMemo・Dashboard・AIなどの業務データを扱う場合は、  
 現在のidentityから利用可能なDatasetをサーバー側で解決します。
 
 ### 開発フロー
@@ -1768,7 +1921,7 @@ python app.py
 
 <br>
 
-### 2026-09：Guest Demo公開・公開環境向け防御
+### 2026-09：Guest Demo・店舗業務ツール・Bakery Hub UI
 
 - 月替わり・年替わり事故を回帰テスト化
 - Guest Datasetの無操作30分・絶対2時間期限を実装
@@ -1788,7 +1941,14 @@ python app.py
 - Session CookieをSecure / HttpOnly / SameSite=Laxへ強化
 - Security Headersを追加
 - HSTSを追加
-- pytest **378 passed / 4 skipped**
+- 材料発注リストのDataset基盤・CRUD・100件上限・PostgreSQL並行制御を追加
+- 店舗メモのCRUD・検索・Trash・restore・完全削除を追加
+- 店舗メモへURL linkify・title・pin・autosave・複製・Undo・mobile gestureを追加
+- PC / Mobileのnavigationと店舗ツールUIを整理
+- 固定UIアイコンをinline SVGへ統一
+- ベーカリー向けブランドを **Bakery Hub** へ統一
+- PR #42時点のfull pytest **668 passed / 16 skipped**
+- mainのGitHub Actionsで通常test / PostgreSQL integrationともGreen
 
 ### 2026-08：認証・セキュリティ・Dataset基盤
 
@@ -1829,6 +1989,7 @@ python app.py
 
 ### 店舗業務支援
 
+- タスク管理（現在は準備中画面）
 - 在庫数管理
 - 売上入力時の自動在庫減算
 - 発注提案
@@ -1866,7 +2027,6 @@ python app.py
 
 - JavaScriptの外部ファイル化
 - CSS構成の追加整理
-- PostgreSQL integration testのCI自動化
 - E2Eテスト導入
 - 自動Mutation Testingツールの検討
 - Mutation Score計測
