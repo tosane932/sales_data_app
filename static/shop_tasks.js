@@ -1,6 +1,6 @@
 const TASK_SETTINGS = Object.freeze({
-    LONG_PRESS_MS: 500,
-    SELECTION_REORDER_PRESS_MS: 320,
+    LONG_PRESS_MS: 420,
+    SELECTION_REORDER_PRESS_MS: 280,
     MOVE_CANCEL_PX: 10,
     SNACKBAR_DURATION_MS: 7000,
 });
@@ -785,6 +785,9 @@ if (taskRoot) {
 
         gesture.ghost = ghost;
         gesture.pointerOffsetY = gesture.startY - rect.top;
+        gesture.reorderGhostStartTop = rect.top;
+        gesture.reorderGhostTargetY = 0;
+        ghost.style.setProperty("--shop-task-drag-y", "0px");
         gesture.reordering = true;
 
         document.documentElement.classList.add("shop-task-reorder-lock");
@@ -800,6 +803,11 @@ if (taskRoot) {
     const clearReorderVisual = (gesture) => {
         if (!gesture) {
             return;
+        }
+
+        if (gesture.reorderGhostFrameId !== null) {
+            window.cancelAnimationFrame(gesture.reorderGhostFrameId);
+            gesture.reorderGhostFrameId = null;
         }
 
         gesture.ghost?.remove();
@@ -861,7 +869,7 @@ if (taskRoot) {
                     {transform: "translateY(0)"},
                 ],
                 {
-                    duration: 220,
+                    duration: 180,
                     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
                 }
             );
@@ -877,9 +885,28 @@ if (taskRoot) {
         }
 
         if (gesture.ghost) {
-            gesture.ghost.style.top = `${
-                clientY - gesture.pointerOffsetY
-            }px`;
+            gesture.reorderGhostTargetY = (
+                clientY
+                - gesture.pointerOffsetY
+                - gesture.reorderGhostStartTop
+            );
+
+            if (gesture.reorderGhostFrameId === null) {
+                gesture.reorderGhostFrameId = window.requestAnimationFrame(
+                    () => {
+                        gesture.reorderGhostFrameId = null;
+
+                        if (!gesture.ghost) {
+                            return;
+                        }
+
+                        gesture.ghost.style.setProperty(
+                            "--shop-task-drag-y",
+                            `${gesture.reorderGhostTargetY}px`
+                        );
+                    }
+                );
+            }
         }
 
         const candidates = Array.from(list.children).filter(
@@ -969,6 +996,9 @@ if (taskRoot) {
             previousOrder: currentOrder(),
             ghost: null,
             pointerOffsetY: 0,
+            reorderGhostFrameId: null,
+            reorderGhostStartTop: 0,
+            reorderGhostTargetY: 0,
             timer: null,
         };
 
@@ -1364,28 +1394,28 @@ if (taskRoot) {
             svgNamespace,
             "svg"
         );
-        reorderIcon.setAttribute("data-icon", "grip-vertical");
+        reorderIcon.setAttribute("data-icon", "menu");
         reorderIcon.setAttribute("viewBox", "0 0 24 24");
-        reorderIcon.setAttribute("fill", "currentColor");
+        reorderIcon.setAttribute("fill", "none");
+        reorderIcon.setAttribute("stroke", "currentColor");
+        reorderIcon.setAttribute("stroke-width", "2");
+        reorderIcon.setAttribute("stroke-linecap", "round");
         reorderIcon.setAttribute("focusable", "false");
         reorderIcon.setAttribute("aria-hidden", "true");
 
-        [
-            [9, 5],
-            [15, 5],
-            [9, 12],
-            [15, 12],
-            [9, 19],
-            [15, 19],
-        ].forEach(([cx, cy]) => {
-            const circle = document.createElementNS(
+        const reorderMenuPathData = [
+            "M5 7h14",
+            "M5 12h14",
+            "M5 17h14",
+        ];
+
+        reorderMenuPathData.forEach((pathData) => {
+            const reorderMenuPath = document.createElementNS(
                 svgNamespace,
-                "circle"
+                "path"
             );
-            circle.setAttribute("cx", String(cx));
-            circle.setAttribute("cy", String(cy));
-            circle.setAttribute("r", "1.5");
-            reorderIcon.appendChild(circle);
+            reorderMenuPath.setAttribute("d", pathData);
+            reorderIcon.appendChild(reorderMenuPath);
         });
 
         reorderHandle.appendChild(reorderIcon);
