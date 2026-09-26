@@ -1090,7 +1090,9 @@ def test_task_template_and_script_expose_direct_manipulation_contract():
     assert "data-task-completed-group" in template_source
     assert 'data-icon="star"' in template_source
     assert 'data-icon="circle"' in template_source
-    assert "LONG_PRESS_MS: 500" in script_source
+    assert "LONG_PRESS_MS: 420" in script_source
+    assert "SELECTION_REORDER_PRESS_MS: 280" in script_source
+    assert "duration: 180" in script_source
     assert "MOVE_CANCEL_PX: 10" in script_source
     assert "pointerdown" in script_source
     assert "fetch(" in script_source
