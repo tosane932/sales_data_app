@@ -759,45 +759,50 @@ if (taskRoot) {
         }
     };
 
-    const createReorderGhost = (gesture) => {
+    const liftReorderCard = (gesture) => {
         const card = gesture.card;
         const rect = card.getBoundingClientRect();
-        const ghost = card.cloneNode(true);
+        const placeholder = document.createElement("div");
 
-        ghost.classList.add("shop-task-drag-ghost");
-        ghost.classList.remove(
-            "is-pressing",
-            "is-reordering",
-            "is-reorder-source"
-        );
-        ghost.setAttribute("aria-hidden", "true");
+        placeholder.className = "shop-task-reorder-placeholder";
+        placeholder.setAttribute("aria-hidden", "true");
+        placeholder.style.height = `${rect.height}px`;
 
-        ghost.querySelectorAll("[id]").forEach((element) => {
-            element.removeAttribute("id");
-        });
+        card.parentElement.insertBefore(placeholder, card);
 
-        ghost.style.left = `${rect.left}px`;
-        ghost.style.top = `${rect.top}px`;
-        ghost.style.width = `${rect.width}px`;
-        ghost.style.height = `${rect.height}px`;
-
-        document.body.appendChild(ghost);
-
-        gesture.ghost = ghost;
+        gesture.placeholder = placeholder;
         gesture.pointerOffsetY = gesture.startY - rect.top;
-        gesture.reorderGhostStartTop = rect.top;
-        gesture.reorderGhostTargetY = 0;
-        ghost.style.setProperty("--shop-task-drag-y", "0px");
+        gesture.reorderCardStartTop = rect.top;
+        gesture.reorderCardTargetY = 0;
         gesture.reordering = true;
+
+        card.style.left = `${rect.left}px`;
+        card.style.top = `${rect.top}px`;
+        card.style.width = `${rect.width}px`;
+        card.style.height = `${rect.height}px`;
+        card.style.setProperty("--shop-task-drag-y", "0px");
 
         document.documentElement.classList.add("shop-task-reorder-lock");
         document.body.classList.add("shop-task-reorder-lock");
 
         card.classList.remove("is-pressing");
-        card.classList.add(
-            "is-reordering",
-            "is-reorder-source"
-        );
+        card.classList.add("is-reordering");
+    };
+
+    const dockReorderCard = (gesture) => {
+        const card = gesture.card;
+        const placeholder = gesture.placeholder;
+
+        if (
+            card
+            && placeholder
+            && placeholder.parentElement
+        ) {
+            placeholder.parentElement.insertBefore(card, placeholder);
+            placeholder.remove();
+        }
+
+        gesture.placeholder = null;
     };
 
     const clearReorderVisual = (gesture) => {
@@ -805,22 +810,35 @@ if (taskRoot) {
             return;
         }
 
-        if (gesture.reorderGhostFrameId !== null) {
-            window.cancelAnimationFrame(gesture.reorderGhostFrameId);
-            gesture.reorderGhostFrameId = null;
+        if (gesture.reorderCardFrameId !== null) {
+            window.cancelAnimationFrame(gesture.reorderCardFrameId);
+            gesture.reorderCardFrameId = null;
         }
 
-        gesture.ghost?.remove();
+        dockReorderCard(gesture);
+
+        const card = gesture.card;
+
+        if (card) {
+            card.style.removeProperty("left");
+            card.style.removeProperty("top");
+            card.style.removeProperty("width");
+            card.style.removeProperty("height");
+            card.style.removeProperty("--shop-task-drag-y");
+
+            card.classList.remove(
+                "is-pressing",
+                "is-reordering",
+                "is-reorder-source"
+            );
+        }
 
         gesture.reordering = false;
-        document.documentElement.classList.remove("shop-task-reorder-lock");
-        document.body.classList.remove("shop-task-reorder-lock");
 
-        gesture.card?.classList.remove(
-            "is-pressing",
-            "is-reordering",
-            "is-reorder-source"
+        document.documentElement.classList.remove(
+            "shop-task-reorder-lock"
         );
+        document.body.classList.remove("shop-task-reorder-lock");
     };
 
     document.addEventListener(
@@ -879,76 +897,133 @@ if (taskRoot) {
     const moveReorderGesture = (gesture, clientY) => {
         const card = gesture.card;
         const list = gesture.list;
+        const placeholder = gesture.placeholder;
 
-        if (!list) {
+        if (
+            !list
+            || !placeholder
+            || placeholder.parentElement !== list
+        ) {
             return;
         }
 
-        if (gesture.ghost) {
-            gesture.reorderGhostTargetY = (
-                clientY
-                - gesture.pointerOffsetY
-                - gesture.reorderGhostStartTop
+        const previousTargetY = gesture.reorderCardTargetY;
+
+        gesture.reorderCardTargetY = (
+            clientY
+            - gesture.pointerOffsetY
+            - gesture.reorderCardStartTop
+        );
+
+        const dragDeltaY = (
+            gesture.reorderCardTargetY
+            - previousTargetY
+        );
+
+        if (gesture.reorderCardFrameId === null) {
+            gesture.reorderCardFrameId = window.requestAnimationFrame(
+                () => {
+                    gesture.reorderCardFrameId = null;
+
+                    if (!gesture.card || !gesture.reordering) {
+                        return;
+                    }
+
+                    gesture.card.style.setProperty(
+                        "--shop-task-drag-y",
+                        `${gesture.reorderCardTargetY}px`
+                    );
+                }
+            );
+        }
+
+        const listChildren = Array.from(list.children);
+        const placeholderIndex = listChildren.indexOf(placeholder);
+
+        const isTaskCard = (candidate) => (
+            candidate
+            && candidate !== card
+            && candidate !== placeholder
+            && candidate.classList.contains("shop-task-card")
+        );
+
+        const previousCandidate = listChildren
+            .slice(0, placeholderIndex)
+            .reverse()
+            .find(isTaskCard);
+
+        const nextCandidate = listChildren
+            .slice(placeholderIndex + 1)
+            .find(isTaskCard);
+
+        const movingTop = (
+            gesture.reorderCardStartTop
+            + gesture.reorderCardTargetY
+        );
+
+        const movingHeight = (
+            Number.parseFloat(card.style.height)
+            || card.getBoundingClientRect().height
+        );
+
+        const movingBottom = movingTop + movingHeight;
+        const swapOverlapRatio = 0.75;
+
+        let movePlaceholder = null;
+
+        if (dragDeltaY > 0 && nextCandidate) {
+            const nextRect = nextCandidate.getBoundingClientRect();
+            const overlap = Math.max(
+                0,
+                movingBottom - nextRect.top
             );
 
-            if (gesture.reorderGhostFrameId === null) {
-                gesture.reorderGhostFrameId = window.requestAnimationFrame(
-                    () => {
-                        gesture.reorderGhostFrameId = null;
+            if (
+                overlap
+                >= nextRect.height * swapOverlapRatio
+            ) {
+                movePlaceholder = () => {
+                    list.insertBefore(
+                        placeholder,
+                        nextCandidate.nextSibling
+                    );
+                };
+            }
+        } else if (dragDeltaY < 0 && previousCandidate) {
+            const previousRect =
+                previousCandidate.getBoundingClientRect();
 
-                        if (!gesture.ghost) {
-                            return;
-                        }
+            const overlap = Math.max(
+                0,
+                previousRect.bottom - movingTop
+            );
 
-                        gesture.ghost.style.setProperty(
-                            "--shop-task-drag-y",
-                            `${gesture.reorderGhostTargetY}px`
-                        );
-                    }
-                );
+            if (
+                overlap
+                >= previousRect.height * swapOverlapRatio
+            ) {
+                movePlaceholder = () => {
+                    list.insertBefore(
+                        placeholder,
+                        previousCandidate
+                    );
+                };
             }
         }
 
-        const candidates = Array.from(list.children).filter(
-            (candidate) => (
-                candidate !== card
-                && candidate.classList.contains("shop-task-card")
-            )
-        );
-
-        let insertBefore = null;
-
-        for (const candidate of candidates) {
-            const rect = candidate.getBoundingClientRect();
-            const midpoint = rect.top + (rect.height / 2);
-
-            if (clientY < midpoint) {
-                insertBefore = candidate;
-                break;
-            }
-        }
-
-        const orderWillChange = insertBefore
-            ? card.nextElementSibling !== insertBefore
-            : card !== list.lastElementChild;
-
-        if (!orderWillChange) {
+        if (!movePlaceholder) {
             return;
         }
 
-        animateTaskReorder(list, card, () => {
-            if (insertBefore) {
-                list.insertBefore(card, insertBefore);
-            } else {
-                list.append(card);
-            }
-        });
-
-        gesture.reordered = (
-            currentOrder().join(",")
-            !== gesture.previousOrder.join(",")
+        animateTaskReorder(
+            list,
+            card,
+            movePlaceholder
         );
+
+        gesture.reordered = true;
     };
+
 
     const cancelGesture = () => {
         if (!activeGesture) {
@@ -956,16 +1031,18 @@ if (taskRoot) {
         }
 
         const gesture = activeGesture;
+        const wasReordering = gesture.reordering;
 
         if (gesture.timer) {
             window.clearTimeout(gesture.timer);
         }
 
-        if (gesture.reordered) {
+        clearReorderVisual(gesture);
+
+        if (wasReordering) {
             restoreOrder(gesture.previousOrder);
         }
 
-        clearReorderVisual(gesture);
         activeGesture = null;
     };
 
@@ -994,11 +1071,11 @@ if (taskRoot) {
             armed: false,
             reordered: false,
             previousOrder: currentOrder(),
-            ghost: null,
+            placeholder: null,
             pointerOffsetY: 0,
-            reorderGhostFrameId: null,
-            reorderGhostStartTop: 0,
-            reorderGhostTargetY: 0,
+            reorderCardFrameId: null,
+            reorderCardStartTop: 0,
+            reorderCardTargetY: 0,
             timer: null,
         };
 
@@ -1021,6 +1098,7 @@ if (taskRoot) {
                 enterSelectionMode(card);
             }
 
+            liftReorderCard(gesture);
             window.getSelection()?.removeAllRanges();
         }, delay);
 
@@ -1062,11 +1140,6 @@ if (taskRoot) {
         }
 
         preventDefault();
-
-        if (!gesture.ghost) {
-            createReorderGhost(gesture);
-        }
-
         moveReorderGesture(gesture, clientY);
     };
 
@@ -1086,6 +1159,7 @@ if (taskRoot) {
         }
 
         const gesture = activeGesture;
+        const wasReordering = gesture.reordering;
 
         if (gesture.timer) {
             window.clearTimeout(gesture.timer);
@@ -1095,11 +1169,17 @@ if (taskRoot) {
 
         clearReorderVisual(gesture);
 
+        const reordered = (
+            wasReordering
+            && currentOrder().join(",")
+                !== gesture.previousOrder.join(",")
+        );
+
         if (gesture.armed) {
             suppressSyntheticClick(gesture.card);
         }
 
-        if (gesture.reordered) {
+        if (reordered) {
             saveOrder(gesture.previousOrder);
         }
     };
