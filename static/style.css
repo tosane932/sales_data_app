@@ -1064,8 +1064,8 @@ select {
 }
 
 .shop-task-toggle svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     pointer-events: none;
 }
 
@@ -5307,7 +5307,7 @@ body.shop-task-composer-open .shop-tools-fab-group {
         margin: 0 !important;
         padding: 0;
         color: #405b49;
-        font-size: 15px !important;
+        font-size: 14px !important;
         font-weight: 700;
         line-height: 1;
     }
@@ -5639,8 +5639,8 @@ body.shop-task-composer-open .shop-tools-fab-group {
 /* 未完了：□ */
 .shop-task-card .shop-task-toggle::before {
     display: block !important;
-    width: 22px !important;
-    height: 22px !important;
+    width: 19px !important;
+    height: 19px !important;
     box-sizing: border-box;
     content: "" !important;
     background: transparent !important;
@@ -6731,4 +6731,64 @@ body.shop-task-reorder-lock .shop-task-card {
 
 .shop-task-card.is-selected {
     border-color: #94b79c !important;
+}
+
+
+/* === Task reorder: native lifted card === */
+
+.shop-task-reorder-placeholder {
+    width: 100%;
+    flex: 0 0 auto;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.shop-task-list-root.is-selection-mode
+.shop-task-card.is-reordering {
+    position: fixed !important;
+    z-index: 1000 !important;
+
+    margin: 0 !important;
+    box-sizing: border-box !important;
+
+    pointer-events: none !important;
+    user-select: none !important;
+
+    transform:
+        translate3d(0, var(--shop-task-drag-y, 0px), 0)
+        scale(1.03) !important;
+    transform-origin: center;
+
+    border: 2px solid var(--shop-tools-accent) !important;
+
+    box-shadow:
+        0 14px 32px rgba(35, 55, 73, 0.24),
+        0 4px 10px rgba(35, 55, 73, 0.14);
+
+    transition: box-shadow 120ms ease !important;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shop-task-list-root.is-selection-mode
+    .shop-task-card.is-reordering {
+        transform:
+            translate3d(0, var(--shop-task-drag-y, 0px), 0)
+            scale(1) !important;
+        transition: none !important;
+    }
+}
+
+/* === Task checkbox: center against whole card height === */
+
+.shop-task-completion-form {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shop-task-completion-form .shop-task-toggle {
+    align-self: center;
+    flex: 0 0 44px;
 }
