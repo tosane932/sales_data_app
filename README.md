@@ -199,9 +199,10 @@ AdminとGuestは同じ業務画面を利用できますが、
 - Guestの商品数・POST件数制限
 - PostgreSQL上の並行requestを考慮したlock制御
 - Dataset単位の材料発注リスト（追加・完了・未完了・削除・100件上限）
-- 店舗メモの作成・編集・検索・pin・複製・ゴミ箱・復元・完全削除
-- 店舗メモのautosaveと、スマートフォン向け長押し・swipe・Undo操作
+- 店舗メモは作成・編集時の1行目をタイトルとして扱い、独立カード + 1行本文プレビューで一覧表示
+- 店舗メモの検索・pin・複製・autosave・ゴミ箱・復元・完全削除・Undo・swipe操作
 - Dataset単位のタスク（追加・完了 / 未完了・削除・複数選択・長押し並び替え）
+- Dashboardの棒グラフ周辺UIとPC / Mobileレイアウトを調整
 - タスク並び替えは実カード追従 + placeholder + FLIPで周囲カードをアニメーション
 - HTTP / HTTPS絶対URLだけを安全にlinkifyし、DBにはplain textを保存
 - Bakery Hubブランド、inline SVG、カテゴリカラーによる共通Navigation
@@ -215,8 +216,8 @@ AdminとGuestは同じ業務画面を利用できますが、
 - GitHub ActionsによるSQLite + PostgreSQL 16の二層CI
 - Falsification / Manual Mutation Testing
 - 月替わり・年替わり事故の回帰テスト
-- 最新main（PR #46 merge時点）のfull pytest：**742 passed / 17 skipped**
-- mainのGitHub Actions：`test` / `postgres-integration` ともにGreen
+- 現行main（PR #49 merge後）で確認済みのfull pytest：**742 passed / 17 skipped**
+- PR #49のGitHub Actions Run Tests #216：`test` / `postgres-integration` ともにGreen
 
 ---
 
@@ -301,6 +302,8 @@ Guest Demoでは、1 Datasetにつき最大30商品まで登録できます。
 
 などを確認できます。
 
+PR #49では、棒グラフ周辺のUIとPC / スマートフォンのレイアウトを見直し、グラフを読み取りやすく操作しやすい構成へ調整しました。
+
 売上データが存在する月には、
 
 ```text
@@ -340,7 +343,7 @@ DailySalesが存在する月
 | ツール | 現在のmain |
 |---|---|
 | 材料発注 | 材料名・数量メモ・補足を登録し、完了 / 未完了を切り替え |
-| 店舗メモ | タイトル・本文、検索、pin、複製、autosave、ゴミ箱、復元、完全削除 |
+| 店舗メモ | 1行目タイトル・1行本文プレビュー、検索、pin、複製、autosave、ゴミ箱、復元、完全削除 |
 | タスク | 追加・完了 / 未完了・削除・複数選択・長押し並び替え |
 
 材料発注・店舗メモ・タスクはProductとは独立したモデルとして保存し、  
@@ -368,10 +371,10 @@ DailySalesが存在する月
 | 販売終了 | `is_active`による論理削除 |
 | 日次売上 | 商品別販売数・同日データ上書き |
 | 状態表示 | 現在の登録済み個数を表示 |
-| 売上分析 | 年月別集計・ランキング・グラフ |
+| 売上分析 | 年月別集計・ランキング・グラフ・PC / Mobile棒グラフUI |
 | 材料発注 | Dataset単位の追加・完了 / 未完了・削除・最大100件 |
-| 店舗メモ | 作成・編集・検索・pin・複製・autosave |
-| メモ削除 | ゴミ箱・復元・完全削除 |
+| 店舗メモ | 1行目タイトル・1行本文プレビュー・作成・編集・検索・pin・複製・autosave |
+| メモ削除 | ゴミ箱・復元・完全削除・Undo・下swipeで通知を閉じる |
 | URL表示 | HTTP / HTTPS絶対URLだけを安全に自動リンク化 |
 | Mobile UI | 長押し・swipe・Undo・FAB・responsive editor |
 | Navigation | Bakery Hubブランド・inline SVG・カテゴリカラー |
@@ -505,14 +508,19 @@ DB例外時はrollbackし、別Datasetのitem IDを送られても更新対象�
 主な操作は次のとおりです。
 
 - 新規作成・編集
+- 1行目を太字タイトルとして表示
+- 本文を1行プレビューし、長い内容は省略表示
+- PC / スマートフォンとも縦1列の独立カード型一覧
 - タイトル / 本文検索
 - pin / unpin
 - 複製
 - autosave
 - ゴミ箱移動
-- 復元
+- 復元後もTrash画面を維持
 - Trashからの完全削除
+- 完全削除時の標準確認ダイアログ
 - 削除直後のUndo
+- 削除通知を下swipeで閉じる操作
 - スマートフォンでの長押しmenu・swipe操作
 
 本文に含まれるURLは、`http://` / `https://` の明確な絶対URLだけを表示時にlinkifyします。  
@@ -1188,7 +1196,7 @@ Dataset / Guest Demo実装
 店舗タスク・並び替えUX
 ↓
 
-PR #46時点
+PR #49時点
 742 passed / 17 skipped
 ```
 
@@ -1264,7 +1272,7 @@ PostgreSQL上でも並行性が安全
 などがあります。
 
 GitHub Actionsでは通常pytestに加えてPostgreSQL 16のintegration jobを実行し、  
-最新PR #46のGitHub Actions Run Tests #209でも、`test` / `postgres-integration` ともにGreenです。
+最新PR #49のGitHub Actions Run Tests #216でも、`test` / `postgres-integration` ともにGreenです。
 
 </details>
 
@@ -1996,8 +2004,11 @@ python app.py
 - Dataset単位の店舗タスク機能を追加
 - 長押し並び替えを実カード追従 + placeholder + FLIPへ改善
 - 並び替え成立の境界を約75%へ調整し、スマートフォン実機で操作感を確認
-- PR #46時点のfull pytest **742 passed / 17 skipped**
-- GitHub Actions Run Tests #209で通常test / PostgreSQL integrationともGreen
+- PR #48で店舗メモ一覧を独立カード型へ整理し、1行目タイトル・1行本文プレビュー・Trash表示・復元導線・削除確認を改善
+- PR #48で削除通知を下swipeで閉じられるようにし、スマートフォンでFABを塞ぎ続けない操作へ調整
+- PR #49でDashboardの棒グラフ周辺UIとPC / Mobileレイアウトを改善
+- PR #49 merge後のfull pytest **742 passed / 17 skipped**
+- GitHub Actions Run Tests #216で通常test / PostgreSQL integrationともGreen
 
 ### 2026-08：認証・セキュリティ・Dataset基盤
 
