@@ -124,7 +124,8 @@
                     data-pin-url="{{ url_for('shop_memos.set_pin', memo_id=memo.id) }}"
                     data-trash-url="{{ url_for('shop_memos.move_to_trash', memo_id=memo.id) }}"
                     data-restore-url="{{ url_for('shop_memos.restore_memo', memo_id=memo.id) }}"
-                    data-pinned="{{ 'true' if memo.pinned_at else 'false' }}">
+                    data-pinned="{{ 'true' if memo.pinned_at else 'false' }}"
+                    data-memo-body="{{ memo.body }}">
                     <button
                         type="button"
                         class="shop-memo-card-open touch-control-no-select"
@@ -157,7 +158,14 @@
                                 </svg>
                             </span>
                             <span class="shop-memo-title">{{ memo.title }}</span>
-                            <p class="shop-memo-body">{{ memo.body }}</p>
+                            <p class="shop-memo-body shop-memo-body-source">{{ memo.body }}</p>
+                            {% set memo_lines = memo.body.splitlines() %}
+                            {% if memo_lines and (memo_lines[0]|trim) == memo.title %}
+                                {% set memo_preview = memo_lines[1:]|join('\n') %}
+                            {% else %}
+                                {% set memo_preview = memo.body %}
+                            {% endif %}
+                            <p class="shop-memo-preview">{{ memo_preview }}</p>
                         </div>
 
                         <div class="shop-memo-card-meta">

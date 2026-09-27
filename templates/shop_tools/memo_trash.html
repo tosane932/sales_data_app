@@ -92,7 +92,19 @@
         <div class="shop-memo-list">
             {% for memo in memos %}
             <article class="shop-memo-card shop-memo-card-trashed">
-                <p class="shop-memo-body">{{ linkify_memo_body(memo.body) }}</p>
+                <span class="shop-memo-title">{{ memo.title }}</span>
+
+                <p class="shop-memo-body shop-memo-trash-body-source">{{ linkify_memo_body(memo.body) }}</p>
+
+                {% set memo_lines = memo.body.splitlines() %}
+                {% if memo_lines and (memo_lines[0]|trim) == memo.title %}
+                    {% set memo_preview = memo_lines[1:]|join('\n') %}
+                {% else %}
+                    {% set memo_preview = memo.body %}
+                {% endif %}
+
+                <p class="shop-memo-trash-preview">{{ memo_preview }}</p>
+
                 <p class="shop-memo-deleted-at">
                     削除日時：{{ format_deleted_at(memo.deleted_at) }}
                 </p>
@@ -101,16 +113,18 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn shop-memo-restore-button touch-control-no-select">復元する</button>
                     </form>
-                    <details class="shop-memo-delete-confirmation">
-                        <summary class="touch-control-no-select">完全に削除</summary>
-                        <p>この操作は取り消せません。本当に削除しますか？</p>
-                        <form method="POST" action="{{ url_for('shop_memos.delete_memo', memo_id=memo.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn shop-memo-delete-button touch-control-no-select">
-                                完全に削除する
-                            </button>
-                        </form>
-                    </details>
+                    <form
+                        method="POST"
+                        class="shop-memo-delete-form"
+                        action="{{ url_for('shop_memos.delete_memo', memo_id=memo.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <span class="visually-hidden">この操作は取り消せません</span>
+                        <button
+                            type="submit"
+                            class="btn shop-memo-delete-button touch-control-no-select">
+                            完全に削除
+                        </button>
+                    </form>
                 </div>
             </article>
             {% endfor %}

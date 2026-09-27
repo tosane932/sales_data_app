@@ -6792,3 +6792,223 @@ body.shop-task-reorder-lock .shop-task-card {
     align-self: center;
     flex: 0 0 44px;
 }
+
+
+/* ========================================
+   📝 店舗メモ：独立カード型一覧
+   ======================================== */
+
+.shop-memo-list-section.shop-memo-list-section-has-fab {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.shop-memo-list-heading-row {
+    margin-bottom: 12px;
+}
+
+.shop-memo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.shop-memo-swipe-row {
+    width: 100%;
+    border-radius: 14px;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed),
+.shop-memo-card:not(.shop-memo-card-trashed):first-child {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1px solid rgba(72, 115, 156, 0.22);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(35, 55, 73, 0.06);
+}
+
+.shop-memo-card-main {
+    display: block;
+}
+
+.shop-memo-title {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    color: #2f4154;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-body {
+    display: -webkit-box;
+    margin: 3px 0 0;
+    min-height: 0;
+    overflow: hidden;
+    color: #697785;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.shop-memo-card-meta {
+    margin-top: 7px;
+}
+
+.shop-memo-date {
+    display: block;
+    color: #8a96a1;
+    font-size: 0.76rem;
+}
+
+.shop-memo-field label[for="shop-memo-title"],
+.shop-memo-field label[for^="shop-memo-edit-title-"],
+.shop-memo-field input[name="title"] {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    .shop-memo-card:not(.shop-memo-card-trashed) {
+        padding: 13px 14px;
+        background: #ffffff;
+        border: 1px solid rgba(72, 115, 156, 0.22);
+        border-radius: 14px;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-card-main {
+        display: block;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-title,
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-date {
+        display: block !important;
+    }
+
+    .shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-menu-button {
+        display: none !important;
+    }
+}
+
+
+/* 店舗メモ：保存本文と一覧プレビューを分離 */
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-body-source {
+    display: none !important;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-preview {
+    display: -webkit-box;
+    margin: 3px 0 0;
+    min-height: 0;
+    overflow: hidden;
+    color: #697785;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* === Memo compact card final override === */
+.shop-memo-card:not(.shop-memo-card-trashed) {
+    padding: 10px 14px;
+}
+
+.shop-memo-card:not(.shop-memo-card-trashed) .shop-memo-preview {
+    display: block;
+    margin: 2px 0 0;
+    min-height: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: unset;
+}
+
+.shop-memo-card-meta {
+    margin-top: 4px;
+}
+
+
+/* === Memo snackbar swipe dismiss === */
+.shop-memo-snackbar {
+    touch-action: pan-x;
+    transition:
+        transform 180ms ease,
+        opacity 180ms ease;
+    will-change: transform, opacity;
+}
+
+.shop-memo-snackbar.is-swipe-dragging {
+    transition: none;
+}
+
+
+/* === Memo trash compact preview === */
+.shop-memo-card-trashed .shop-memo-title {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-memo-card-trashed .shop-memo-trash-body-source {
+    display: none;
+}
+
+.shop-memo-card-trashed .shop-memo-trash-preview {
+    display: block;
+    margin: 3px 0 0;
+    overflow: hidden;
+    color: #697785;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shop-memo-card-trashed .shop-memo-deleted-at {
+    margin: 5px 0 0;
+    font-size: 0.78rem;
+}
+
+.shop-memo-card-trashed {
+    padding: 12px 14px;
+}
+
+
+/* === Memo trash compact actions === */
+.shop-memo-card-trashed .shop-memo-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.shop-memo-card-trashed .shop-memo-actions form {
+    width: auto !important;
+    flex: 0 0 auto;
+}
+
+.shop-memo-card-trashed .shop-memo-actions .btn {
+    width: auto !important;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+}

@@ -315,7 +315,7 @@ def test_memo_full_lifecycle_updates_active_and_trash_views(
         f"/shop-tools/memo/{memo_id}/restore",
     )
     assert restore_response.status_code == 303
-    assert restore_response.headers["Location"].endswith("/shop-tools/memo")
+    assert restore_response.headers["Location"].endswith("/shop-tools/memo/trash")
     db.session.expire_all()
     assert db.session.get(ShopMemo, memo_id).deleted_at is None
     assert "編集後" in authenticated_client.get(
@@ -1774,7 +1774,8 @@ def test_memo_ui_has_accessible_controls_and_irreversible_delete_confirmation(
         f'form[action="/shop-tools/memo/{deleted_memo.id}/restore"]'
     ) is not None
     permanent_delete = trash_document.select_one(
-        f'details form[action="/shop-tools/memo/{deleted_memo.id}/delete"]'
+        f'form.shop-memo-delete-form'
+        f'[action="/shop-tools/memo/{deleted_memo.id}/delete"]'
     )
     assert permanent_delete is not None
     assert "この操作は取り消せません" in permanent_delete.parent.get_text()

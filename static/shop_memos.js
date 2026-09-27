@@ -300,6 +300,60 @@ const hideAutosaveError = (dialog) => {
     }
 };
 
+const firstMemoLine = (value) => {
+    const line = String(value || "")
+        .split(/\r?\n/)
+        .find((item) => item.trim());
+
+    return line ? line.trim().slice(0, 100) : "";
+};
+
+const memoBodyWithoutTitle = (title, body) => {
+    const lines = String(body || "").split(/\r?\n/);
+    const firstContentIndex = lines.findIndex((line) => line.trim());
+
+    if (
+        firstContentIndex >= 0
+        && lines[firstContentIndex].trim() === String(title || "").trim()
+    ) {
+        lines.splice(firstContentIndex, 1);
+        return lines.join("\n").trimStart();
+    }
+
+    return String(body || "");
+};
+
+const ensureEditorTitleLine = (dialog) => {
+    const titleInput = dialog.querySelector('input[name="title"]');
+    const textarea = dialog.querySelector('textarea[name="body"]');
+
+    if (!titleInput || !textarea) {
+        return;
+    }
+
+    const title = titleInput.value.trim();
+    const body = textarea.value;
+
+    if (!title || !body.trim()) {
+        return;
+    }
+
+    if (firstMemoLine(body) !== title) {
+        textarea.value = `${title}\n${body}`;
+    }
+};
+
+const syncEditorTitleFromBody = (dialog) => {
+    const titleInput = dialog.querySelector('input[name="title"]');
+    const textarea = dialog.querySelector('textarea[name="body"]');
+
+    if (!titleInput || !textarea) {
+        return;
+    }
+
+    titleInput.value = firstMemoLine(textarea.value);
+};
+
 const applySavedMemoToEditor = (dialog, memo) => {
     dialog.dataset.memoId = String(memo.id);
     dialog.dataset.autosaveUrl = memo.autosave_url;
@@ -425,7 +479,11 @@ document.querySelectorAll("dialog[data-memo-editor]").forEach((dialog) => {
     const backButton = dialog.querySelector(".shop-memo-mobile-editor-back");
     editorStates.set(dialog, {dirty: false, timer: null, saving: null});
 
+    ensureEditorTitleLine(dialog);
+    syncEditorTitleFromBody(dialog);
+
     textarea?.addEventListener("input", () => {
+        syncEditorTitleFromBody(dialog);
         scheduleMobileAutosave(dialog);
         refreshMobileEditorLayout(dialog);
     });
@@ -570,9 +628,15 @@ const contextFromMemoElement = (element) => {
     const title = card
         ? card.querySelector(".shop-memo-title")?.textContent || ""
         : editor.querySelector('input[name="title"]')?.value || "";
-    const body = card
-        ? card.querySelector(".shop-memo-body")?.textContent || ""
+    const rawBody = card
+        ? card.dataset.memoBody
+            || card.querySelector(".shop-memo-body")?.textContent
+            || ""
         : editor.querySelector('textarea[name="body"]')?.value || "";
+
+    const body = card && title && firstMemoLine(rawBody) !== title
+        ? `${title}\n${rawBody}`
+        : rawBody;
 
     return {
         memoId: source.dataset.memoId,
@@ -606,7 +670,10 @@ const openMobileActionSheet = (element) => {
 
     activeMobileMemo = context;
     mobilePreviewTitle.textContent = context.title;
-    mobilePreviewBody.textContent = context.body;
+    mobilePreviewBody.textContent = memoBodyWithoutTitle(
+        context.title,
+        context.body
+    );
     mobilePinActionLabel.textContent = context.pinned
         ? "ピンを外す"
         : "ピン留め";
@@ -1017,4 +1084,91 @@ MOBILE_MEMO_MEDIA.addEventListener("change", () => {
     document.querySelectorAll("dialog[data-memo-editor]").forEach(
         refreshMobileEditorLayout
     );
+});
+
+
+/* === Memo snackbar: swipe down to dismiss === */
+(() => {
+    const snackbar = document.getElementById("shop-memo-snackbar");
+
+    if (!snackbar || snackbar.dataset.swipeDismissReady === "true") {
+        return;
+    }
+
+    snackbar.dataset.swipeDismissReady = "true";
+
+    let startY = 0;
+    let dragY = 0;
+    let dragging = false;
+
+    const resetPosition = () => {
+        snackbar.style.transform = "";
+        snackbar.style.opacity = "";
+        snackbar.classList.remove("is-swipe-dragging");
+    };
+
+    const dismissSnackbar = () => {
+        snackbar.classList.remove("is-swipe-dragging");
+        snackbar.style.transform = "translateY(120%)";
+        snackbar.style.opacity = "0";
+
+        window.setTimeout(() => {
+            snackbar.hidden = true;
+            resetPosition();
+        }, 180);
+    };
+
+    snackbar.addEventListener("pointerdown", (event) => {
+        if (event.target.closest("button")) {
+            return;
+        }
+
+        startY = event.clientY;
+        dragY = 0;
+        dragging = true;
+
+        snackbar.classList.add("is-swipe-dragging");
+        snackbar.setPointerCapture?.(event.pointerId);
+    });
+
+    snackbar.addEventListener("pointermove", (event) => {
+        if (!dragging) {
+            return;
+        }
+
+        dragY = Math.max(0, event.clientY - startY);
+
+        snackbar.style.transform = `translateY(${dragY}px)`;
+        snackbar.style.opacity = String(
+            Math.max(0.35, 1 - dragY / 180)
+        );
+    });
+
+    const finishSwipe = () => {
+        if (!dragging) {
+            return;
+        }
+
+        dragging = false;
+
+        if (dragY >= 60) {
+            dismissSnackbar();
+            return;
+        }
+
+        resetPosition();
+    };
+
+    snackbar.addEventListener("pointerup", finishSwipe);
+    snackbar.addEventListener("pointercancel", finishSwipe);
+})();
+
+
+/* === Memo trash: Taskと同じ標準削除確認 === */
+document.querySelectorAll(".shop-memo-delete-form").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+        if (!window.confirm("このメモを完全に削除しますか？")) {
+            event.preventDefault();
+        }
+    });
 });
