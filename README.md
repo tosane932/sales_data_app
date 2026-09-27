@@ -581,9 +581,9 @@ Dataset
 └── Guest Dataset C
 ```
 
-Product・MaterialOrderItem・ShopMemoは、それぞれ所属する`dataset_id`を持ちます。
+Product・MaterialOrderItem・ShopMemo・ShopTaskは、それぞれ所属する`dataset_id`を持ちます。
 
-商品・日次売上・Dashboard・AI分析・材料発注・店舗メモなどの処理では、  
+商品・日次売上・Dashboard・AI分析・材料発注・店舗メモ・タスクなどの処理では、  
 現在認証されている利用者が利用できるDatasetだけを対象にします。
 
 ```text
@@ -673,7 +673,7 @@ Guest Datasetの利用時には期限を確認し、期限切れの場合は業�
 削除順序は、
 
 ```text
-MaterialOrderItem / ShopMemo
+MaterialOrderItem / ShopMemo / ShopTask
             ↓
         DailySales
             ↓
