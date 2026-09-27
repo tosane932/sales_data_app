@@ -6793,6 +6793,37 @@ body.shop-task-reorder-lock .shop-task-card {
     flex: 0 0 44px;
 }
 
+/* === Dashboard product sales horizontal chart === */
+
+.dashboard-chart-card {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #f5edd6;
+    border-radius: 12px;
+}
+
+.dashboard-chart-scroll {
+    max-height: 720px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.dashboard-chart-canvas {
+    position: relative;
+    min-height: 280px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-chart-card {
+        padding: 14px 10px;
+    }
+
+    .dashboard-chart-scroll {
+        max-height: 70vh;
+    }
+}
+
 
 /* ========================================
    📝 店舗メモ：独立カード型一覧
