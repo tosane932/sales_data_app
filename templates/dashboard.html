@@ -119,8 +119,14 @@
         </svg>
         <span>商品ごとの売上</span>
     </h2>
-    <div style="background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #f5edd6; margin-bottom: 30px;">
-        <canvas id="salesChart"></canvas>
+    <div class="dashboard-chart-card">
+        <div class="dashboard-chart-scroll">
+            <div
+                class="dashboard-chart-canvas"
+                data-dashboard-chart-canvas>
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <h2 id="ai-advice-heading" class="ui-icon-layout">
@@ -272,6 +278,57 @@
         );
     }
 
+    function wrapChartLabel(label) {
+        const characters = Array.from(String(label));
+        const maxCharacters = 18;
+        const lineLength = 9;
+
+        const visibleCharacters = characters.slice(
+            0,
+            maxCharacters
+        );
+
+        if (characters.length > maxCharacters) {
+            visibleCharacters[
+                visibleCharacters.length - 1
+            ] = '…';
+        }
+
+        const lines = [];
+
+        for (
+            let index = 0;
+            index < visibleCharacters.length;
+            index += lineLength
+        ) {
+            lines.push(
+                visibleCharacters
+                    .slice(index, index + lineLength)
+                    .join('')
+            );
+        }
+
+        return lines;
+    }
+
+    const salesChartCanvas =
+        document.querySelector('[data-dashboard-chart-canvas]');
+
+    function syncSalesChartHeight(labels) {
+        const rowHeight = 44;
+        const chartPadding = 64;
+        const minHeight = 280;
+
+        const chartHeight = Math.max(
+            minHeight,
+            (labels.length * rowHeight) + chartPadding
+        );
+
+        salesChartCanvas.style.height = `${chartHeight}px`;
+    }
+
+    syncSalesChartHeight(initialLabels);
+
     const ctx = document.getElementById('salesChart').getContext('2d');
     const salesChart = new Chart(ctx, {
         type: 'bar',
@@ -293,9 +350,38 @@
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-            plugins: { legend: { display: false } }
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        autoSkip: false,
+                        padding: 8,
+                        callback(value) {
+                            const label = this.getLabelForValue(
+                                value
+                            );
+
+                            return wrapChartLabel(label);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         }
     });
 
@@ -398,6 +484,9 @@
                         data.chart_labels,
                         chartBorderColors
                     );
+
+                syncSalesChartHeight(data.chart_labels);
+                salesChart.resize();
                 salesChart.update();
 
                 // 4. AI経営アドバイスのテキストを改行を考慮して反映
