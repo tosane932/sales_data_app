@@ -5,7 +5,7 @@
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
 **Bakery Hub** は、ベーカリーの商品登録・日次売上入力・売上分析に加え、  
-材料発注リストと店舗メモまで一つの画面で扱える業務支援Webアプリケーションです。
+材料発注リスト・店舗メモ・タスクまで一つの画面で扱える業務支援Webアプリケーションです。
 
 必要なときだけGemini APIへ経営アドバイスを依頼できます。
 
@@ -43,15 +43,15 @@ Guest Demoでも、
       ↓
 売上ランキング・グラフを見る
       ↓
-材料発注リスト・店舗メモを使う
+材料発注リスト・店舗メモ・タスクを使う
       ↓
 Geminiへ経営アドバイスを依頼する
 ```
 
 という実際の業務フローを操作できます。
 
-店舗メモツールでは、現在 **材料発注** と **メモ** を利用できます。  
-`/shop-tools/tasks` のタスク機能は、mainでは準備中画面です。
+店舗メモツールでは、現在 **材料発注・メモ・タスク** を利用できます。  
+タスクでは、追加・完了 / 未完了・削除・複数選択・長押し並び替えを操作できます。
 
 > [!NOTE]
 > Renderの無料インスタンスを使用しているため、しばらくアクセスがない場合はスリープ状態になります。  
@@ -90,7 +90,7 @@ Guestの商品数
 ## 📸 スクリーンショット
 
 > スクリーンショットは撮影時点の画面です。  
-> 現在の実装では、Guest Demo、Dataset分離、認証、CSRF保護、rate limit、回帰テストに加え、材料発注・店舗メモ・Bakery Hubの新UIを追加しています。  
+> 現在の実装では、Guest Demo、Dataset分離、認証、CSRF保護、rate limit、回帰テストに加え、材料発注・店舗メモ・タスク・Bakery Hubの新UIを追加しています。  
 > そのため、公開中の画面とは一部デザインが異なります。
 
 ### 🍞 商品マスタ登録画面
@@ -142,7 +142,7 @@ Guestの商品数
 店舗メモツール
 ├── 材料発注リスト
 ├── 店舗メモ
-└── タスク（準備中）
+└── タスク
 ```
 
 利用者は、次の2種類を明確に分けています。
@@ -173,7 +173,7 @@ AdminとGuestは同じ業務画面を利用できますが、
         ↓
 売上ランキングとグラフを確認する
         ↓
-必要に応じて材料発注リスト・店舗メモを使う
+必要に応じて材料発注リスト・店舗メモ・タスクを使う
         ↓
 必要なときだけGeminiへ経営アドバイスを依頼する
 ```
@@ -201,6 +201,8 @@ AdminとGuestは同じ業務画面を利用できますが、
 - Dataset単位の材料発注リスト（追加・完了・未完了・削除・100件上限）
 - 店舗メモの作成・編集・検索・pin・複製・ゴミ箱・復元・完全削除
 - 店舗メモのautosaveと、スマートフォン向け長押し・swipe・Undo操作
+- Dataset単位のタスク（追加・完了 / 未完了・削除・複数選択・長押し並び替え）
+- タスク並び替えは実カード追従 + placeholder + FLIPで周囲カードをアニメーション
 - HTTP / HTTPS絶対URLだけを安全にlinkifyし、DBにはplain textを保存
 - Bakery Hubブランド、inline SVG、カテゴリカラーによる共通Navigation
 - Flask-LoginによるAdmin認証
@@ -213,7 +215,7 @@ AdminとGuestは同じ業務画面を利用できますが、
 - GitHub ActionsによるSQLite + PostgreSQL 16の二層CI
 - Falsification / Manual Mutation Testing
 - 月替わり・年替わり事故の回帰テスト
-- PR #42時点のfull pytest：**668 passed / 16 skipped**
+- 最新main（PR #46 merge時点）のfull pytest：**742 passed / 17 skipped**
 - mainのGitHub Actions：`test` / `postgres-integration` ともにGreen
 
 ---
@@ -339,10 +341,10 @@ DailySalesが存在する月
 |---|---|
 | 材料発注 | 材料名・数量メモ・補足を登録し、完了 / 未完了を切り替え |
 | 店舗メモ | タイトル・本文、検索、pin、複製、autosave、ゴミ箱、復元、完全削除 |
-| タスク | 準備中画面 |
+| タスク | 追加・完了 / 未完了・削除・複数選択・長押し並び替え |
 
-材料発注と店舗メモはProductとは独立したモデルとして保存し、  
-どちらも現在のDatasetに所属するデータだけを参照・更新します。
+材料発注・店舗メモ・タスクはProductとは独立したモデルとして保存し、  
+いずれも現在のDatasetに所属するデータだけを参照・更新します。
 
 ---
 
@@ -373,7 +375,7 @@ DailySalesが存在する月
 | URL表示 | HTTP / HTTPS絶対URLだけを安全に自動リンク化 |
 | Mobile UI | 長押し・swipe・Undo・FAB・responsive editor |
 | Navigation | Bakery Hubブランド・inline SVG・カテゴリカラー |
-| タスク | mainでは準備中画面 |
+| タスク | Dataset単位の追加・完了 / 未完了・削除・複数選択・長押し並び替え |
 | AI | Gemini APIによる日次支援・経営アドバイス |
 | AI制限 | Guest Dataset単位で合計3回 |
 | DB整合性 | 一意制約・CHECK・transaction・rollback・row lock |
@@ -520,7 +522,45 @@ DBへHTMLを保存せずplain textを維持し、本文・URL表示文字列・h
 Admin / Guest / Guest間の越境を防ぎます。
 
 スマートフォンでは、画面幅・virtual keyboard・touch操作を前提にUIを調整しています。  
-タスク機能はこのREADME更新時点ではmain未実装で、準備中画面を表示します。
+タスク機能は別の`ShopTask`モデルとして実装し、店舗メモと同じDataset境界の中で利用できます。
+
+</details>
+
+---
+
+<details>
+<summary><strong>✅ タスク機能を見る</strong></summary>
+
+<br>
+
+タスクは`ShopTask`としてDataset単位で保存します。
+
+主な項目は、
+
+```text
+title         最大100文字
+is_completed 完了状態
+completed_at 完了日時
+position      並び順
+```
+
+です。
+
+現在の主な操作は次のとおりです。
+
+- 新規作成
+- 完了 / 未完了
+- 削除
+- 複数選択
+- 完了済みグループ表示
+- 長押しによる並び替え
+
+スマートフォンの並び替えでは、複製したghostではなく**実際のTaskカード本人**を指へ追従させます。  
+元の場所は`placeholder`で確保し、周囲のカードはFLIPを用いて滑らかに移動させています。
+
+並び替え成立の境界も実機で調整し、隣接カードへほぼ100%重なるまで待つのではなく、約75%重なった段階で周囲が避けるようにしています。
+
+JavaScript変更後はChrome headlessでも構文エラーを確認し、Task専用テストは**69 passed**、PR #46時点のfull pytestは**742 passed / 17 skipped**です。
 
 </details>
 
@@ -1145,8 +1185,11 @@ Dataset / Guest Demo実装
 ↓
 600件超
 
-PR #42時点
-668 passed / 16 skipped
+店舗タスク・並び替えUX
+↓
+
+PR #46時点
+742 passed / 17 skipped
 ```
 
 現在は、
@@ -1156,6 +1199,7 @@ Product
 DailySales
 MaterialOrderItem
 ShopMemo
+ShopTask
 Dashboard
 AI
 XSS
@@ -1181,6 +1225,7 @@ Guest作成rate limit
 店舗メモのDataset分離
 店舗メモのTrash / restore / permanent delete
 店舗メモのautosave / pin / URL linkify
+店舗タスクのDataset分離・完了状態・並び替え
 Mobile UI / SVG Navigation
 AI prompt制限
 Admin login rate limit
@@ -1195,7 +1240,7 @@ HSTS
 
 ### PostgreSQL専用テスト
 
-PR #42時点で通常suiteからskipされる16件は、主にテスト用PostgreSQL環境が必要なintegration testです。
+最新mainで通常suiteからskipされる17件は、主にテスト用PostgreSQL環境が必要なintegration testです。
 
 通常のSQLiteテストだけで、
 
@@ -1213,12 +1258,13 @@ PostgreSQL上でも並行性が安全
 - Admin login rate limit
 - 材料発注100件上限と並行request
 - 店舗メモのDataset分離・100件上限・rollback
+- 店舗タスクのDataset分離・整合性・並び替え
 - Alembic migration
 
 などがあります。
 
 GitHub Actionsでは通常pytestに加えてPostgreSQL 16のintegration jobを実行し、  
-最新main（PR #42 merge時点）では両jobがGreenです。
+最新PR #46のGitHub Actions Run Tests #209でも、`test` / `postgres-integration` ともにGreenです。
 
 </details>
 
@@ -1947,8 +1993,11 @@ python app.py
 - PC / Mobileのnavigationと店舗ツールUIを整理
 - 固定UIアイコンをinline SVGへ統一
 - ベーカリー向けブランドを **Bakery Hub** へ統一
-- PR #42時点のfull pytest **668 passed / 16 skipped**
-- mainのGitHub Actionsで通常test / PostgreSQL integrationともGreen
+- Dataset単位の店舗タスク機能を追加
+- 長押し並び替えを実カード追従 + placeholder + FLIPへ改善
+- 並び替え成立の境界を約75%へ調整し、スマートフォン実機で操作感を確認
+- PR #46時点のfull pytest **742 passed / 17 skipped**
+- GitHub Actions Run Tests #209で通常test / PostgreSQL integrationともGreen
 
 ### 2026-08：認証・セキュリティ・Dataset基盤
 
@@ -1989,7 +2038,6 @@ python app.py
 
 ### 店舗業務支援
 
-- タスク管理（現在は準備中画面）
 - 在庫数管理
 - 売上入力時の自動在庫減算
 - 発注提案
@@ -2044,6 +2092,7 @@ python app.py
 - [GitHubリポジトリ](https://github.com/tosane932/sales_data_app)
 - [商品を消しても売上履歴を壊さない論理削除の実装記録](https://qiita.com/tosane932/items/4825452f4bb73fd90ba8)
 - [Flask-Migrateの初期マイグレーション修復記録](https://qiita.com/tosane932/items/13c2ca0e17716594aa1e)
+- [📝店舗メモツール完成｜タスクの長押し・並び替えを“使いやすい動き”まで詰めた](https://qiita.com/tosane932/items/de92221331b5f6b5912b)
 
 ### pytest強化シリーズ
 
