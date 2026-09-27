@@ -721,7 +721,7 @@ def create_shop_memos_blueprint(*, access_required, resolve_dataset):
         if request.is_json:
             return jsonify(ok=True, memo=memo_json_payload(memo))
 
-        return redirect(url_for("shop_memos.list_memos"), code=303)
+        return redirect(url_for("shop_memos.list_trash"), code=303)
 
     @blueprint.post("/shop-tools/memo/<int:memo_id>/delete")
     @access_required

@@ -503,7 +503,7 @@ def test_memo_trash_lifecycle_and_limits_on_postgresql(tmp_path):
             "permanent_delete": 303,
             "accepted_create": 303,
         }
-        assert result["restore_location"].endswith("/shop-tools/memo")
+        assert result["restore_location"].endswith("/shop-tools/memo/trash")
         assert result["restored_is_active"] is True
         assert result["permanently_deleted"] is True
         assert result["guest_a_count"] == 100
