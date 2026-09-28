@@ -1,0 +1,405 @@
+/* ========================================
+   🌿 ページ全体
+======================================== */
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: #fcfdfa;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    box-sizing: border-box;
+}
+
+h1 {
+    color: #2c5e3b;
+    margin: 0 0 5px;
+}
+
+.subtitle {
+    color: #88a070;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+
+/* ========================================
+   👤 ログインユーザー表示
+======================================== */
+
+.user-panel {
+    width: min(580px, calc(100% - 32px));
+    margin: 0 auto 22px;
+    padding: 14px 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    background: #f7faf5;
+    border: 1px solid #d7e3d2;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(60, 90, 60, 0.08);
+
+    box-sizing: border-box;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+
+    border: 2px solid #c9d9c2;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+
+    min-width: 0;
+    color: #364536;
+}
+
+.user-text strong {
+    overflow-wrap: anywhere;
+}
+
+.login-label {
+    color: #7d8f79;
+    font-size: 12px;
+}
+
+
+/* ========================================
+   🚪 ログアウトボタン
+======================================== */
+
+.logout-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    padding: 9px 16px;
+
+    background: #ffffff;
+    color: #c65f6f;
+    border: 1px solid #e7a8b2;
+    border-radius: 8px;
+
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s,
+        box-shadow 0.2s;
+}
+
+.logout-button:hover {
+    background: #fff1f3;
+    color: #a94354;
+    box-shadow: 0 3px 8px rgba(198, 95, 111, 0.15);
+}
+
+.logout-button:active {
+    transform: translateY(1px);
+}
+
+
+/* ========================================
+   🔐 Googleログインボタン
+======================================== */
+
+.guest-panel {
+    justify-content: center;
+    padding: 0;
+
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.google-login-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    padding: 11px 20px;
+
+    background: #ffffff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    transition:
+        background-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.google-login-button:hover {
+    background: #f8f9fa;
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.12);
+}
+
+.google-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 20px;
+    height: 20px;
+
+    color: #4285f4;
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+
+/* ========================================
+   🔍 検索フォーム
+======================================== */
+
+.search-container {
+    width: min(580px, calc(100% - 32px));
+    margin: 0 auto 20px;
+
+    box-sizing: border-box;
+}
+
+#search-form {
+    width: 100%;
+    min-height: 56px;
+    padding: 5px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    background: #ffffff;
+    border: 2px solid #cbdcbe;
+    border-radius: 999px;
+
+    box-sizing: border-box;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+#search-form:focus-within {
+    border-color: #91ad83;
+    box-shadow: 0 0 0 3px rgba(145, 173, 131, 0.15);
+}
+
+.search-input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 18px;
+
+    background: transparent;
+    color: #364536;
+    border: none;
+    outline: none;
+
+    font-family: inherit;
+    font-size: 16px;
+
+    box-sizing: border-box;
+}
+
+.search-input::placeholder {
+    color: #9aa697;
+}
+
+.search-button {
+    position: static;
+    flex-shrink: 0;
+
+    min-width: 105px;
+    height: 44px;
+    padding: 0 22px;
+
+    background-color: #e8a7b6;
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s,
+        transform 0.1s,
+        box-shadow 0.2s;
+}
+
+.search-button:hover {
+    background-color: #dc829a;
+    box-shadow: 0 3px 8px rgba(220, 130, 154, 0.25);
+}
+
+.search-button:active {
+    transform: translateY(1px);
+}
+
+
+/* ========================================
+   ⚠️ 注意事項
+======================================== */
+
+.warning-text {
+    color: #d9534f;
+    font-size: 13px;
+    margin-top: 7px;
+    text-align: center;
+}
+
+
+/* ========================================
+   🕊️ 鳩のアニメーション
+======================================== */
+
+#dove-stage {
+    min-height: 62px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dove {
+    display: inline-block;
+    font-size: 40px;
+
+    transition: all 1.5s ease-in-out;
+}
+
+.dove.fly-away {
+    transform: translate(300px, -200px) scale(1.5) rotate(15deg);
+    opacity: 0;
+}
+
+
+/* ========================================
+   ⏳ ローディング表示
+======================================== */
+
+#loading-screen {
+    display: none;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.hourglass {
+    display: inline-block;
+    font-size: 30px;
+
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* ========================================
+   📱 スマートフォン対応
+======================================== */
+
+@media (max-width: 600px) {
+    body {
+        padding: 18px 10px;
+    }
+
+    h1 {
+        font-size: 26px;
+    }
+
+    .subtitle {
+        margin-bottom: 22px;
+        font-size: 14px;
+    }
+
+    .user-panel,
+    .search-container {
+        width: 100%;
+    }
+
+    .user-panel {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .user-avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .user-text strong {
+        font-size: 14px;
+    }
+
+    .logout-button {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    #search-form {
+        min-height: 54px;
+    }
+
+    .search-input {
+        height: 42px;
+        padding: 0 12px;
+        font-size: 15px;
+    }
+
+    .search-button {
+        min-width: 88px;
+        height: 42px;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    .dove.fly-away {
+        transform: translate(160px, -150px) scale(1.2) rotate(15deg);
+    }
+}

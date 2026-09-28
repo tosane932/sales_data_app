@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分析結果 | Puoppo 🕊️</title>
+    <style>
+        /* 🌿 トップページと統一感を持たせたナチュラルなデザイン */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #fcfdfa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #eef2ea;
+        }
+
+        h1 {
+            color: #2c5e3b;
+            font-size: 24px;
+            margin-top: 0;
+        }
+
+        .keyword-badge {
+            display: inline-block;
+            background-color: #f0f4ee;
+            color: #2c5e3b;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #2c5e3b;
+            font-size: 18px;
+            border-left: 4px solid #e8a7b6; /* 桜色のアクセント */
+            padding-left: 10px;
+            margin-top: 30px;
+        }
+
+        /* 🤖 AI分析結果の表示エリア */
+        .analysis-box {
+            background-color: #fafbfc;
+            border: 1px solid #ebedf0;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        /* GeminiのMarkdown出力（リストや強調）が荒れずに表示されるよう最低限だけ整える */
+        .analysis-box ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .analysis-box li {
+            margin-bottom: 6px;
+        }
+
+        /* 📰 収集したニュースのリスト */
+        .news-list {
+            padding-left: 20px;
+            line-height: 1.5;
+        }
+
+        .news-list li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        /* ↩️ 戻るボタン */
+        .back-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 25px;
+            background-color: #e8a7b6; /* 桜色 */
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #df93a4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Puoppo 世論・不満分析結果 🕊️</h1>
+
+        <div class="keyword-badge">検索ワード: {{ keyword }}</div>
+
+        <h2>🤖 AI「Puoppo」による分析レポート</h2>
+        <!-- app.py側でMarkdown→HTMLに変換済みのため safe を付けてそのまま表示します -->
+        <div class="analysis-box">{{ result | safe }}</div>
+
+        <h2>📰 分析の元になった最新ニュース</h2>
+        <ul class="news-list">
+            {% for title in news %}
+                <li>{{ title }}</li>
+            {% endfor %}
+        </ul>
+
+        <div style="text-align: center;">
+            <a href="/" class="back-button">↩️ 他のワードも調べる</a>
+        </div>
+    </div>
+
+</body>
+</html>
