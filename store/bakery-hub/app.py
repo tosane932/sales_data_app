@@ -1579,6 +1579,8 @@ def dashboard():
     )
 
     return render_template("dashboard.html",
+                           today_sales=_get_today_sales_amount(current_dataset, today),
+                           business_date=today.isoformat(),
                            sales=sales_data,
                            ranked_sales=ranked_sales,
                            chart_labels=chart_labels,
@@ -1613,7 +1615,10 @@ def api_dashboard_data():
     chart_labels = [name for name, qty in ranked_sales]
     chart_values = [qty for name, qty in ranked_sales]
 
+    today = business_today()
     return jsonify({
+        "today_sales": _get_today_sales_amount(current_dataset, today),
+        "business_date": today.isoformat(),
         "ranked_sales": ranked_sales,
         "chart_labels": chart_labels,
         "chart_values": chart_values,
@@ -1904,6 +1909,22 @@ def _get_today_sales_map(target_date, current_dataset):
         sale.product_id: sale.quantity
         for sale in sales
     }
+
+def _get_today_sales_amount(current_dataset, target_date):
+    """認可済みDatasetの当日売上を、登録単価×数量で集計する。"""
+    amount = db.session.query(
+        db.func.coalesce(
+            db.func.sum(db.cast(Product.price, db.BigInteger) * DailySales.quantity),
+            0,
+        )
+    ).select_from(Product).join(
+        DailySales, Product.id == DailySales.product_id,
+    ).filter(
+        Product.dataset_id == current_dataset.id,
+        DailySales.date == target_date,
+    ).scalar()
+    return int(amount)
+
 
 def _get_sales_from_db(
     current_dataset,

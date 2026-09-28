@@ -11,6 +11,7 @@
 {% include "_app_navigation.html" %}
 
 <div class="container">
+    <header class="dashboard-header">
     <h1>
         <svg class="ui-icon ui-icon-page-heading" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
             <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
@@ -20,6 +21,7 @@
         </svg>
         <span>売上データ分析</span>
     </h1>
+    </header>
     <p class="dashboard-filter-guidance">
         ※表示期間を変更した後は、【データを抽出】ボタンを押してください。
     </p>
@@ -63,6 +65,11 @@
         <small>※年を選ぶと、メニュー登録済みの月に「登録済み」と表示されます。</small>
     </div>
 
+    <section class="dashboard-today" aria-label="本日の売上">
+        <div><strong>本日の売上</strong><small><time id="businessDate">{{ business_date }}</time>（日本時間）・表示期間にかかわらず本日分</small></div>
+        <strong id="todaySalesAmount" aria-live="polite">¥{{ "{:,}".format(today_sales) }}</strong>
+    </section>
+
     <p class="dashboard-period ui-icon-layout">
         <svg class="ui-icon ui-icon-status" data-icon="calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
             <path d="M8 2v3"></path>
@@ -79,6 +86,7 @@
         <span>表示期間：<strong id="periodTitle">{{ period_text }}</strong></span>
     </p>
 
+    <section class="dashboard-ranking-panel" aria-labelledby="ranking-heading">
     <h2 id="ranking-heading" class="ui-icon-layout">
         <svg class="ui-icon ui-icon-section-heading" data-icon="trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
             <path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"></path>
@@ -91,7 +99,7 @@
         <span>売れ筋ランキング</span>
     </h2>
 
-    <div class="ranking-container" id="rankingContainer">
+    <div class="ranking-container" id="rankingContainer" tabindex="0" role="region" aria-label="商品別ランキング（スクロールで全件表示）">
         {% if ranked_sales %}
             {% for name, qty in ranked_sales %}
                 <div class="ranking-item">
@@ -110,6 +118,8 @@
         {% endif %}
     </div>
 
+    </section>
+    <section class="dashboard-chart-panel" aria-labelledby="sales-chart-heading">
     <h2 id="sales-chart-heading" class="ui-icon-layout">
         <svg class="ui-icon ui-icon-section-heading" data-icon="chart-column" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
             <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
@@ -120,7 +130,7 @@
         <span>商品ごとの売上</span>
     </h2>
     <div class="dashboard-chart-card">
-        <div class="dashboard-chart-scroll">
+        <div class="dashboard-chart-scroll" tabindex="0" role="region" aria-label="商品ごとの売上グラフ（スクロールで全件表示）">
             <div
                 class="dashboard-chart-canvas"
                 data-dashboard-chart-canvas>
@@ -129,6 +139,8 @@
         </div>
     </div>
 
+    </section>
+    <section class="dashboard-ai-panel" aria-labelledby="ai-advice-heading">
     <h2 id="ai-advice-heading" class="ui-icon-layout">
         <svg class="ui-icon ui-icon-section-heading" data-icon="bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
             <path d="M12 8V4H8"></path>
@@ -150,7 +162,7 @@
             <path d="M9 13v2"></path>
         </svg>
 
-        <div class="dashboard-ai-response">
+        <div class="dashboard-ai-response" tabindex="0" role="region" aria-label="AIアドバイス本文">
             <svg id="aiAdviceLoadingIcon" class="ui-icon ui-icon-status" data-icon="loader-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" hidden>
                 <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
             </svg>
@@ -173,6 +185,7 @@
         </button>
     </div>
 
+    </section>
     <div class="dashboard-actions">
         <a
             href="{{ url_for('input_sales') }}"
@@ -355,6 +368,7 @@
             maintainAspectRatio: false,
             scales: {
                 x: {
+                    position: 'top',
                     beginAtZero: true,
                     ticks: {
                         precision: 0
@@ -405,6 +419,9 @@
             .then(data => {
                 // 1. 表示期間タイトルの更新
                 periodTitle.innerText = data.period_text;
+                document.getElementById('todaySalesAmount').textContent =
+                    `¥${data.today_sales.toLocaleString('ja-JP')}`;
+                document.getElementById('businessDate').textContent = data.business_date;
                 updateSalesMonthIndicators(data.sales_months);
                 activeYear = year || null;
                 activeMonth = month || null;

@@ -182,6 +182,8 @@ def test_dashboard_initial_ai_advice_autoescapes_html_like_text():
     with flask_app.test_request_context("/dashboard"):
         html = render_template(
             "dashboard.html",
+            today_sales=0,
+            business_date="2026-08-09",
             ranked_sales=[],
             chart_labels=[],
             chart_values=[],

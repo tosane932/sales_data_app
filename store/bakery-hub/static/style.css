@@ -4639,7 +4639,7 @@ body.app-shell-page {
 
 .app-shell-page.product-page .container > h1,
 .app-shell-page.input-page .container > h1,
-.app-shell-page.dashboard-page .container > h1 {
+.app-shell-page.dashboard-page .dashboard-header h1 {
     margin-bottom: 26px;
     padding: 16px 18px;
 
@@ -7042,4 +7042,66 @@ body.shop-task-reorder-lock .shop-task-card {
     min-height: 44px;
     padding: 8px 14px;
     font-size: 0.9rem;
+}
+
+/* Dashboard: today's KPI is separate from the selected analysis period. */
+.dashboard-today {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px;
+    background: #edf4ef;
+    border: 1px solid #c8dccf;
+    border-radius: 12px;
+}
+.dashboard-today small { display: block; margin-top: 4px; }
+#todaySalesAmount { font-size: 30px; color: #2c5d3b; overflow-wrap: anywhere; }
+.dashboard-header h1 { color: var(--page-title-accent); }
+
+/* Keep all products and the full AI response reachable inside their panels.
+   Narrow/short screens and browser zoom retain normal document scrolling. */
+@media (min-width: 1100px) and (min-height: 650px) {
+    body.app-shell-page.dashboard-page { padding-top: 16px; padding-bottom: 16px; }
+    .app-shell-page.dashboard-page .container {
+        max-width: none;
+        height: calc(100dvh - 32px);
+        min-height: 618px;
+        box-sizing: border-box;
+        padding: 16px 20px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+        grid-template-rows: auto auto auto auto minmax(170px, 1fr) auto auto;
+        gap: 8px 18px;
+    }
+    .dashboard-header { grid-column: 1; grid-row: 1; align-self: center; }
+    .app-shell-page.dashboard-page .dashboard-header h1 { margin: 0; padding: 0; border: 0; background: transparent; }
+    .dashboard-page .filter-box { grid-column: 2; grid-row: 1 / 3; margin: 0; padding: 8px; }
+    .dashboard-page .dashboard-filter-form { flex-wrap: wrap; gap: 6px; }
+    .dashboard-page .dashboard-filter-form select { padding: 8px; min-height: 40px; }
+    .dashboard-page .dashboard-filter-label { font-size: 14px; }
+    .dashboard-page .filter-box small { display: block; margin-top: 4px; }
+    .dashboard-filter-guidance { grid-column: 1; grid-row: 2; margin: 0; font-size: 13px; }
+    .dashboard-today { grid-column: 1 / -1; grid-row: 3; padding: 10px 16px; }
+    .dashboard-page .dashboard-period { grid-column: 1 / -1; grid-row: 4; margin: 0; }
+    .dashboard-chart-panel { grid-column: 1; grid-row: 5; }
+    .dashboard-ranking-panel { grid-column: 2; grid-row: 5; }
+    .dashboard-chart-panel, .dashboard-ranking-panel {
+        min-width: 0; min-height: 0; display: flex; flex-direction: column;
+    }
+    .dashboard-page .container h2 { margin: 0 0 6px; font-size: 18px; }
+    .dashboard-page .ranking-container { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .dashboard-page .ranking-item { margin-bottom: 6px; padding: 8px 10px; }
+    .dashboard-page .prod-name { min-width: 0; overflow-wrap: anywhere; }
+    .dashboard-page .rank-badge, .dashboard-page .prod-qty { flex-shrink: 0; }
+    .dashboard-page .prod-qty { white-space: nowrap; }
+    .dashboard-chart-card { min-height: 0; flex: 1; margin: 0; padding: 8px; display: flex; }
+    .dashboard-chart-scroll { width: 100%; max-height: none; }
+    .dashboard-ai-panel { grid-column: 1 / -1; grid-row: 6; min-width: 0; }
+    .dashboard-ai-card { margin: 0; padding: 10px 14px; display: flex; gap: 16px; align-items: center; }
+    .dashboard-ai-response { flex: 1; min-width: 0; max-height: 80px; overflow-y: auto; }
+    .dashboard-page .btn-ai-advice { width: auto; max-width: 260px; margin: 0; padding: 12px; }
+    .dashboard-page .dashboard-actions { grid-column: 1 / -1; grid-row: 7; flex-direction: row; margin: 0; }
+    .dashboard-page .dashboard-action { padding: 9px 12px; }
 }

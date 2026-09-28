@@ -929,6 +929,8 @@ def test_dashboard_api_returns_sales_aggregation_for_selected_period(
     assert response.status_code == 200
     assert response.is_json
     assert set(payload) == {
+        "today_sales",
+        "business_date",
         "ranked_sales",
         "chart_labels",
         "chart_values",
@@ -1108,3 +1110,61 @@ def test_dashboard_routes_reject_out_of_range_month(
     assert response.status_code == 400
     if route == "/api/ai-advice":
         assert not gemini_client.called
+
+
+@pytest.mark.parametrize("period", ["", "?year=2025", "?year=2026&month=8"])
+@pytest.mark.parametrize("day, expected", [(1, 1300), (2, 700), (3, 0)])
+def test_today_sales_is_independent_of_analysis_period(
+    authenticated_client, dashboard_records, monkeypatch, period, day, expected,
+):
+    monkeypatch.setattr(app_module, "business_today", lambda: datetime.date(2026, 8, day))
+    response = authenticated_client.get("/dashboard" + period)
+    assert response.status_code == 200
+    document = _dashboard_document(response)
+    assert document.select_one("#todaySalesAmount").get_text(strip=True) == f"¥{expected:,}"
+    payload = authenticated_client.get("/api/dashboard-data" + period).get_json()
+    assert payload["today_sales"] == expected
+    assert payload["business_date"] == f"2026-08-{day:02d}"
+
+
+@pytest.mark.parametrize("identity", ["admin", "guest", "other_guest"])
+def test_today_sales_preserves_dataset_boundary(
+    flask_app, cross_dataset_dashboard_records, monkeypatch, identity,
+):
+    monkeypatch.setattr(app_module, "business_today", lambda: datetime.date(2026, 8, 1))
+    client = flask_app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = "admin"
+        session["_fresh"] = True
+        session[app_module.ADMIN_AUTH_FINGERPRINT_SESSION_KEY] = app_module._get_admin_auth_fingerprint(flask_app.config["ADMIN_PASSWORD_HASH"])
+    expected = 3100
+    if identity != "admin":
+        dataset = Dataset.query.filter_by(kind="guest").one()
+        if identity == "other_guest":
+            now = datetime.datetime.now(datetime.timezone.utc)
+            dataset = Dataset(kind="guest", created_at=now, last_activity_at=now,
+                              absolute_expires_at=now + datetime.timedelta(hours=2))
+            db.session.add(dataset)
+            db.session.commit()
+        client = flask_app.test_client()
+        with client.session_transaction() as session:
+            session["_user_id"] = f"guest:{dataset.id}"
+            session["_fresh"] = True
+        expected = 987654 * 300 + 90 * 400 if identity == "guest" else 0
+    response = client.get("/dashboard?year=2025")
+    assert response.status_code == 200
+    assert _dashboard_document(response).select_one("#todaySalesAmount").get_text(strip=True) == f"¥{expected:,}"
+    assert client.get("/api/dashboard-data?year=2025").get_json()["today_sales"] == expected
+
+
+def test_today_sales_includes_inactive_products_and_large_amounts(
+    authenticated_client, dashboard_records, monkeypatch,
+):
+    monkeypatch.setattr(app_module, "business_today", lambda: datetime.date(2026, 8, 1))
+    product = db.session.get(Product, dashboard_records["product_a_id"])
+    product.price = 1_000_000
+    product.is_active = False
+    sale = DailySales.query.filter_by(product_id=product.id, date=datetime.date(2026, 8, 1)).one()
+    sale.quantity = 100_000
+    db.session.commit()
+    assert authenticated_client.get("/api/dashboard-data").get_json()["today_sales"] == 100_000_001_000
