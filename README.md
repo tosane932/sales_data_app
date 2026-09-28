@@ -13,7 +13,7 @@
 
 ## Logistics
 
-- Driver Personality Test（統合予定）
+- [Driver Personality Test](logistics/driver-personality-test/)
 
 ```text
 Tosane Works
@@ -22,7 +22,7 @@ Tosane Works
 ├── Information
 │   └── Puoppo
 └── Logistics
-    └── Driver Personality Test（統合予定）
+    └── Driver Personality Test
 ```
 
 各プロダクトは、依存関係・テスト・Docker・デプロイ設定を可能な限り独立して管理します。
