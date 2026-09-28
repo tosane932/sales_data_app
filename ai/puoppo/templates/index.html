@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ja"> 
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Puoppo 🕊️ 世論分析アプリ</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
+
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -18,14 +18,14 @@
       ]
     }
     </script>
-    
+
 </head>
 <body>
 
     <h1>Puoppo 🕊️</h1>
     <div class="subtitle">AI世論・不満トレンド分析システム</div>
 
-    
+
     {% if current_user.is_authenticated %}
         <div class="user-panel">
             <div class="user-info">
@@ -85,7 +85,7 @@
         function startAnimation(event) {
             // 💡 以下の行の先頭に「//」をつけて、画面遷移を止めないように修正します
             //event.preventDefault(); // テスト用に通常の画面遷移を一時的に止めます
-            
+
             const pigeon = document.getElementById('pigeon');
             const loadingScreen = document.getElementById('loading-screen');
 
@@ -107,7 +107,7 @@
             {% for row in history %}
                 <li style="background-color: #f0f4ee; padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
                     <span>🔍 {{ row[1] }}</span>
-                    
+
                     <form action="/delete" method="POST" style="margin: 0;">
                         <input type="hidden" name="id" value="{{ row[0] }}">
                         <button type="submit" style="background: none; border: none; color: #d9534f; cursor: pointer; font-size: 14px; font-family: inherit; padding: 0;">削除</button>
