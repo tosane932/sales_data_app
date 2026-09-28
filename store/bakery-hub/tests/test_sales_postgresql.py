@@ -276,3 +276,42 @@ def test_concurrent_first_sales_insert_succeeds_without_duplicate(tmp_path):
         with engine.begin() as connection:
             db.metadata.drop_all(connection)
         engine.dispose()
+
+
+def test_dashboard_today_sales_large_amount_postgresql():
+    """単価×数量が32bit整数を超えても、本番と同じDBで集計できる。"""
+    worker_environment = os.environ.copy()
+    worker_environment.update(
+        DATABASE_URL=POSTGRESQL_TEST_DATABASE_URL,
+        SECRET_KEY="isolated-integration-test-only",
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", r'''
+import datetime
+from app import app, _get_today_sales_amount
+from models import db, Dataset, Product, DailySales
+with app.app_context():
+    try:
+        db.create_all()
+        dataset = Dataset(kind="admin", system_key="admin")
+        db.session.add(dataset)
+        product = Product(dataset=dataset, year=2039, month=12,
+                          name="高額集計テスト", price=1000000)
+        db.session.add(product)
+        db.session.flush()
+        today = datetime.date(2039, 12, 1)
+        db.session.add(DailySales(product_id=product.id, date=today, quantity=100000))
+        db.session.commit()
+        assert _get_today_sales_amount(dataset, today) == 100000000000
+        assert _get_today_sales_amount(dataset, today + datetime.timedelta(days=1)) == 0
+    finally:
+        db.session.remove()
+        db.drop_all()
+'''],
+        cwd=REPOSITORY_ROOT,
+        env=worker_environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, "PostgreSQL today-sales aggregation failed"
