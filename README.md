@@ -1,21 +1,58 @@
 # Tosane Works
 
-個人開発作品を分野別にまとめたポートフォリオリポジトリです。
+現場で感じた課題や不便を、Webアプリとして形にしていくポートフォリオです。
 
-## Store
+物流・店舗業務・情報収集など、異なる分野の個人開発作品をまとめています。
 
-- [Bakery Hub](store/bakery-hub/)
+---
 
-## Information
+## 🏪 Store
 
-- [Puoppo](information/puoppo/) — 公式RSSの記事を収集し、Gemini APIで要約・分析するWebアプリ
-  - [Render Demo](https://puoppo.onrender.com/)
+### 🥐 Bakery Hub
 
-## Logistics
+ベーカリー店舗の売上管理からAIによる経営アドバイス、材料発注、店舗メモ、タスク管理までを一元化したWebアプリケーション。
 
-- [Driver Personality Test](logistics/driver-personality-test/)
+**Python / Flask / PostgreSQL / Docker / pytest / GitHub Actions / Gemini API**
 
-```text
+[Live Demo]  
+[README]
+
+[最新スクリーンショット]
+
+---
+
+## 📰 Information
+
+### 🕊 Puoppo
+
+公式RSSから記事を収集し、Gemini APIで要約・分析する情報収集Webアプリケーション。
+
+**Python / Flask / SQLite / Gemini API / Docker**
+
+[Live Demo]  
+[README]
+
+[最新スクリーンショット]
+
+---
+
+## 🚛 Logistics
+
+### Driver Personality Test
+
+物流現場で起こり得る判断場面を、全50問の診断形式へ落とし込んだブラウザ完結型Webアプリケーション。
+
+**JavaScript / HTML / CSS / sql.js / GitHub Pages**
+
+[Live Demo]  
+[README]
+
+[最新スクリーンショット]
+
+---
+
+## Repository Structure
+
 Tosane Works
 ├── Store
 │   └── Bakery Hub
@@ -23,6 +60,5 @@ Tosane Works
 │   └── Puoppo
 └── Logistics
     └── Driver Personality Test
-```
 
-各プロダクトは、依存関係・テスト・Docker・デプロイ設定を可能な限り独立して管理します。
+各プロダクトは、依存関係・テスト・Docker・デプロイ設定を可能な限り独立して管理しています。
