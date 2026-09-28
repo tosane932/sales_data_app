@@ -9,7 +9,7 @@
 ## 🏪 Store
 
 ### 🥐 Bakery Hub
-
+[BakeryHub](file_000000003b388209a00e8ed719d16d2f.png)
 ベーカリー店舗の売上管理からAIによる経営アドバイス、材料発注、店舗メモ、タスク管理までを一元化したWebアプリケーション。
 
 **Python / Flask / PostgreSQL / Docker / pytest / GitHub Actions / Gemini API**
