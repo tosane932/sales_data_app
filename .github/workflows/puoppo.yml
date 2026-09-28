@@ -4,17 +4,17 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "ai/puoppo/**"
+      - "information/puoppo/**"
       - ".github/workflows/puoppo.yml"
   pull_request:
     branches: [ main ]
     paths:
-      - "ai/puoppo/**"
+      - "information/puoppo/**"
       - ".github/workflows/puoppo.yml"
 
 defaults:
   run:
-    working-directory: ai/puoppo
+    working-directory: information/puoppo
 
 jobs:
   smoke:

@@ -1,6 +1,6 @@
 # Puoppo 🕊
 
-![トップ画像](https://raw.githubusercontent.com/tosane932/tosane-works/main/ai/puoppo/file_00000000e1dc820982ad82ea885d80c7.png)
+![トップ画像](https://raw.githubusercontent.com/tosane932/tosane-works/main/information/puoppo/file_00000000e1dc820982ad82ea885d80c7.png)
 
 ## 🚀 概要：なぜ「Puoppo」なのか
 
@@ -17,7 +17,7 @@ IT開発系の資格なし、プログラミング実務未経験の状態から
 
 **👉 [Puoppo（Renderで稼働中）](https://puoppo.onrender.com)**
 
-**👉 [ソースコード（Tosane Works / ai/puoppo）](https://github.com/tosane932/tosane-works/tree/main/ai/puoppo)**
+**👉 [ソースコード（Tosane Works / information/puoppo）](https://github.com/tosane932/tosane-works/tree/main/information/puoppo)**
 
 ### 📊 システム体験の手順
 初めてアプリを触る方は、ぜひ以下の手順に沿って、公式RSSからのデータ収集とAIによる要約ロジックを体験してみてください。
@@ -73,7 +73,7 @@ PCのローカル環境に直接インストールして動かす方法と、環
 
 ```bash
 git clone https://github.com/tosane932/tosane-works.git
-cd tosane-works/ai/puoppo
+cd tosane-works/information/puoppo
 ```
 
 ### 事前準備
