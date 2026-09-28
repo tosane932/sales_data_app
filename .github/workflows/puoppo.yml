@@ -1,0 +1,70 @@
+name: Puoppo Smoke Check
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "ai/puoppo/**"
+      - ".github/workflows/puoppo.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "ai/puoppo/**"
+      - ".github/workflows/puoppo.yml"
+
+defaults:
+  run:
+    working-directory: ai/puoppo
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GEMINI_API_KEY: ci-dummy-api-key
+      SECRET_KEY: ci-dummy-flask-key
+      GOOGLE_CLIENT_ID: ci-dummy-client-id
+      GOOGLE_CLIENT_SECRET: ci-dummy-client-secret
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: Python構文を確認
+        run: python -m compileall -q app.py
+
+      - name: Flaskと画面のsmoke check
+        run: |
+          python - <<'PY'
+          import app as puoppo
+
+          flask_app = puoppo.app
+          flask_app.config.update(TESTING=True)
+
+          expected_routes = {
+              "/",
+              "/delete",
+              "/login",
+              "/login/google/callback",
+              "/logout",
+              "/search",
+              "/static/<path:filename>",
+          }
+          actual_routes = {rule.rule for rule in flask_app.url_map.iter_rules()}
+          assert expected_routes <= actual_routes
+
+          flask_app.jinja_env.get_template("index.html")
+          flask_app.jinja_env.get_template("result.html")
+
+          with flask_app.test_client() as client:
+              assert client.get("/").status_code == 200
+              assert client.get("/static/style.css").status_code == 200
+          PY
