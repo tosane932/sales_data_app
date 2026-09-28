@@ -1,6 +1,6 @@
 # 🍞 Bakery Hub | Bakery Sales Management System
 
-![トップ画像](https://raw.githubusercontent.com/tosane932/sales_data_app/main/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)
+![トップ画像](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/demo_thumbnail/file_00000000dfb482098a1fd093bb07f1dc.png)
 
 > **現場の「困った」を、Pythonで「最適解」へ。**
 
@@ -95,23 +95,23 @@ Guestの商品数
 
 ### 🍞 商品マスタ登録画面
 
-[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen01.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen01.jpg)
+[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen01.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen01.jpg)
 
 ### ✅ メニュー登録完了画面
 
-[![メニュー登録完了画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen02.jpg)
+[![メニュー登録完了画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen02.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen02.jpg)
 
 ### 📝 日次売上入力画面
 
-[![日次売上入力画面](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen03.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen03.jpg)
+[![日次売上入力画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen03.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen03.jpg)
 
 ### 📊 売上分析ダッシュボード
 
-[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen04.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen04.jpg)
+[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen04.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen04.jpg)
 
-[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen05.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen05.jpg)
+[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen05.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen05.jpg)
 
-[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen06.jpg)](https://raw.githubusercontent.com/tosane932/sales_data_app/main/screenshot/screen06.jpg)
+[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen06.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen06.jpg)
 
 ---
 
@@ -1866,11 +1866,11 @@ Webデザインで学んだ、
 ### 1. リポジトリをクローン
 
 ```bash
-git clone https://github.com/tosane932/sales_data_app.git
+git clone https://github.com/tosane932/tosane-works.git
 ```
 
 ```bash
-cd sales_data_app
+cd tosane-works/store/bakery-hub
 ```
 
 ### 2. 環境変数を作成
@@ -2100,7 +2100,7 @@ python app.py
 
 - [Qiita：開発記録・エラー解決記事](https://qiita.com/tosane932)
 - [オンラインデモ](https://bakery-salesdata.onrender.com/)
-- [GitHubリポジトリ](https://github.com/tosane932/sales_data_app)
+- [GitHubリポジトリ](https://github.com/tosane932/tosane-works/tree/main/store/bakery-hub)
 - [商品を消しても売上履歴を壊さない論理削除の実装記録](https://qiita.com/tosane932/items/4825452f4bb73fd90ba8)
 - [Flask-Migrateの初期マイグレーション修復記録](https://qiita.com/tosane932/items/13c2ca0e17716594aa1e)
 - [📝店舗メモツール完成｜タスクの長押し・並び替えを“使いやすい動き”まで詰めた](https://qiita.com/tosane932/items/de92221331b5f6b5912b)
