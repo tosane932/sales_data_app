@@ -8,18 +8,42 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from contextlib import closing
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, abort, render_template, request, redirect, url_for
 from flask_login import LoginManager, UserMixin, login_user, logout_user
 
 # 🤖 新しい公式パッケージから Client を読み込みます
 from google import genai
 import markdown
 
+TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
+
+
+def is_env_flag_enabled(name):
+    value = os.environ.get(name, "")
+    return value.strip().lower() in TRUE_ENV_VALUES
+
+
+GOOGLE_LOGIN_ENABLED = is_env_flag_enabled("GOOGLE_LOGIN_ENABLED")
+GOOGLE_LOGIN_CONFIGURED = all(
+    os.environ.get(setting_name, "").strip()
+    for setting_name in (
+        "SECRET_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+    )
+)
+GOOGLE_LOGIN_AVAILABLE = GOOGLE_LOGIN_ENABLED and GOOGLE_LOGIN_CONFIGURED
+
+
 # 🔑 余計な固定を外し、自動で最適な接続先を選ばせます
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config.update(
+    SECRET_KEY=os.environ.get("SECRET_KEY"),
+    GOOGLE_LOGIN_ENABLED=GOOGLE_LOGIN_ENABLED,
+    GOOGLE_LOGIN_AVAILABLE=GOOGLE_LOGIN_AVAILABLE,
+)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -27,18 +51,20 @@ login_manager.login_view = "login"
 
 oauth = OAuth(app)
 
-google = oauth.register(
-    name="google",
-    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
-    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url=(
-        "https://accounts.google.com/"
-        ".well-known/openid-configuration"
-    ),
-    client_kwargs={
-        "scope": "openid email profile"
-    }
-)
+google = None
+if GOOGLE_LOGIN_AVAILABLE:
+    google = oauth.register(
+        name="google",
+        client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url=(
+            "https://accounts.google.com/"
+            ".well-known/openid-configuration"
+        ),
+        client_kwargs={
+            "scope": "openid email profile"
+        }
+    )
 
 # ⚙️ コードのあちこちにあった固定値をここにまとめる（変更時はここだけ直せばOK）
 DB_NAME = 'puoppo.db'
@@ -46,7 +72,8 @@ RSS_BASE_URL = "https://news.google.com/rss/search"
 MAX_NEWS_ITEMS = 100
 HOST = '0.0.0.0'
 PORT = 5000
-DEBUG = True
+DEBUG = is_env_flag_enabled("FLASK_DEBUG")
+app.config["DEBUG"] = DEBUG
 
 
 def get_db_connection():
@@ -125,6 +152,9 @@ def load_user(user_id):
 
 @app.route("/login")
 def login():
+    if not app.config["GOOGLE_LOGIN_AVAILABLE"] or google is None:
+        abort(404)
+
     redirect_uri = url_for(
         "google_callback",
         _external=True
@@ -137,6 +167,9 @@ def login():
 
 @app.route("/login/google/callback")
 def google_callback():
+    if not app.config["GOOGLE_LOGIN_AVAILABLE"] or google is None:
+        abort(404)
+
     token = google.authorize_access_token()
     user_info = token.get("userinfo")
 
@@ -211,6 +244,9 @@ def google_callback():
 
 @app.route("/logout")
 def logout():
+    if not app.config["GOOGLE_LOGIN_AVAILABLE"]:
+        abort(404)
+
     logout_user()
     return redirect(url_for("index"))
 
@@ -225,7 +261,11 @@ def index():
         history_list = cursor.fetchall()  # 履歴をリストとして一括取得
 
     # 取得した履歴を index.html に渡して表示します
-    return render_template('index.html', history=history_list)
+    return render_template(
+        'index.html',
+        history=history_list,
+        google_login_available=app.config["GOOGLE_LOGIN_AVAILABLE"],
+    )
 
 
 # 📥 検索窓から送信されたキーワードを処理し、分析結果画面を表示する
