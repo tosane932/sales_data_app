@@ -6,9 +6,9 @@
 
 - [Bakery Hub](store/bakery-hub/)
 
-## AI
+## Information
 
-- [Puoppo](ai/puoppo/) — 公式RSSの記事を収集し、Gemini APIで要約・分析するWebアプリ
+- [Puoppo](information/puoppo/) — 公式RSSの記事を収集し、Gemini APIで要約・分析するWebアプリ
   - [Render Demo](https://puoppo.onrender.com/)
 
 ## Logistics
@@ -19,7 +19,7 @@
 Tosane Works
 ├── Store
 │   └── Bakery Hub
-├── AI
+├── Information
 │   └── Puoppo
 └── Logistics
     └── Driver Personality Test（統合予定）
