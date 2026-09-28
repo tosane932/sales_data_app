@@ -1,0 +1,79 @@
+<!DOCTYPE html> 
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚛 運転性格診断テスト (50問) - Driver Personality Test(DPT)</title>
+    <link rel="stylesheet" href="style.css?v=20260710">
+    <script type="application/ld+json">
+     {
+       "@context": "https://schema.org",
+       "@type": "Person",
+       "name": "tosane932",
+       "url": "tosane932のポートフォリオURL",
+       "sameAs": [
+       "https://github.com/tosane932",
+       "https://qiita.com/tosane932"
+       ]
+     }
+     </script>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🚛 運転性格診断テスト</h1>
+        <h2>Driver-Personality-Test (DPT)</h2>
+        <p>現場のための安全運転プロファイリング（全50問）</p>
+    </header>
+
+    <div id="start-screen">
+        <h2>🚛 診断を始める前に...</h2>
+        <p style="line-height:1.7;">
+            全50問、現場のリアルな状況をもとにした運転性格診断です。<br>
+            直感で「一番自分に近いもの」をお選びください。判断に迷う質問は「状況が判断できない／該当なし」でスキップすることもできます。
+        </p>
+
+        <div class="past-scores-title">📋 過去の受診履歴（ブラウザに安全に保存されます）</div>
+        <ul id="past-scores-list">
+            <li class="empty-msg">読み込み中...</li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <button id="start-test-btn" class="option-btn" style="width: 100%; max-width: 300px; text-align: center; background-color: var(--primary-color); color: white;" onclick="startTest()">運転性格診断スタート🚛</button>
+        </div>
+    </div>
+
+    <div id="test-container"></div>
+
+    <div id="back-to-top-link" style="text-align:center; margin-top: 10px; margin-bottom: 20px;">
+        <a href="./" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">← トップページに戻る</a>
+    </div>
+
+    <div id="result-area">
+        <div style="text-align: right; margin-bottom: 15px;">
+            <button class="option-btn" style="width: auto; display: inline-block; padding: 10px 20px;" onclick="resetTest()">🔄 テストをやり直す</button>
+        </div>
+
+        <div class="result-header">
+            <h2>診断結果</h2>
+            <div class="score-display"><span id="total-score">0</span>点</div>
+            <div class="result-title" id="result-status">判定中...</div>
+            <div class="result-desc" id="result-commentary"></div>
+        </div>
+
+        <div class="breakdown-title">📊 回答内訳</div>
+        <div id="breakdown-container"></div>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <button class="option-btn" style="width: 100%; max-width: 300px; text-align: center; background-color: var(--primary-color); color: white;" onclick="resetTest()">🔄 もう一度テストを受ける</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script src="db.js"></script>
+<script src="testData.js"></script>
+<script src="app.js?v=20260710"></script>
+</body>
+</html>
