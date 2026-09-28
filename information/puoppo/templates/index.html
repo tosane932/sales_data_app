@@ -26,7 +26,8 @@
     <div class="subtitle">AI世論・不満トレンド分析システム</div>
 
 
-    {% if current_user.is_authenticated %}
+    {% if google_login_available %}
+        {% if current_user.is_authenticated %}
         <div class="user-panel">
             <div class="user-info">
                 {% if current_user.profile_image %}
@@ -54,6 +55,7 @@
                 <span>Googleでログイン</span>
             </a>
         </div>
+        {% endif %}
     {% endif %}
 
 
