@@ -14,10 +14,8 @@
 
 **Python / Flask / PostgreSQL / Docker / pytest / GitHub Actions / Gemini API**
 
-[Live Demo]  
-[README]
-
-[最新スクリーンショット]
+[Live Demo](https://bakery-salesdata.onrender.com/)
+[README](https://github.com/tosane932/tosane-works/blob/main/store/bakery-hub/README.md)
 
 ---
 
@@ -29,10 +27,8 @@
 
 **Python / Flask / SQLite / Gemini API / Docker**
 
-[Live Demo]  
-[README]
-
-[最新スクリーンショット]
+[Live Demo](https://puoppo.onrender.com/)
+[README](https://github.com/tosane932/tosane-works/blob/main/information/puoppo/README.md)
 
 ---
 
@@ -44,10 +40,8 @@
 
 **JavaScript / HTML / CSS / sql.js / GitHub Pages**
 
-[Live Demo]  
-[README]
-
-[最新スクリーンショット]
+[Live Demo](https://tosane932.github.io/tosane-works/logistics/driver-personality-test/)
+[README](https://github.com/tosane932/tosane-works/blob/main/logistics/driver-personality-test/README.md)
 
 ---
 
