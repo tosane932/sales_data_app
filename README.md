@@ -24,7 +24,7 @@
 ## 📰 Information
 
 ### 🕊 Puoppo
-
+[puoppo_img](file_000000001c888209a78cd0af416f2820.png)
 公式RSSから記事を収集し、Gemini APIで要約・分析する情報収集Webアプリケーション。
 
 **Python / Flask / SQLite / Gemini API / Docker**
