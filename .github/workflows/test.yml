@@ -1,10 +1,20 @@
-name: Run Tests
+name: Bakery Hub Tests
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - "store/bakery-hub/**"
+      - ".github/workflows/test.yml"
   pull_request:
     branches: [ main ]
+    paths:
+      - "store/bakery-hub/**"
+      - ".github/workflows/test.yml"
+
+defaults:
+  run:
+    working-directory: store/bakery-hub
 
 jobs:
   test:
