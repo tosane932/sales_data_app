@@ -18,6 +18,18 @@
 
 **Python / Flask / PostgreSQL / Docker / pytest / GitHub Actions / Gemini API**
 
+#### PC
+
+![Bakery Hub Dashboard](demo/pc_dashboard.jpg)
+
+#### Smartphone
+
+<p align="center">
+  <img src="demo/mobile_order.jpg" alt="材料発注" width="32%">
+  <img src="demo/mobile_memo.jpg" alt="店舗メモ" width="32%">
+  <img src="demo/mobile_task.jpg" alt="タスク管理" width="32%">
+</p>
+
 [▶ Live Demo](https://bakery-salesdata.onrender.com/) ・ [📖 詳細README](store/bakery-hub/README.md)
 
 ---
@@ -32,6 +44,13 @@
 
 **Python / Flask / SQLite / Gemini API / Docker**
 
+#### Screenshots
+
+<p align="center">
+  <img src="demo/puoppo_search.jpg" alt="Puoppo検索画面" width="32%">
+  <img src="demo/puoppo_analysis.jpg" alt="Puoppo AI分析結果" width="64%">
+</p>
+
 [▶ Live Demo](https://puoppo.onrender.com/) ・ [📖 詳細README](information/puoppo/README.md)
 
 ---
@@ -45,6 +64,10 @@
 物流現場で起こり得る判断場面を全50問の診断形式へ落とし込み、運転傾向を可視化するブラウザ完結型Webアプリケーションです。
 
 **JavaScript / HTML / CSS / sql.js / GitHub Pages**
+
+#### Screenshot
+
+![Driver Personality Test](demo/dpt.jpg)
 
 [▶ Live Demo](https://tosane932.github.io/tosane-works/logistics/driver-personality-test/) ・ [📖 詳細README](logistics/driver-personality-test/README.md)
 
