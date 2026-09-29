@@ -1,6 +1,6 @@
 # Tosane Works
 
-![Tosane Works](file_000000002294820987d80bbba81ec1d2.png)
+![Tosane Works](img/tosane-works-banner.png)
 
 **現場で感じた課題や不便を、Webアプリとして形にしていくポートフォリオです。**
 
@@ -12,7 +12,7 @@
 
 ### 🥐 Bakery Hub
 
-![Bakery Hub](file_000000003b388209a00e8ed719d16d2f.png)
+![Bakery Hub](img/bakery-hub-banner.png)
 
 ベーカリー店舗の売上管理・分析から、AIによる経営アドバイス、材料発注、店舗メモ、タスク管理までを一元化したWebアプリケーションです。
 
@@ -26,7 +26,7 @@
 
 ### 🕊 Puoppo
 
-![Puoppo](file_000000001c888209a78cd0af416f2820.png)
+![Puoppo](img/puoppo-banner.png)
 
 公式RSSから関連記事を収集し、Gemini APIで要約・分析する情報収集Webアプリケーションです。
 
@@ -40,7 +40,7 @@
 
 ### Driver Personality Test
 
-![Driver Personality Test](file_0000000026848209825ea34ae287182e.png)
+![Driver Personality Test](img/dpt-banner.png)
 
 物流現場で起こり得る判断場面を全50問の診断形式へ落とし込み、運転傾向を可視化するブラウザ完結型Webアプリケーションです。
 
