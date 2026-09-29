@@ -206,7 +206,7 @@ def test_dashboard_fixed_ui_uses_specific_svg_icons(
 def test_login_brand_uses_wheat_svg(client):
     document = _document(client.get("/login"))
     _assert_labeled_icon(
-        document.select_one(".login-edition-title span"),
+        document.select_one(".portfolio-project-heading"),
         "wheat",
         "Bakery Hub",
     )

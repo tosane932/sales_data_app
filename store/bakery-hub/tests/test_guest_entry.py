@@ -90,6 +90,57 @@ def test_login_page_contains_separate_csrf_protected_guest_start_form(client):
     assert document.select("form form") == []
 
 
+def test_login_page_is_tosane_works_portfolio_entry(client):
+    response = client.get("/login")
+    document = _document(response)
+
+    assert response.status_code == 200
+    assert document.title.get_text(strip=True) == (
+        "Tosane Works | Web Application Portfolio"
+    )
+    assert document.select_one(".login-system-header h1").get_text(
+        " ", strip=True
+    ) == "Tosane Works 現場の課題をWebアプリとして形に"
+    assert "sales_data_app" not in document.get_text(" ", strip=True)
+
+    expected_projects = {
+        "store-category-heading": "Bakery Hub",
+        "information-category-heading": "Puoppo",
+        "logistics-category-heading": "Driver Personality Test",
+    }
+    for heading_id, project_name in expected_projects.items():
+        category = document.select_one(
+            f'.portfolio-category-card[aria-labelledby="{heading_id}"]'
+        )
+        assert category is not None
+        assert category.select_one("h3").get_text(strip=True) == project_name
+
+    bakery_links = document.select_one(
+        '.portfolio-project-links[aria-label="Bakery Hubのリンク"]'
+    )
+    assert bakery_links.select_one('a[href="#guest-demo-heading"]') is not None
+
+    external_links = {
+        "https://github.com/tosane932/tosane-works/blob/main/store/bakery-hub/README.md",
+        "https://puoppo.onrender.com/",
+        "https://github.com/tosane932/tosane-works/blob/main/information/puoppo/README.md",
+        "https://tosane932.github.io/tosane-works/logistics/driver-personality-test/",
+        "https://github.com/tosane932/tosane-works/blob/main/logistics/driver-personality-test/README.md",
+    }
+    for href in external_links:
+        link = document.select_one(f'a[href="{href}"]')
+        assert link is not None
+        assert link.get("target") == "_blank"
+        assert set(link.get("rel", [])) == {"noopener", "noreferrer"}
+
+    assert [
+        heading.name
+        for heading in document.select(
+            "main h2, main h3, main h4"
+        )
+    ] == ["h2", "h3", "h4", "h4", "h2", "h3", "h2", "h3"]
+
+
 def test_logged_in_guest_sees_return_link_instead_of_new_guest_start(
     flask_app,
 ):
