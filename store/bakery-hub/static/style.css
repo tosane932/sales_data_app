@@ -2955,7 +2955,7 @@ body.app-shell-page {
     }
 
     body.app-shell-page {
-        padding: 72px 10px 24px;
+        padding: 56px 10px 24px;
     }
 
     body.app-shell-page.app-navigation-open {
@@ -2984,12 +2984,12 @@ body.app-shell-page {
     .app-navigation-open-button {
         position: fixed;
         z-index: 32;
-        top: 12px;
+        top: 4px;
         left: 12px;
         display: inline-flex;
-        width: 52px;
-        height: 52px;
-        min-height: 52px;
+        width: 48px;
+        height: 48px;
+        min-height: 48px;
         align-items: center;
         justify-content: center;
         padding: 0;
@@ -3005,6 +3005,11 @@ body.app-shell-page {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
         cursor: pointer;
+    }
+
+    .app-navigation-open-button .app-navigation-button-icon svg {
+        width: 24px;
+        height: 24px;
     }
 
     .shop-tools-fab {
@@ -3109,7 +3114,7 @@ body.app-shell-page {
     }
 
     .app-shell-page.shop-tools-page {
-        padding: 72px 0 calc(98px + env(safe-area-inset-bottom));
+        padding: 56px 0 calc(98px + env(safe-area-inset-bottom));
     }
 
     .app-shell-page .shop-tools-bottom-nav {
