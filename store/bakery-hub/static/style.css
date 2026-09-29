@@ -2940,6 +2940,25 @@ body.app-shell-page {
         -webkit-tap-highlight-color: transparent;
     }
 
+    .material-order-primary-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+        gap: 10px;
+    }
+
+    .material-order-primary-fields .material-order-field {
+        min-width: 0;
+    }
+
+    .material-order-quantity-optional {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
     .touch-control-no-select {
         -webkit-user-select: none;
         user-select: none;

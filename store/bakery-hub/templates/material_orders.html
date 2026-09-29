@@ -31,25 +31,27 @@
         <form method="POST" action="{{ url_for('material_orders.create_item') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <div class="material-order-field">
-                <label for="material-name">材料名 <span aria-hidden="true">※</span></label>
-                <input
-                    id="material-name"
-                    name="name"
-                    type="text"
-                    value="{{ form_values.name }}"
-                    maxlength="100"
-                    required>
-            </div>
+            <div class="material-order-primary-fields">
+                <div class="material-order-field">
+                    <label for="material-name">材料名 <span aria-hidden="true">※</span></label>
+                    <input
+                        id="material-name"
+                        name="name"
+                        type="text"
+                        value="{{ form_values.name }}"
+                        maxlength="100"
+                        required>
+                </div>
 
-            <div class="material-order-field">
-                <label for="material-quantity">数量・単位（任意）</label>
-                <input
-                    id="material-quantity"
-                    name="quantity_text"
-                    type="text"
-                    value="{{ form_values.quantity_text }}"
-                    maxlength="30">
+                <div class="material-order-field">
+                    <label for="material-quantity">数量・単位<span class="material-order-quantity-optional">（任意）</span></label>
+                    <input
+                        id="material-quantity"
+                        name="quantity_text"
+                        type="text"
+                        value="{{ form_values.quantity_text }}"
+                        maxlength="30">
+                </div>
             </div>
 
             <div class="material-order-field">
@@ -58,7 +60,7 @@
                     id="material-memo"
                     name="memo"
                     maxlength="300"
-                    rows="3">{{ form_values.memo }}</textarea>
+                    rows="2">{{ form_values.memo }}</textarea>
             </div>
 
             <button
