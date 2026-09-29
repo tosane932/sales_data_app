@@ -49,8 +49,8 @@
 #### Screenshots
 
 <p align="center">
-  <img src="demo/puoppo_search.jpg" alt="Puoppo検索画面" width="34%">
-  <img src="demo/puoppo_analysis.jpg" alt="Puoppo AI分析結果" width="62%">
+  <img src="demo/puoppo_search.jpg" alt="Puoppo検索画面" width="48%">
+  <img src="demo/puoppo_analysis.jpg" alt="Puoppo AI分析結果" width="48%">
 </p>
 
 [▶ Live Demo](https://puoppo.onrender.com/) ・ [📖 詳細README](information/puoppo/README.md)
@@ -70,7 +70,7 @@
 #### Screenshot
 
 <p align="center">
-  <img src="demo/dpt.jpg" alt="Driver Personality Test" width="700">
+  <img src="demo/dpt.jpg" alt="Driver Personality Test" width="48%">
 </p>
 
 [▶ Live Demo](https://tosane932.github.io/tosane-works/logistics/driver-personality-test/) ・ [📖 詳細README](logistics/driver-personality-test/README.md)
