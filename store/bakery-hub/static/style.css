@@ -1787,10 +1787,31 @@ select {
 .login-page .portfolio-category-card {
     margin-bottom: 18px;
     padding: 28px;
-    background: #ffffff;
-    border: 1px solid #f1ebd9;
+    background: var(--portfolio-category-background, #ffffff);
+    border: 1px solid var(--portfolio-category-border, #f1ebd9);
     border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(139, 92, 26, 0.05);
+    box-shadow: 0 10px 30px rgba(76, 66, 54, 0.07);
+}
+
+.login-page .portfolio-category-store {
+    --portfolio-category-background: #fffaf2;
+    --portfolio-category-border: #ead4b3;
+    --portfolio-category-accent: #8b5717;
+    --portfolio-category-divider: #e8c896;
+}
+
+.login-page .portfolio-category-information {
+    --portfolio-category-background: #f3faff;
+    --portfolio-category-border: #bfdbea;
+    --portfolio-category-accent: #2f6680;
+    --portfolio-category-divider: #b9dceb;
+}
+
+.login-page .portfolio-category-logistics {
+    --portfolio-category-background: #f4faf5;
+    --portfolio-category-border: #c4ddc9;
+    --portfolio-category-accent: #3f6f4c;
+    --portfolio-category-divider: #bdd9c4;
 }
 
 .login-page .portfolio-category-card:last-child {
@@ -1800,8 +1821,8 @@ select {
 .login-page .portfolio-category-title {
     margin: 0 0 20px;
     padding: 0 0 12px;
-    color: #8b5a1a;
-    border-bottom: 2px solid #f7eed6;
+    color: var(--portfolio-category-accent, #8b5a1a);
+    border-bottom: 2px solid var(--portfolio-category-divider, #f7eed6);
     font-size: 18px;
     line-height: 1.4;
 }
