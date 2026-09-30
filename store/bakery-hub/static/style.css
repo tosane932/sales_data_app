@@ -1745,9 +1745,9 @@ select {
    👤 ログイン・ゲストデモ入口
 ======================================== */
 
-/* カード外：sales_data_app 共通タイトル */
+/* ポートフォリオ共通タイトル */
 .login-page .login-system-header {
-    max-width: 650px;
+    max-width: 720px;
     margin: 0 auto 18px;
 
     text-align: center;
@@ -1774,27 +1774,112 @@ select {
 }
 
 
-/* カード内：ベーカリー版タイトル */
-.login-page .login-edition-title {
-    margin: 0 0 24px;
-    padding-bottom: 14px;
+/* 1カテゴリ1カードで、作品は同じカード内へ追加できる構造 */
+.login-page .portfolio-home {
+    max-width: 720px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
 
+.login-page .portfolio-category-card {
+    margin-bottom: 18px;
+    padding: 28px;
+    background: #ffffff;
+    border: 1px solid #f1ebd9;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(139, 92, 26, 0.05);
+}
+
+.login-page .portfolio-category-card:last-child {
+    margin-bottom: 0;
+}
+
+.login-page .portfolio-category-title {
+    margin: 0 0 20px;
+    padding: 0 0 12px;
     color: #8b5a1a;
     border-bottom: 2px solid #f7eed6;
-
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1.4;
 }
 
-.login-page .login-edition-title span {
-    font-size: 16px;
-    font-weight: normal;
+.login-page .portfolio-project + .portfolio-project {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #eee2c9;
+}
+
+.login-page .portfolio-project-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+}
+
+.login-page .portfolio-project-heading h3 {
+    min-width: 0;
+    margin: 0;
+    color: #6e543c;
+    font-size: 20px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.login-page .portfolio-project-heading svg {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+}
+
+.login-page .portfolio-project-description {
+    margin: 7px 0 0;
+    color: #665c54;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.login-page .portfolio-project-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.login-page .portfolio-project-link {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    box-sizing: border-box;
+    color: #6f4919;
+    background: #fffaf0;
+    border: 1px solid #dfcda9;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1.3;
+    text-decoration: none;
+}
+
+.login-page .portfolio-project-link:hover {
+    background: #f8edda;
+    border-color: #c9a063;
+}
+
+.login-page .portfolio-project-link:focus-visible {
+    outline: 3px solid #6f4919;
+    outline-offset: 3px;
 }
 
 
 /* ゲストデモ */
 .login-page .guest-demo-section {
-    margin-bottom: 26px;
+    margin: 24px 0 26px;
     padding: 18px;
 
     background-color: #fffdf8;
@@ -1802,7 +1887,7 @@ select {
     border-radius: 12px;
 }
 
-.login-page .guest-demo-section h2 {
+.login-page .guest-demo-section h4 {
     margin: 0 0 10px;
 
     color: #6e543c;
@@ -1848,7 +1933,7 @@ select {
     text-align: left;
 }
 
-.login-page .admin-login-section h2 {
+.login-page .admin-login-section h4 {
     margin: 0 0 6px;
 
     color: #6e543c;
@@ -1919,14 +2004,32 @@ select {
         font-size: 12px;
     }
 
-    .login-page .login-edition-title {
-        margin-bottom: 20px;
+    .login-page .portfolio-home {
+        padding: 0;
+        border-radius: 0;
+    }
 
+    .login-page .portfolio-category-card {
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .login-page .portfolio-category-title {
+        margin-bottom: 16px;
+        font-size: 17px;
+    }
+
+    .login-page .portfolio-project-heading h3 {
         font-size: 18px;
     }
 
-    .login-page .login-edition-title span {
-        font-size: 14px;
+    .login-page .portfolio-project-links {
+        gap: 7px;
+    }
+
+    .login-page .portfolio-project-link {
+        padding: 7px 10px;
+        font-size: 12px;
     }
 
     .login-page .guest-demo-section {
@@ -4631,12 +4734,6 @@ body.app-shell-page {
     height: 1em;
 }
 
-.login-page .login-edition-title > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
 .shop-tools-brand {
     display: flex;
     align-items: center;
@@ -5055,13 +5152,6 @@ body.app-shell-page {
     transform: scale(0.98);
 }
 
-
-/* ===== Bakery Hub branding ===== */
-
-.login-page .login-edition-label {
-    font-size: 20px;
-    font-weight: 700;
-}
 
 /* Task: hidden 属性を author CSS より優先する */
 .shop-task-selection-toolbar[hidden],
