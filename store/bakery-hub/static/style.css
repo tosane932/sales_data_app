@@ -1794,10 +1794,10 @@ select {
 }
 
 .login-page .portfolio-category-store {
-    --portfolio-category-background: #fffaf2;
-    --portfolio-category-border: #ead4b3;
-    --portfolio-category-accent: #8b5717;
-    --portfolio-category-divider: #e8c896;
+    --portfolio-category-background: #fff6e8;
+    --portfolio-category-border: #e4c38d;
+    --portfolio-category-accent: #945d14;
+    --portfolio-category-divider: #dcb677;
 }
 
 .login-page .portfolio-category-information {
