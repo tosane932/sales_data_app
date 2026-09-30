@@ -104,21 +104,34 @@ def test_login_page_is_tosane_works_portfolio_entry(client):
     assert "sales_data_app" not in document.get_text(" ", strip=True)
 
     expected_projects = {
-        "store-category-heading": "Bakery Hub",
-        "information-category-heading": "Puoppo",
-        "logistics-category-heading": "Driver Personality Test",
+        "store-category-heading": (
+            "Bakery Hub",
+            "portfolio-category-store",
+        ),
+        "information-category-heading": (
+            "Puoppo",
+            "portfolio-category-information",
+        ),
+        "logistics-category-heading": (
+            "Driver Personality Test",
+            "portfolio-category-logistics",
+        ),
     }
-    for heading_id, project_name in expected_projects.items():
+    for heading_id, (project_name, category_class) in expected_projects.items():
         category = document.select_one(
             f'.portfolio-category-card[aria-labelledby="{heading_id}"]'
         )
         assert category is not None
+        assert category_class in category.get("class", [])
         assert category.select_one("h3").get_text(strip=True) == project_name
 
     bakery_links = document.select_one(
         '.portfolio-project-links[aria-label="Bakery Hubのリンク"]'
     )
-    assert bakery_links.select_one('a[href="#guest-demo-heading"]') is not None
+    assert bakery_links.select_one('a[href="#guest-demo-heading"]') is None
+    assert [link.get_text(" ", strip=True) for link in bakery_links.select("a")] == [
+        "📖 詳細README"
+    ]
 
     external_links = {
         "https://github.com/tosane932/tosane-works/blob/main/store/bakery-hub/README.md",
