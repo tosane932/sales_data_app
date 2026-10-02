@@ -29,10 +29,13 @@
 ログイン画面の
 
 ```text
-ゲストデモを始める
+ゲストデモを体験する
 ```
 
 から体験できます。
+
+ログイン画面は **Tosane WorksのWeb Portfolio入口** も兼ねています。
+Store（オレンジ）・Information（水色）・Logistics（緑）のカテゴリごとに作品を表示し、各READMEへ移動できます。Puoppo・Driver Personality TestにはLive Demoへのリンクもあります。Bakery HubのGuest Demoと管理者ログインはStore内に配置しています。
 
 Guest Demoでも、
 
@@ -216,8 +219,10 @@ AdminとGuestは同じ業務画面を利用できますが、
 - GitHub ActionsによるSQLite + PostgreSQL 16の二層CI
 - Falsification / Manual Mutation Testing
 - 月替わり・年替わり事故の回帰テスト
-- 現行main（PR #49 merge後）で確認済みのfull pytest：**742 passed / 17 skipped**
-- PR #49のGitHub Actions Run Tests #216：`test` / `postgres-integration` ともにGreen
+- 本日の売上金額KPI（日本時間・表示期間とは独立した当日集計）
+- PC Dashboardの主要領域を1画面内で確認しやすくするコンパクトな配置
+- Tosane WorksのWeb Portfolio入口として、ログイン画面に3カテゴリの作品導線を配置
+- 2026-09-30の[GitHub Actions Bakery Hub Tests #234](https://github.com/tosane932/tosane-works/actions/runs/36668156708)（commit `e64d0d6`）：通常pytest **756 passed / 18 skipped**、`test` / `postgres-integration` ともに成功
 
 ---
 
@@ -295,6 +300,7 @@ Guest Demoでは、1 Datasetにつき最大30商品まで登録できます。
 ダッシュボードでは、
 
 - 商品別売上ランキング
+- 本日の売上金額（日本時間）
 - 売上数量グラフ
 - 年月別集計
 - 販売終了商品の過去売上
@@ -303,6 +309,9 @@ Guest Demoでは、1 Datasetにつき最大30商品まで登録できます。
 などを確認できます。
 
 PR #49では、棒グラフ周辺のUIとPC / スマートフォンのレイアウトを見直し、グラフを読み取りやすく操作しやすい構成へ調整しました。
+
+PR #58では、表示中の年月にかかわらず、認証済みDatasetの当日売上を「登録単価 × 販売数量」で集計するKPIを追加しました。該当する売上がなければ0円を表示します。
+PCでは幅1100px以上・高さ650px以上でグラフとランキングを左右に配置し、主要領域を1画面内で確認しやすくしています。ランキングとAI回答はパネル内でスクロールでき、狭い画面や高さが不足する場合は通常のページスクロールを使います。
 
 売上データが存在する月には、
 
@@ -349,6 +358,8 @@ DailySalesが存在する月
 材料発注・店舗メモ・タスクはProductとは独立したモデルとして保存し、  
 いずれも現在のDatasetに所属するデータだけを参照・更新します。
 
+PR #64ではスマートフォン上部の余白と固定メニューボタンを調整し、PR #65では材料発注フォームをコンパクトにしました。材料名・数量メモを横並びにし、補足メモ欄の高さや余白を抑えています。
+
 ---
 
 ## ⚙️ 主な機能
@@ -371,13 +382,14 @@ DailySalesが存在する月
 | 販売終了 | `is_active`による論理削除 |
 | 日次売上 | 商品別販売数・同日データ上書き |
 | 状態表示 | 現在の登録済み個数を表示 |
-| 売上分析 | 年月別集計・ランキング・グラフ・PC / Mobile棒グラフUI |
+| 売上分析 | 年月別集計・ランキング・グラフ・本日の売上金額KPI・PCのコンパクト配置 |
 | 材料発注 | Dataset単位の追加・完了 / 未完了・削除・最大100件 |
 | 店舗メモ | 1行目タイトル・1行本文プレビュー・作成・編集・検索・pin・複製・autosave |
 | メモ削除 | ゴミ箱・復元・完全削除・Undo・下swipeで通知を閉じる |
 | URL表示 | HTTP / HTTPS絶対URLだけを安全に自動リンク化 |
 | Mobile UI | 長押し・swipe・Undo・FAB・responsive editor |
 | Navigation | Bakery Hubブランド・inline SVG・カテゴリカラー |
+| Portfolio入口 | ログイン画面にStore / Information / Logisticsの作品・README・デモ導線 |
 | タスク | Dataset単位の追加・完了 / 未完了・削除・複数選択・長押し並び替え |
 | AI | Gemini APIによる日次支援・経営アドバイス |
 | AI制限 | Guest Dataset単位で合計3回 |
@@ -568,7 +580,7 @@ position      並び順
 
 並び替え成立の境界も実機で調整し、隣接カードへほぼ100%重なるまで待つのではなく、約75%重なった段階で周囲が避けるようにしています。
 
-JavaScript変更後はChrome headlessでも構文エラーを確認し、Task専用テストは**69 passed**、PR #46時点のfull pytestは**742 passed / 17 skipped**です。
+PR #46時点では、JavaScript変更後にChrome headlessでも構文エラーを確認し、Task専用テストは**69 passed**、full pytestは**742 passed / 17 skipped**でした。
 
 </details>
 
@@ -1198,6 +1210,9 @@ Dataset / Guest Demo実装
 
 PR #49時点
 742 passed / 17 skipped
+
+2026-09-30 / CI #234（commit e64d0d6）
+756 passed / 18 skipped
 ```
 
 現在は、
@@ -1248,7 +1263,7 @@ HSTS
 
 ### PostgreSQL専用テスト
 
-最新mainで通常suiteからskipされる17件は、主にテスト用PostgreSQL環境が必要なintegration testです。
+2026-09-30のCI #234では、通常suiteの18件がテスト用PostgreSQL環境を必要とするためskipされています。
 
 通常のSQLiteテストだけで、
 
@@ -1272,7 +1287,8 @@ PostgreSQL上でも並行性が安全
 などがあります。
 
 GitHub Actionsでは通常pytestに加えてPostgreSQL 16のintegration jobを実行し、  
-最新PR #49のGitHub Actions Run Tests #216でも、`test` / `postgres-integration` ともにGreenです。
+[2026-09-30のBakery Hub Tests #234](https://github.com/tosane932/tosane-works/actions/runs/36668156708)（commit `e64d0d6`）では、通常pytestは **756 passed / 18 skipped**、PostgreSQLのmigration確認は **1 passed**、後続のintegration suiteは **16 passed** で、両jobとも成功しています。
+今回確認したmain（`149b73e`）との差分はルートREADMEへのWeb Portfolioリンク追加だけで、アプリ・テスト・CI設定は同じです。上記は当該CIの実行結果であり、今回ローカルでpytestを再実行した結果ではありません。
 
 </details>
 
@@ -2009,6 +2025,12 @@ python app.py
 - PR #49でDashboardの棒グラフ周辺UIとPC / Mobileレイアウトを改善
 - PR #49 merge後のfull pytest **742 passed / 17 skipped**
 - GitHub Actions Run Tests #216で通常test / PostgreSQL integrationともGreen
+- PR #58で本日の売上金額KPIとPC Dashboardのコンパクト配置を追加
+- PR #64 / #65でスマートフォン上部UIと材料発注フォームをコンパクト化
+- PR #66でログイン画面をTosane WorksのWeb Portfolio入口へ拡張
+- PR #67 / #68で3カテゴリの色分けとStoreのオレンジ色を調整
+- PR #69でTosane WorksルートREADMEにWeb Portfolioへのリンクを追加
+- 2026-09-30のBakery Hub Tests #234（commit `e64d0d6`）で通常pytest **756 passed / 18 skipped**、PostgreSQL jobも成功
 
 ### 2026-08：認証・セキュリティ・Dataset基盤
 
@@ -2098,6 +2120,7 @@ python app.py
 
 ## 🔗 関連リンク
 
+- [Tosane Works：作品一覧](https://github.com/tosane932/tosane-works)
 - [Qiita：開発記録・エラー解決記事](https://qiita.com/tosane932)
 - [オンラインデモ](https://bakery-salesdata.onrender.com/)
 - [GitHubリポジトリ](https://github.com/tosane932/tosane-works/tree/main/store/bakery-hub)
@@ -2112,3 +2135,4 @@ python app.py
 - [pytestを「事故防止台帳」として育てる 第3段階](https://qiita.com/tosane932/items/6d1ca5490979c8cf9d62)
 - [pytestを「事故防止台帳」として育てる 第4段階](https://qiita.com/tosane932/items/372270330e73583a227f)
 - [pytestを「事故防止台帳」として育てる 第5段階](https://qiita.com/tosane932/items/85fd24c7baa6fe7c76a7)
+
