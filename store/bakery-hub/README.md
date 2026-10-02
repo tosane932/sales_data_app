@@ -92,40 +92,19 @@ Guestの商品数
 
 ## 📸 スクリーンショット
 
-> スクリーンショットは撮影時点の画面です。  
-> 現在の実装では、Guest Demo、Dataset分離、認証、CSRF保護、rate limit、回帰テストに加え、材料発注・店舗メモ・タスク・Bakery Hubの新UIを追加しています。  
-> そのため、公開中の画面とは一部デザインが異なります。
+### PC
 
-### 🍞 商品マスタ登録画面
+<p align="center">
+  <img src="../../demo/pc_dashboard.jpg" alt="Bakery Hub Dashboard" width="900">
+</p>
 
-[![商品マスタ登録画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen01.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen01.jpg)
+### Smartphone
 
-### ✅ メニュー登録完了画面
-
-[![メニュー登録完了画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen02.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen02.jpg)
-
-### 📝 日次売上入力画面
-
-[![日次売上入力画面](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen03.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen03.jpg)
-
-### 📊 売上分析ダッシュボード
-
-[![売上分析ダッシュボード1](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen04.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen04.jpg)
-
-[![売上分析ダッシュボード2](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen05.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen05.jpg)
-
-[![売上分析ダッシュボード3](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen06.jpg)](https://raw.githubusercontent.com/tosane932/tosane-works/main/store/bakery-hub/screenshot/screen06.jpg)
-
----
-
-## 📺 デモ動画
-
-以下の画像をクリックすると、YouTubeで実際の動作を確認できます。
-
-[![ベーカリー売上管理システム（デモ動画）](demo_thumbnail/thumbnail_postgreSQL.png)](https://youtu.be/iz4r3YP3JZk?si=w9AENw1iifjlwZ7j)
-
-> デモ動画は撮影時点の画面です。  
-> 最新版ではGuest DemoやDataset分離を含め、認証・セキュリティ・回帰テストを大幅に強化しています。
+<p align="center">
+  <img src="../../demo/mobile_order.jpg" alt="材料発注" width="32%">
+  <img src="../../demo/mobile_memo.jpg" alt="店舗メモ" width="32%">
+  <img src="../../demo/mobile_task.jpg" alt="タスク管理" width="32%">
+</p>
 
 ---
 
